@@ -1,10 +1,10 @@
 <div align="center">
-<h2> Soft-robot Control Environment (gym-softrobot) </h2>
+<h1> Soft-robot Control Environment (gym-softrobot) </h1>
 </div>
 
 The environment is designed to leverage reinforcement learning methods into soft-robotics control, inspired from slender-body living creatures.
 The code is built on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for slender structure.
-We intend this package to be easy-to-install and fully compatible to OpenAI Gym.
+We intend this package to be easy-to-install and fully compatible to [OpenAI Gym](https://github.com/openai/gym).
 
 Requirements:
 - Python 3.8+
@@ -46,3 +46,7 @@ More advanced algorithms are still under development.
 - `octo-reach`
 - `octo-swim`
 - `octo-flat`
+
+## Contribution
+
+We are currently developing the package internally.

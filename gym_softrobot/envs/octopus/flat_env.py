@@ -363,6 +363,9 @@ class FlatEnv(gym.Env):
                 #self.shearable_rods[a].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
 
     def step(self, action):
+        err_msg = f"{action!r} ({type(action)}) invalid: expected {self.action_space}"
+        assert self.action_space.contains(action), err_msg
+
         rest_kappa = action # alias
 
         """ Set intrinsic strains (set actions) """

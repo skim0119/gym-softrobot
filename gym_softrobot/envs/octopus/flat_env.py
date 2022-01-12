@@ -52,7 +52,7 @@ class FlatEnv(gym.Env):
             n_arm=5,
             config_generate_video=False,
             config_save_head_data=False,
-            policy_mode=None
+            policy_mode='centralized'
         ):
 
         # Integrator type

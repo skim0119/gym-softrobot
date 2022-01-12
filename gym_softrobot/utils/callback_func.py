@@ -1,8 +1,3 @@
-"""
-Created on Sep. 23, 2021
-@author: Heng-Sheng (Hanson) Chang
-"""
-
 from elastica.callback_functions import CallBackBaseClass
 
 class RodCallBack(CallBackBaseClass):

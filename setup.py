@@ -16,7 +16,7 @@ URL = "https://github.com/skim0119/gym-softrobot"
 EMAIL = "skim449@illinois.edu"
 AUTHOR = "skim0119"
 REQUIRES_PYTHON = ">=3.8.0"
-VERSION = "0.0.1"
+VERSION = "0.0.2"
 
 # What packages are required for this module to be executed?
 REQUIRED = ["gym>=0.21.0", "pyelastica>=0.2.0", "matplotlib>=3.3.2"]
@@ -91,7 +91,8 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=["tests"]),
+    packages=find_packages(exclude=["tests", "*.tests", "*.tests.*", "tests.*",
+        "*/tests", "*/tests/*", "tests/*"]),
     #py_modules=['gym_softrobot'],
     license="MIT",
     classifiers=[

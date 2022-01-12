@@ -12,6 +12,7 @@ from scipy.interpolate import interp1d
 from elastica import *
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
+from elastica.interaction import AnisotropicFrictionalPlaneRigidBody
 
 from gym_softrobot.utils.actuation.forces.drag_force import DragForce
 from gym_softrobot.utils.custom_elastica.callback_func import RodCallBack, RigidCylinderCallBack
@@ -89,8 +90,14 @@ class FlatEnv(gym.Env):
             raise NotImplementedError
         self.metadata= {}
         self.reward_range=50.0
-        self._prev_action = np.zeros([n_body, n_arm]+list(self.action_space.shape),
-                dtype=self.action_space.dtype)
+        if policy_mode == 'centralized':
+            self._prev_action = np.zeros([n_body]+list(self.action_space.shape),
+                    dtype=self.action_space.dtype)
+        elif policy_mode == 'decentralized':
+            self._prev_action = np.zeros([n_body, n_arm]+list(self.action_space.shape),
+                    dtype=self.action_space.dtype)
+        else:
+            raise NotImplementedError
 
         self.config_generate_video = config_generate_video
         self.config_save_head_data = config_save_head_data
@@ -306,7 +313,12 @@ class FlatEnv(gym.Env):
                 pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods[a:b]]) # y
                 vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods[a:b]]) # x
                 vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods[a:b]]) # y
-                previous_action = self._prev_action[i, :, :]
+                if self.policy_mode == 'decentralized':
+                    previous_action = self._prev_action[i, :, :]
+                elif self.policy_mode == 'centralized':
+                    previous_action = self._prev_action[i, :].reshape([self.n_arm, self.n_action])
+                else:
+                    raise NotImplementedError
                 individual_state = np.hstack([
                     kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
                     previous_action])
@@ -332,7 +344,12 @@ class FlatEnv(gym.Env):
     def set_action(self, action):
         for body_i in range(self.n_body):
             reshaped_kappa  = action[body_i].reshape((self.n_arm, self.n_action))
-            self._prev_action[body_i][:] = reshaped_kappa
+            if self.policy_mode == "decentralized":
+                self._prev_action[body_i][:] = reshaped_kappa
+            elif self.policy_mode == "centralized":
+                self._prev_action[body_i][:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
+            else:
+                raise NotImplementedError
             reshaped_kappa = np.concatenate([np.zeros((self.n_arm, 1)), reshaped_kappa], axis=1)
             reshaped_kappa = interp1d(
                     np.linspace(0,1,self.n_action+1),

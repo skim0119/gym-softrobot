@@ -43,7 +43,7 @@ class FlatEnv(gym.Env):
     metadata = {'render.modes': ['rgb_array', 'human']}
 
     def __init__(self,
-            final_time,
+            final_time=10.0,
             time_step=1.0e-5,
             recording_fps=40,
             n_elems=40,

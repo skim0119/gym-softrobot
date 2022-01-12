@@ -1,6 +1,9 @@
 <div align="center">
-<h1> Soft-robot Control Environment (gym-softrobot) </h1>
+<h1> Soft-Robot Control Environment (gym-softrobot) </h1>
+  <img src="https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg">
 </div>
+
+
 
 The environment is designed to leverage reinforcement learning methods into soft-robotics control, inspired from slender-body living creatures.
 The code is built on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for slender structure.
@@ -27,8 +30,25 @@ Please use this bibtex to cite in your publications:
 
 ## Installation
 
-```
+```bash
 pip install gym-softrobot
+```
+
+To test the installation, you can run couple steps of the environment as the following.
+```py
+import gym 
+import gym_softrobot
+env = gym.make('OctoFlat-v0', policy_mode='centralized')
+
+# env is created, now we can use it: 
+for episode in range(2): 
+    observation = env.reset()
+    for step in range(50):
+        action = env.action_space.sample() 
+        observation, reward, done, info = env.step(action[None])
+        print(f"{episode=:2} |{step=:2}, {reward=}, {done=}")
+        if done:
+            break
 ```
 
 ## Reinforcement Learning Example
@@ -50,3 +70,5 @@ More advanced algorithms are still under development.
 ## Contribution
 
 We are currently developing the package internally.
+
+[badge-CI]: https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg

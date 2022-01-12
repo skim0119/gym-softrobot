@@ -1,6 +1,9 @@
 <div align="center">
-<h1> Soft-robot Control Environment (gym-softrobot) </h1>
+<h1> Soft-Robot Control Environment (gym-softrobot) </h1>
+  <img src="https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg">
 </div>
+
+
 
 The environment is designed to leverage reinforcement learning methods into soft-robotics control, inspired from slender-body living creatures.
 The code is built on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for slender structure.
@@ -50,3 +53,5 @@ More advanced algorithms are still under development.
 ## Contribution
 
 We are currently developing the package internally.
+
+[badge-CI]: https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg

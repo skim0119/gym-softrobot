@@ -1,0 +1,98 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the action will run. Triggers the workflow on push request
+# events for the master branch, and pull request events for all branches.
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+    - update*
+  schedule:
+  - cron: "0 2 * * 1-5"
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ${{ matrix.os }} #ubuntu-latest
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: [3.8]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+      
+      # Ref: https://docs.github.com/en/free-pro-team@latest/actions/guides/building-and-testing-python
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # You can test your matrix by printing the current Python version
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+      
+      # Cache the pip requirmenets for other tests. If requirements cached use them to speed up the build.
+      # Ref: https://github.com/actions/cache/blob/main/examples.md#python---pip 
+      - name: Cache pip Linux
+        uses: actions/cache@v2
+        if: startsWith(runner.os, 'Linux')
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Cache pip MacOS
+        uses: actions/cache@v2
+        if: startsWith(runner.os, 'macOS')
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+            
+      - name: Cache pip Windows
+        uses: actions/cache@v2
+        if: startsWith(runner.os, 'Windows')
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      - name: Install dependencies
+        run: |
+          echo update pip
+          python -m pip install --upgrade pip
+          echo update requirments
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          echo update test requirements
+          if [ -f tests/requirements.txt ]; then pip install -r tests/requirements.txt; fi
+    
+      # Runs a single command using the runners shell
+      - name: Welcome message
+        run: echo Test build on python 3.8!
+
+      # Set environment variables.
+      # We disable numba jit compilation to print the numpy-error.
+      - name: Set environment variables
+        run: |
+          if [[ "${{ matrix.python-version }}" == "3.8" ]]; then 
+            echo "NUMBA_DISABLE_JIT=1" >> $GITHUB_ENV
+          fi
+        
+      # Run pytest
+      - name: Unittest using pytest and coverage
+        run: |
+          if [[ "${{ matrix.python-version }}" == "3.8" ]]; then 
+            pytest --cov=./ --cov-report=xml
+          fi

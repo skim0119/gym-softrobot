@@ -1,0 +1,14 @@
+[run]
+branch = True
+source=gym_softrobot
+   
+[report]
+# Regexes for lines to exclude from consideration
+exclude_lines =
+    # Don't complain if non-runnable code isn't run:
+    raise NotImplementedError
+    if __name__ == .__main__.:
+omit =
+    tests/*
+    run_test/*
+    setup.py

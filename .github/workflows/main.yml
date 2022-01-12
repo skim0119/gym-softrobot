@@ -12,6 +12,8 @@ on:
     branches:
     - main
     - update*
+  schedule:
+  - cron: "0 2 * * 1-5"
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -92,6 +94,5 @@ jobs:
       - name: Unittest using pytest and coverage
         run: |
           if [[ "${{ matrix.python-version }}" == "3.8" ]]; then 
-            python3 -m pytest
             pytest --cov=./ --cov-report=xml
           fi

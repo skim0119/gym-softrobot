@@ -91,8 +91,8 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    #packages=find_packages(exclude=["tests"]),
-    py_modules=['gym_softrobot'],
+    packages=find_packages(exclude=["tests"]),
+    #py_modules=['gym_softrobot'],
     license="MIT",
     classifiers=[
         # Trove classifiers

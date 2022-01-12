@@ -30,8 +30,25 @@ Please use this bibtex to cite in your publications:
 
 ## Installation
 
-```
+```bash
 pip install gym-softrobot
+```
+
+To test the installation, you can run couple steps of the environment as the following.
+```py
+import gym 
+import gym_softrobot
+env = gym.make('OctoFlat-v0', policy_mode='centralized')
+
+# env is created, now we can use it: 
+for episode in range(2): 
+    observation = env.reset()
+    for step in range(50):
+        action = env.action_space.sample() 
+        observation, reward, done, info = env.step(action[None])
+        print(f"{episode=:2} |{step=:2}, {reward=}, {done=}")
+        if done:
+            break
 ```
 
 ## Reinforcement Learning Example

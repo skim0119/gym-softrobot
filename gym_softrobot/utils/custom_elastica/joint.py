@@ -169,9 +169,13 @@ class FixedJoint2Rigid(FreeJoint):
         torque = np.cross(link_direction, forcedirection)[0]
 
         # The opposite torque will be applied on link one
-        rod_one_external_torques[..., index_one] -= (
-            rod_one_director_collection[..., index_one] @ torque
-        )
-        rod_two_external_torques[..., index_two] += (
-            rod_two_director_collection[..., index_two] @ torque
-        )
+        for i in range(3):
+            for j in range(3):
+                rod_one_external_torques[i, index_one] -= rod_one_director_collection[i,j,index_one] * torque[j]
+                rod_two_external_torques[i, index_two] += rod_two_director_collection[i,j,index_two] * torque[j]
+        #rod_one_external_torques[..., index_one] -= (
+        #    rod_one_director_collection[..., index_one] @ torque
+        #)
+        #rod_two_external_torques[..., index_two] += (
+        #    rod_two_director_collection[..., index_two] @ torque
+        #)

@@ -443,3 +443,6 @@ class FlatEnv(core.Env):
 
     def close(self):
         pass
+
+    def _build(self):
+        pass

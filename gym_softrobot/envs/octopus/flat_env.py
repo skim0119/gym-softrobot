@@ -47,10 +47,10 @@ class FlatEnv(core.Env):
     metadata = {'render.modes': ['rgb_array', 'human']}
 
     def __init__(self,
-            final_time=10.0,
-            time_step=1.0e-5,
-            recording_fps=40,
-            n_elems=40,
+            final_time=5.0,
+            time_step=5.0e-5,
+            recording_fps=5,
+            n_elems=10,
             n_arm=5,
             config_generate_video=False,
             config_save_head_data=False,
@@ -71,7 +71,7 @@ class FlatEnv(core.Env):
         self.policy_mode = policy_mode
 
         self.friction_symmetry = False
-        self.friction_coeff = 1.0
+        self.friction_coef = 1.0
 
         # Spaces
         self.n_action = 3 # number of interpolation point
@@ -105,6 +105,14 @@ class FlatEnv(core.Env):
 
         self.config_generate_video = config_generate_video
         self.config_save_head_data = config_save_head_data
+
+        # Determinism
+        self.seed()
+
+    def seed(self, seed=None):
+        # Deprecated in new gym
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
     def summary(self,):
         print(f"""
@@ -287,7 +295,7 @@ class FlatEnv(core.Env):
         # self.bias=self.shearable_rod.compute_position_center_of_mass()[0].copy()
 
         # Set Target
-        self._target = (2-1)*np.random.random(2) + 1
+        self._target = (2-1)*self.np_random.random(2) + 1
         self._target /= np.linalg.norm(self._target)
 
         # Initial State
@@ -296,7 +304,7 @@ class FlatEnv(core.Env):
         return state
 
     def get_state(self):
-        states = defaultdict(list)
+        states = {}
         # Build state
         kappa_state = np.vstack([rod.kappa[0] for rod in self.shearable_rods])
         pos_state1 = np.vstack([rod.position_collection[0] for rod in self.shearable_rods]) # x
@@ -311,18 +319,15 @@ class FlatEnv(core.Env):
             raise NotImplementedError
         individual_state = np.hstack([
             kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
-            previous_action])
+            previous_action]).astype(np.float32)
         shared_state = np.concatenate([
             self._target, # 2
             self.rigid_rod.position_collection[:,0], # 3
             self.rigid_rod.velocity_collection[:,0], # 3
             self.rigid_rod.director_collection[:,:,0].ravel(), # 9
-            ])
-        states["individual"].append(individual_state)
-        states["shared"].append(shared_state)
-        # Wrap numpy array
-        for k in states:
-            states[k] = np.array(states[k])
+            ], dtype=np.float32)
+        states["individual"] = individual_state
+        states["shared"] = shared_state
         return states
 
     def set_action(self, action):

@@ -5,11 +5,11 @@ import pytest
 from gym import envs
 import gym_softrobot
 
-ENVIRONMENT_IDS = ("OctoFlat-v0",)
+from tests.envs.spec_list import spec_list 
 
-@pytest.mark.parametrize("environment_id", env_list)
-def test_serialize_deserialize(environment_id):
-    env = envs.make(environment_id)
+@pytest.mark.parametrize("spec", spec_list)
+def test_serialize_deserialize(spec):
+    env = spec.make()
     env.reset()
 
     with pytest.raises(AssertionError, match="invalid"):

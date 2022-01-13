@@ -22,10 +22,10 @@ register(
 #)
 
 """ Snake Environment """
-#register(
-#    id='ContinuumSnake-v0',
-#    entry_point='gym_softrobot.envs.snake:ContinuumSnakeEnv',
-#)
+register(
+    id='ContinuumSnake-v0',
+    entry_point='gym_softrobot.envs.snake:ContinuumSnakeEnv',
+)
 
 """ Simple Control Environment """
 #register(

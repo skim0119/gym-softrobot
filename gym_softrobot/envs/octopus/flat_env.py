@@ -1,4 +1,7 @@
+from typing import Optional
+
 import gym
+from gym import core
 from gym import error, spaces, utils
 from gym.utils import seeding
 
@@ -29,7 +32,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
     pass
 
 
-class FlatEnv(gym.Env):
+class FlatEnv(core.Env):
     """
     Description:
     Source:
@@ -68,6 +71,9 @@ class FlatEnv(gym.Env):
         self.n_seg = n_elems-1
         self.n_body = n_body
         self.policy_mode = policy_mode
+
+        self.friction_symmetry = False
+        self.friction_coeff = 1.0
 
         # Spaces
         self.n_action = 3 # number of interpolation point
@@ -117,8 +123,7 @@ class FlatEnv(gym.Env):
         {self.reward_range=}
         """)
 
-    def reset(self,):
-        #print("resetting")
+    def reset(self):
         self.simulator = BaseSimulator()
 
         """ Set up an arm """
@@ -240,9 +245,14 @@ class FlatEnv(gym.Env):
         slip_velocity_tol = 1e-8
         froude = 0.1
         mu = base_length / (period * period * np.abs(gravitational_acc) * froude)
-        kinetic_mu_array = np.array(
-            [mu, 1.5 * mu, 2.0 * mu]
-        )  # [forward, backward, sideways]
+        if self.friction_symmetry:
+            kinetic_mu_array = np.array(
+                [mu, mu, mu]
+            ) * self.friction_coef  # [forward, backward, sideways]
+        else:
+            kinetic_mu_array = np.array(
+                [mu, 1.5 * mu, 2.0 * mu]
+            ) * self.friction_coef # [forward, backward, sideways]
         static_mu_array = 2 * kinetic_mu_array
         for body_i in range(self.n_body):
             for arm_i in range(self.n_arm):
@@ -350,9 +360,13 @@ class FlatEnv(gym.Env):
                 self._prev_action[body_i][:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
             else:
                 raise NotImplementedError
-            reshaped_kappa = np.concatenate([np.zeros((self.n_arm, 1)), reshaped_kappa], axis=1)
+            reshaped_kappa = np.concatenate([
+                    np.zeros((self.n_arm, 1)),
+                    reshaped_kappa,
+                    np.zeros((self.n_arm, 1)),
+                ], axis=1)
             reshaped_kappa = interp1d(
-                    np.linspace(0,1,self.n_action+1),
+                    np.linspace(0,1,self.n_action+2),
                     reshaped_kappa,
                     kind='cubic'
                 )(np.linspace(0,1,self.n_seg))
@@ -372,7 +386,7 @@ class FlatEnv(gym.Env):
         self.set_action(rest_kappa)
 
         """ Post-simulation """
-        xposbefore_list = [rb.position_collection[0:2,0].copy() for rb in self. rigid_rods]
+        xposbefore_list = [rb.position_collection[0:2,0].copy() for rb in self.rigid_rods]
 
         """ Run the simulation for one step """
         stime = time.perf_counter()

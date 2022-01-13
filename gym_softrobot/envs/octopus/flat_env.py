@@ -51,7 +51,6 @@ class FlatEnv(core.Env):
             time_step=1.0e-5,
             recording_fps=40,
             n_elems=40,
-            n_body=1,
             n_arm=5,
             config_generate_video=False,
             config_save_head_data=False,
@@ -69,7 +68,6 @@ class FlatEnv(core.Env):
         self.n_arm = n_arm
         self.n_elems = n_elems
         self.n_seg = n_elems-1
-        self.n_body = n_body
         self.policy_mode = policy_mode
 
         self.friction_symmetry = False
@@ -97,10 +95,10 @@ class FlatEnv(core.Env):
         self.metadata= {}
         self.reward_range=50.0
         if policy_mode == 'centralized':
-            self._prev_action = np.zeros([n_body]+list(self.action_space.shape),
+            self._prev_action = np.zeros(list(self.action_space.shape),
                     dtype=self.action_space.dtype)
         elif policy_mode == 'decentralized':
-            self._prev_action = np.zeros([n_body, n_arm]+list(self.action_space.shape),
+            self._prev_action = np.zeros([n_arm]+list(self.action_space.shape),
                     dtype=self.action_space.dtype)
         else:
             raise NotImplementedError
@@ -144,47 +142,44 @@ class FlatEnv(core.Env):
         self.angle_list=[rotation_angle*arm_i for arm_i in range(self.n_arm)]
 
         self.shearable_rods=[]  # arms
-        self.rigid_rods=[]  # heads
-        for body_i in range(self.n_body):
-            for arm_i in range(self.n_arm):
-                rod = CosseratRod.straight_rod(
-                    n_elements=n_elem,
-                    start=z_rotation(np.array([rigid_rod_radius, 0.0, 0.0]),self.angle_list[arm_i]),
-                    direction=z_rotation(np.array([1.0, 0.0, 0.0]),self.angle_list[arm_i]),
-                    normal=np.array([0.0, 0.0, 1.0]),
-                    base_length=L0,
-                    base_radius=r0,
-                    density=1000.0,
-                    nu=1e-3,
-                    youngs_modulus=1e6,
-                    poisson_ratio=0.5,
-                    # nu_for_torques=damp_coefficient*((radius_mean/radius_base)**4),
-                )
-                self.shearable_rods.append(rod)
-                self.simulator.append(rod)
+        for arm_i in range(self.n_arm):
+            rod = CosseratRod.straight_rod(
+                n_elements=n_elem,
+                start=z_rotation(np.array([rigid_rod_radius, 0.0, 0.0]),self.angle_list[arm_i]),
+                direction=z_rotation(np.array([1.0, 0.0, 0.0]),self.angle_list[arm_i]),
+                normal=np.array([0.0, 0.0, 1.0]),
+                base_length=L0,
+                base_radius=r0,
+                density=1000.0,
+                nu=1e-3,
+                youngs_modulus=1e6,
+                poisson_ratio=0.5,
+                # nu_for_torques=damp_coefficient*((radius_mean/radius_base)**4),
+            )
+            self.shearable_rods.append(rod)
+            self.simulator.append(rod)
 
-            """ Add head """
-            # setting up test params
-            start = np.zeros((3,))
-            direction = np.array([0.0, 0.0, 1.0])
-            normal = np.array([0.0, 1.0, 0.0])
-            binormal = np.cross(direction, normal)
-            base_area = np.pi * rigid_rod_radius ** 2
-            density = 1000
+        """ Add head """
+        # setting up test params
+        start = np.zeros((3,))
+        direction = np.array([0.0, 0.0, 1.0])
+        normal = np.array([0.0, 1.0, 0.0])
+        binormal = np.cross(direction, normal)
+        base_area = np.pi * rigid_rod_radius ** 2
+        density = 1000
 
-            rigid_rod = Cylinder(start, direction, normal, rigid_rod_length, rigid_rod_radius, density)
-            self.simulator.append(rigid_rod)
-            self.rigid_rods.append(rigid_rod)
+        self.rigid_rod = Cylinder(start, direction, normal, rigid_rod_length, rigid_rod_radius, density)
+        self.simulator.append(self.rigid_rod)
 
-            """ Set up boundary conditions """
-            for arm_i in range(self.n_arm):
-                _k = 1e2
-                _kt = _k / 100
-                a = self.n_arm * body_i + arm_i
-                self.simulator.connect(
-                    first_rod=rigid_rod, second_rod=self.shearable_rods[a], first_connect_idx=-1, second_connect_idx=0
-                ).using(FixedJoint2Rigid, k=_k, nu=1e-3, kt=_kt,angle=self.angle_list[arm_i],radius=rigid_rod_radius)
+        """ Set up boundary conditions """
+        for arm_i in range(self.n_arm):
+            _k = 1e6
+            _kt = 1e-2
+            self.simulator.connect(
+                first_rod=self.rigid_rod, second_rod=self.shearable_rods[arm_i], first_connect_idx=-1, second_connect_idx=0
+            ).using(FixedJoint2Rigid, k=_k, nu=1e-3, kt=_kt,angle=self.angle_list[arm_i],radius=rigid_rod_radius)
 
+        # CallBack
         if self.config_generate_video:
             self.rod_parameters_dict_list=[]
             for arm in self.shearable_rods:
@@ -195,26 +190,21 @@ class FlatEnv(core.Env):
                     callback_params=rod_parameters_dict
                 )
                 self.rod_parameters_dict_list.append(rod_parameters_dict)
-
         if self.config_save_head_data:
-            self.head_dicts = []
-            for rr in self.rigid_rods:
-                head_dict = defaultdict(list)
-                self.simulator.collect_diagnostics(rr).using(
-                    RigidCylinderCallBack, step_skip=self.step_skip, callback_params=head_dict
-                )
-                self.head_dicts.append(head_dict)
+            self.head_dict = defaultdict(list)
+            self.simulator.collect_diagnostics(self.rigid_rod).using(
+                RigidCylinderCallBack, step_skip=self.step_skip, callback_params=self.head_dict
+            )
+
         """Add gravity forces"""
         gravitational_acc = -9.81
-        for body_i in range(self.n_body):
-            for arm_i in range(self.n_arm):
-                a = self.n_arm * body_i + arm_i
-                self.simulator.add_forcing_to(self.shearable_rods[a]).using(
-                        GravityForces, acc_gravity=np.array([0.0, 0.0,gravitational_acc])
-                    )
-            self.simulator.add_forcing_to(self.rigid_rods[body_i]).using(
-                        GravityForces, acc_gravity=np.array([0.0, 0.0,gravitational_acc])
-                    )
+        for arm_i in range(self.n_arm):
+            self.simulator.add_forcing_to(self.shearable_rods[arm_i]).using(
+                    GravityForces, acc_gravity=np.array([0.0, 0.0,gravitational_acc])
+                )
+        self.simulator.add_forcing_to(self.rigid_rod).using(
+                    GravityForces, acc_gravity=np.array([0.0, 0.0,gravitational_acc])
+                )
 
         """ Add drag force """
         # dl = L0 / n_elem
@@ -254,33 +244,30 @@ class FlatEnv(core.Env):
                 [mu, 1.5 * mu, 2.0 * mu]
             ) * self.friction_coef # [forward, backward, sideways]
         static_mu_array = 2 * kinetic_mu_array
-        for body_i in range(self.n_body):
-            for arm_i in range(self.n_arm):
-                a = self.n_arm * body_i + arm_i
-                self.simulator.add_forcing_to(self.shearable_rods[a]).using(
-                    AnisotropicFrictionalPlane,
-                    k=1.0,
-                    nu=1e-6,
-                    plane_origin=origin_plane,
-                    plane_normal=normal_plane,
-                    slip_velocity_tol=slip_velocity_tol,
-                    static_mu_array=static_mu_array,
-                    kinetic_mu_array=kinetic_mu_array,
-                )
-        mu = base_length / (period * period * np.abs(gravitational_acc) * froude)
-        kinetic_mu_array = np.array([mu, mu, mu])  # [forward, backward, sideways]
-        static_mu_array = 2 * kinetic_mu_array
-        for body_i in range(self.n_body):
-            self.simulator.add_forcing_to(self.rigid_rods[body_i]).using(
-                AnisotropicFrictionalPlaneRigidBody,
+        for arm_i in range(self.n_arm):
+            self.simulator.add_forcing_to(self.shearable_rods[arm_i]).using(
+                AnisotropicFrictionalPlane,
                 k=1.0,
-                nu=1e0,
+                nu=1e-6,
                 plane_origin=origin_plane,
                 plane_normal=normal_plane,
                 slip_velocity_tol=slip_velocity_tol,
                 static_mu_array=static_mu_array,
                 kinetic_mu_array=kinetic_mu_array,
             )
+        mu = base_length / (period * period * np.abs(gravitational_acc) * froude)
+        kinetic_mu_array = np.array([mu, mu, mu])  # [forward, backward, sideways]
+        static_mu_array = 2 * kinetic_mu_array
+        self.simulator.add_forcing_to(self.rigid_rod).using(
+            AnisotropicFrictionalPlaneRigidBody,
+            k=1.0,
+            nu=1e0,
+            plane_origin=origin_plane,
+            plane_normal=normal_plane,
+            slip_velocity_tol=slip_velocity_tol,
+            static_mu_array=static_mu_array,
+            kinetic_mu_array=kinetic_mu_array,
+        )
 
         """ Finalize the simulator and create time stepper """
         self.StatefulStepper = PositionVerlet()
@@ -306,75 +293,60 @@ class FlatEnv(core.Env):
         # Initial State
         state = self.get_state()
 
-        #
-        self._pre_done = np.zeros(self.n_body, dtype=bool)
-
         return state
 
-    def get_state(self, dones=None):
+    def get_state(self):
         states = defaultdict(list)
         # Build state
-        for i in range(self.n_body):
-            a = self.n_arm * i
-            b = self.n_arm * (i+1)
-            if dones is None or (not dones[i]):
-                kappa_state = np.vstack([rod.kappa[0] for rod in self.shearable_rods[a:b]])
-                pos_state1 = np.vstack([rod.position_collection[0] for rod in self.shearable_rods[a:b]]) # x
-                pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods[a:b]]) # y
-                vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods[a:b]]) # x
-                vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods[a:b]]) # y
-                if self.policy_mode == 'decentralized':
-                    previous_action = self._prev_action[i, :, :]
-                elif self.policy_mode == 'centralized':
-                    previous_action = self._prev_action[i, :].reshape([self.n_arm, self.n_action])
-                else:
-                    raise NotImplementedError
-                individual_state = np.hstack([
-                    kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
-                    previous_action])
-                shared_state = np.concatenate([
-                    self._target, # 2
-                    self.rigid_rods[i].position_collection[:,0], # 3
-                    self.rigid_rods[i].velocity_collection[:,0], # 3
-                    self.rigid_rods[i].director_collection[:,:,0].ravel(), # 9
-                    ])
-                states["individual"].append(individual_state)
-                states["shared"].append(shared_state)
-            else:
-                for k, v in self.observation_space.spaces.items():
-                    shape = v.shape
-                    if self.policy_mode == "decentralized" and k != 'shared':
-                        shape = tuple([self.n_arm]+list(shape))
-                    states[k].append(np.zeros(shape, dtype=v.dtype))
+        kappa_state = np.vstack([rod.kappa[0] for rod in self.shearable_rods])
+        pos_state1 = np.vstack([rod.position_collection[0] for rod in self.shearable_rods]) # x
+        pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods]) # y
+        vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods]) # x
+        vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
+        if self.policy_mode == 'decentralized':
+            previous_action = self._prev_action[:, :]
+        elif self.policy_mode == 'centralized':
+            previous_action = self._prev_action.reshape([self.n_arm, self.n_action])
+        else:
+            raise NotImplementedError
+        individual_state = np.hstack([
+            kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
+            previous_action])
+        shared_state = np.concatenate([
+            self._target, # 2
+            self.rigid_rod.position_collection[:,0], # 3
+            self.rigid_rod.velocity_collection[:,0], # 3
+            self.rigid_rod.director_collection[:,:,0].ravel(), # 9
+            ])
+        states["individual"].append(individual_state)
+        states["shared"].append(shared_state)
         # Wrap numpy array
         for k in states:
             states[k] = np.array(states[k])
         return states
 
     def set_action(self, action):
-        for body_i in range(self.n_body):
-            reshaped_kappa  = action[body_i].reshape((self.n_arm, self.n_action))
-            if self.policy_mode == "decentralized":
-                self._prev_action[body_i][:] = reshaped_kappa
-            elif self.policy_mode == "centralized":
-                self._prev_action[body_i][:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
-            else:
-                raise NotImplementedError
-            reshaped_kappa = np.concatenate([
-                    np.zeros((self.n_arm, 1)),
-                    reshaped_kappa,
-                    np.zeros((self.n_arm, 1)),
-                ], axis=1)
-            reshaped_kappa = interp1d(
-                    np.linspace(0,1,self.n_action+2),
-                    reshaped_kappa,
-                    kind='cubic'
-                )(np.linspace(0,1,self.n_seg))
-            for arm_i in range(self.n_arm):
-                a = self.n_arm * body_i + arm_i
-                self.shearable_rods[a].rest_kappa[0, :] = reshaped_kappa[arm_i]
-                #self.shearable_rods[a].rest_sigma[1, :] = self.rest_sigma[1,:] #rest_sigma.copy()
-                #self.shearable_rods[a].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
+        reshaped_kappa  = action.reshape((self.n_arm, self.n_action))
+        if self.policy_mode == "decentralized":
+            self._prev_action[:] = reshaped_kappa
+        elif self.policy_mode == "centralized":
+            self._prev_action[:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
+        else:
+            raise NotImplementedError
+        reshaped_kappa = np.concatenate([
+                np.zeros((self.n_arm, 1)),
+                reshaped_kappa,
+                np.zeros((self.n_arm, 1)),
+            ], axis=1)
+        reshaped_kappa = interp1d(
+                np.linspace(0,1,self.n_action+2),
+                reshaped_kappa,
+                kind='cubic'
+            )(np.linspace(0,1,self.n_seg))
+        for arm_i in range(self.n_arm):
+            self.shearable_rods[arm_i].rest_kappa[0, :] = reshaped_kappa[arm_i]
+            #self.shearable_rods[arm_i].rest_sigma[1, :] = self.rest_sigma[1,:] #rest_sigma.copy()
+            #self.shearable_rods[arm_i].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
 
     def step(self, action):
         err_msg = f"{action!r} ({type(action)}) invalid: expected {self.action_space}"
@@ -386,7 +358,7 @@ class FlatEnv(core.Env):
         self.set_action(rest_kappa)
 
         """ Post-simulation """
-        xposbefore_list = [rb.position_collection[0:2,0].copy() for rb in self.rigid_rods]
+        xposbefore = self.rigid_rod.position_collection[0:2,0].copy() 
 
         """ Run the simulation for one step """
         stime = time.perf_counter()
@@ -401,52 +373,39 @@ class FlatEnv(core.Env):
         etime = time.perf_counter()
 
         """ Done is a boolean to reset the environment before episode is completed """
-        rewards = []
-        dones = []
-        for body_i in range(self.n_body):
-            if self._pre_done[body_i]:
-                rewards.append(0.0)
-                dones.append(True)
-                continue
-            a = self.n_arm * body_i
-            b = self.n_arm * (body_i+1)
-            done = False
-            survive_reward = 0.0
-            forward_reward = 0.0
-            control_cost = 0.0 # 0.5 * np.square(rest_kappa[body_i].ravel()).mean()
-            bending_energy = sum([rod.compute_bending_energy() for rod in self.shearable_rods[a:b]])
-            if np.isnan(bending_energy):
-                bending_energy = 10
-            #shear_energy = sum([rod.compute_shear_energy() for rod in self.shearable_rods[a:b]])
-            # Position of the rod cannot be NaN, it is not valid, stop the simulation
-            invalid_values_condition = _isnan_check(np.concatenate(
-                [rod.position_collection for rod in self.shearable_rods[a:b]] + 
-                [rod.velocity_collection for rod in self.shearable_rods[a:b]]
-                ))
+        done = False
+        survive_reward = 0.0
+        forward_reward = 0.0
+        control_cost = 0.0 # 0.5 * np.square(rest_kappa.ravel()).mean()
+        bending_energy = sum([rod.compute_bending_energy() for rod in self.shearable_rods])
+        if np.isnan(bending_energy):
+            bending_energy = 100
+        #shear_energy = sum([rod.compute_shear_energy() for rod in self.shearable_rods])
+        # Position of the rod cannot be NaN, it is not valid, stop the simulation
+        invalid_values_condition = _isnan_check(np.concatenate(
+            [rod.position_collection for rod in self.shearable_rods] + 
+            [rod.velocity_collection for rod in self.shearable_rods]
+            ))
 
-            if invalid_values_condition == True:
-                print(f" Nan detected in {body_i}-body simulation, exiting simulation now. {self.time=}")
-                done = True
-                survive_reward = -10.0
-            else:
-                xposafter = self.rigid_rods[body_i].position_collection[0:2,0]
-                forward_reward = (np.linalg.norm(self._target - xposafter) - 
-                    np.linalg.norm(self._target - xposbefore_list[body_i])) * 1e3
+        if invalid_values_condition == True:
+            print(f" Nan detected in, exiting simulation now. {self.time=}")
+            done = True
+            survive_reward = -100.0
+        else:
+            xposafter = self.rigid_rod.position_collection[0:2,0]
+            forward_reward = (np.linalg.norm(self._target - xposafter) - 
+                np.linalg.norm(self._target - xposbefore)) * 1e3
 
-            # print(self.rigid_rods[body_i].position_collection)
-            #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
-            if self.counter>=250 or self.time>self.final_time:
-                done=True
+        # print(self.rigid_rods.position_collection)
+        #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
+        if self.counter>=250 or self.time>self.final_time:
+            done=True
 
-            reward = forward_reward - control_cost + survive_reward - bending_energy
-            reward = forward_reward
-            #reward *= 10 # Reward scaling
-            #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
+        #reward = forward_reward - control_cost + survive_reward - bending_energy
+        reward = forward_reward
+        #reward *= 10 # Reward scaling
+        #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
             
-            rewards.append(reward)
-            dones.append(done)
-        rewards = np.array(rewards, dtype=np.float32)
-        dones = np.array(dones, dtype=bool)
 
         """ Return state:
             (1) current simulation time
@@ -454,16 +413,14 @@ class FlatEnv(core.Env):
             (3) a flag denotes whether the simulation runs correlectly
         """
         # systems = [self.shearable_rod]
-        states = self.get_state(dones)
+        states = self.get_state()
 
         # Info
-        info = {'time':self.time,
-                'done':dones,}
-        self._pre_done[:] = dones
+        info = {'time':self.time}
 
         self.counter += 1
 
-        return states, rewards, np.all(dones), info
+        return states, reward, done, info
 
     def save_data(self, filename_video, fps):
         

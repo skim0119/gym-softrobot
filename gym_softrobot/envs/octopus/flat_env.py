@@ -249,7 +249,7 @@ class FlatEnv(core.Env):
         forward_reward = 0.0
         control_cost = 0.0 # 0.5 * np.square(rest_kappa.ravel()).mean()
         bending_energy = 0.0 #sum([rod.compute_bending_energy() for rod in self.shearable_rods])
-        #shear_energy = sum([rod.compute_shear_energy() for rod in self.shearable_rods])
+        shear_energy = 0.0 # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(np.concatenate(
             [rod.position_collection for rod in self.shearable_rods] + 

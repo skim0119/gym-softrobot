@@ -10,42 +10,34 @@ import types
 
 from functools import partial
 import sys
-sys.path.append("../../../../") # include elastica-python directory
-sys.path.append("../../")       # include ActuationModel directory
-
-from set_environment import Environment
-
-from custom_ppo import CustomPPO
-
-from callback_func import OthersCallBack
+sys.path.append("..")
 
 import gym
+import gym_softrobot
 
 from stable_baselines3.common.vec_env import SubprocVecEnv #DummyVecEnv
-#from stable_baselines3 import PPO # ,A2C,DDPG,SAC
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.buffers import DictRolloutBuffer, RolloutBuffer
 from stable_baselines3.common.callbacks import CheckpointCallback, EveryNTimesteps
 
-if __name__ == "__main__":
 
+def main(ids):
     """ Create simulation environment
-    Total number of simulataneous data-collection is n_body * n_envs
+    Total number of simulataneous data-collection is n_envs
     """
-    final_time = 20.0
+    final_time = 30.0
     n_elems = 9
-    n_body = 1
-    n_arm = 5
-    fps = 5
+    n_arm = 8
+    fps = 4
 
     mode = "decentralized"
 
     # Set policy
     if mode == "centralized":
-        from custom_ppo import CustomPPO as module
+        from stable_baselines3 import PPO as module #A2C,DDPG,SAC
         policy = "MultiInputPolicy"
     elif mode == "decentralized": # Fully Decentralized
-        from custom_decppo import CustomDecPPO as module
+        from marl.dec_ppo import DecPPO as module
         policy = "MultiInputPolicy"
     elif mode == "DTCE":
         raise NotImplementedError
@@ -54,13 +46,13 @@ if __name__ == "__main__":
 
     env_kwargs = {
             'final_time': final_time,
-            'time_step': 4e-5, #8e-6,
+            'time_step': 5e-5, #8e-6,
             'recording_fps': fps,
             'n_elems': n_elems,
-            'n_body': n_body,
+            'n_arm': n_arm, 
             'policy_mode': mode,
         }
-    env = Environment(**env_kwargs, config_generate_video=True)
+    env = gym.make('OctoFlat-v0',**env_kwargs, config_generate_video=True)
     state = env.reset()
 
 
@@ -71,7 +63,7 @@ if __name__ == "__main__":
 
     # Load
     print("----- Loading -----")
-    model_path = "model/PPO_decentralized/run_11/rl_model_572800_steps.zip"
+    model_path = "model/PPO_decentralized/run_2/rl_model_1056000_steps.zip"
     model = module.load(model_path)
 
     total_steps = int(final_time * fps)#750 # 751
@@ -96,10 +88,10 @@ if __name__ == "__main__":
                 else:
                     val = state[key]
                     obs[key] = np.reshape(val, space.shape)
-            #obs = np.reshape(state, [n_body]+list(env.observation_space.shape))
+            #obs = np.reshape(state, list(env.observation_space.shape))
         action_kappa = model.predict(obs)[0]
         # Action reshape
-        action_kappa = np.reshape(action_kappa, [n_body,n_arm,-1])
+        action_kappa = np.reshape(action_kappa, [n_arm,-1])
         action_kappa = np.clip(action_kappa, env.action_space.low, env.action_space.high)
         state, reward, done, info = env.step(action_kappa)
         print(f'action stat: mean={action_kappa.mean()}, std={action_kappa.std()}, max={action_kappa.max()}, min={action_kappa.min()}, absmin={np.abs(action_kappa).min()}')
@@ -108,6 +100,10 @@ if __name__ == "__main__":
             break
 
     """ Save the data of the simulation """
-    path = f'PPO_{mode}_1.mp4' # Name
+    path = f'PPO_{mode}_{ids}.mp4' # Name
     env.save_data(path, fps)
+
+if __name__=="__main__":
+    for i in range(10):
+        main(i)
 

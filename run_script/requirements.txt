@@ -1,0 +1,3 @@
+tqdm>=4.62
+stable-baselines3
+tensorboard

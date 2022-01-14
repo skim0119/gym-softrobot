@@ -4,14 +4,13 @@
 </div>
 
 
-
 The environment is designed to leverage reinforcement learning methods into soft-robotics control, inspired from slender-body living creatures.
 The code is built on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for slender structure.
 We intend this package to be easy-to-install and fully compatible to [OpenAI Gym](https://github.com/openai/gym).
 
 Requirements:
 - Python 3.8+
-- OpenAI Gym
+- OpenAI Gym 0.21.0
 - PyElastica 0.2+
 - Matplotlib (optional for display rendering and plotting)
 
@@ -45,7 +44,7 @@ for episode in range(2):
     observation = env.reset()
     for step in range(50):
         action = env.action_space.sample() 
-        observation, reward, done, info = env.step(action[None])
+        observation, reward, done, info = env.step(action)
         print(f"{episode=:2} |{step=:2}, {reward=}, {done=}")
         if done:
             break
@@ -62,10 +61,16 @@ More advanced algorithms are still under development.
 
 ### Octopus[Multi-arm control]
 
-- `octo-flat` [2D]
-- `octo-reach`
-- `octo-swim`
-- `octo-flat`
+- `OctoFlat-v0`
+- `OctoReach-v0`
+- `OctoSwim-v0`
+- `OctoHunt-v0`
+
+### Snake
+
+- 'ContinuumSnake-v0'
+
+### Simple Control
 
 ## Contribution
 

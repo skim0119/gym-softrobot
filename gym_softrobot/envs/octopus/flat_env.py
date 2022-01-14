@@ -15,11 +15,9 @@ from scipy.interpolate import interp1d
 from elastica import *
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
-from elastica.interaction import AnisotropicFrictionalPlaneRigidBody
 
-from gym_softrobot.utils.actuation.forces.drag_force import DragForce
+from gym_softrobot.envs.octopus.build import build_octopus
 from gym_softrobot.utils.custom_elastica.callback_func import RodCallBack, RigidCylinderCallBack
-from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.render.post_processing import plot_video
 
 def z_rotation(vector, theta):
@@ -132,60 +130,11 @@ class FlatEnv(core.Env):
     def reset(self):
         self.simulator = BaseSimulator()
 
-        """ Set up an arm """
-        n_elem = self.n_elems            # number of discretized elements of the arm
-        L0 = 0.35                # total length of the arm
-        r0 = L0 * 0.011
-
-        rigid_rod_length = r0 * 2
-        rigid_rod_radius = 0.05
-
-        # radius_base = r0     # radius of the arm at the base
-        # radius_tip = r0     # radius of the arm at the tip
-        # radius = np.linspace(radius_base, radius_tip, n_elem+1)
-        # radius_mean = (radius[:-1]+radius[1:])/2
-        # damp_coefficient = 0.02
-
-        rotation_angle=360/self.n_arm
-        self.angle_list=[rotation_angle*arm_i for arm_i in range(self.n_arm)]
-
-        self.shearable_rods=[]  # arms
-        for arm_i in range(self.n_arm):
-            rod = CosseratRod.straight_rod(
-                n_elements=n_elem,
-                start=z_rotation(np.array([rigid_rod_radius, 0.0, 0.0]),self.angle_list[arm_i]),
-                direction=z_rotation(np.array([1.0, 0.0, 0.0]),self.angle_list[arm_i]),
-                normal=np.array([0.0, 0.0, 1.0]),
-                base_length=L0,
-                base_radius=r0,
-                density=1000.0,
-                nu=1e-3,
-                youngs_modulus=1e6,
-                poisson_ratio=0.5,
-                # nu_for_torques=damp_coefficient*((radius_mean/radius_base)**4),
+        self.shearable_rods, self.rigid_rod = build_octopus(
+                self.simulator,
+                self.n_arm,
+                self.n_elems,
             )
-            self.shearable_rods.append(rod)
-            self.simulator.append(rod)
-
-        """ Add head """
-        # setting up test params
-        start = np.zeros((3,))
-        direction = np.array([0.0, 0.0, 1.0])
-        normal = np.array([0.0, 1.0, 0.0])
-        binormal = np.cross(direction, normal)
-        base_area = np.pi * rigid_rod_radius ** 2
-        density = 1000
-
-        self.rigid_rod = Cylinder(start, direction, normal, rigid_rod_length, rigid_rod_radius, density)
-        self.simulator.append(self.rigid_rod)
-
-        """ Set up boundary conditions """
-        for arm_i in range(self.n_arm):
-            _k = 1e6
-            _kt = 1e-2
-            self.simulator.connect(
-                first_rod=self.rigid_rod, second_rod=self.shearable_rods[arm_i], first_connect_idx=-1, second_connect_idx=0
-            ).using(FixedJoint2Rigid, k=_k, nu=1e-3, kt=_kt,angle=self.angle_list[arm_i],radius=rigid_rod_radius)
 
         # CallBack
         if self.config_generate_video:
@@ -203,79 +152,6 @@ class FlatEnv(core.Env):
             self.simulator.collect_diagnostics(self.rigid_rod).using(
                 RigidCylinderCallBack, step_skip=self.step_skip, callback_params=self.head_dict
             )
-
-        """Add gravity forces"""
-        gravitational_acc = -9.81
-        for arm_i in range(self.n_arm):
-            self.simulator.add_forcing_to(self.shearable_rods[arm_i]).using(
-                    GravityForces, acc_gravity=np.array([0.0, 0.0,gravitational_acc])
-                )
-        self.simulator.add_forcing_to(self.rigid_rod).using(
-                    GravityForces, acc_gravity=np.array([0.0, 0.0,gravitational_acc])
-                )
-
-        """ Add drag force """
-        # dl = L0 / n_elem
-        # fluid_factor = 1
-        # r_bar = (radius_base + radius_tip) / 2
-        # sea_water_dentsity = 1022
-        # c_per = 0.41 / sea_water_dentsity / r_bar / dl * fluid_factor
-        # c_tan = 0.033 / sea_water_dentsity / np.pi / r_bar / dl * fluid_factor
-        #
-        # self.simulator.add_forcing_to(self.shearable_rod).using(
-        #     DragForce,
-        #     rho_environment=sea_water_dentsity,
-        #     c_per=c_per,
-        #     c_tan=c_tan,
-        #     system=self.shearable_rod,
-        #     step_skip=self.step_skip,
-        #     callback_params=self.rod_parameters_dict
-        # )
-
-        """Add friction forces (always the last thing before finalize)"""
-        normal = np.array([0.0, 0.0, 1.0])
-        base_length = L0
-        base_radius = r0
-        period = 2.0
-
-        origin_plane = np.array([0.0, 0.0, -base_radius])
-        normal_plane = normal
-        slip_velocity_tol = 1e-8
-        froude = 0.1
-        mu = base_length / (period * period * np.abs(gravitational_acc) * froude)
-        if self.friction_symmetry:
-            kinetic_mu_array = np.array(
-                [mu, mu, mu]
-            ) * self.friction_coef  # [forward, backward, sideways]
-        else:
-            kinetic_mu_array = np.array(
-                [mu, 1.5 * mu, 2.0 * mu]
-            ) * self.friction_coef # [forward, backward, sideways]
-        static_mu_array = 2 * kinetic_mu_array
-        for arm_i in range(self.n_arm):
-            self.simulator.add_forcing_to(self.shearable_rods[arm_i]).using(
-                AnisotropicFrictionalPlane,
-                k=1.0,
-                nu=1e-6,
-                plane_origin=origin_plane,
-                plane_normal=normal_plane,
-                slip_velocity_tol=slip_velocity_tol,
-                static_mu_array=static_mu_array,
-                kinetic_mu_array=kinetic_mu_array,
-            )
-        mu = base_length / (period * period * np.abs(gravitational_acc) * froude)
-        kinetic_mu_array = np.array([mu, mu, mu])  # [forward, backward, sideways]
-        static_mu_array = 2 * kinetic_mu_array
-        self.simulator.add_forcing_to(self.rigid_rod).using(
-            AnisotropicFrictionalPlaneRigidBody,
-            k=1.0,
-            nu=1e0,
-            plane_origin=origin_plane,
-            plane_normal=normal_plane,
-            slip_velocity_tol=slip_velocity_tol,
-            static_mu_array=static_mu_array,
-            kinetic_mu_array=kinetic_mu_array,
-        )
 
         """ Finalize the simulator and create time stepper """
         self.StatefulStepper = PositionVerlet()
@@ -395,7 +271,7 @@ class FlatEnv(core.Env):
         if invalid_values_condition == True:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
-            survive_reward = -100.0
+            survive_reward = -20.0
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             forward_reward = (np.linalg.norm(self._target - xposafter) - 
@@ -442,7 +318,4 @@ class FlatEnv(core.Env):
         pass
 
     def close(self):
-        pass
-
-    def _build(self):
         pass

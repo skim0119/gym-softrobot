@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 .*.swp
 
+logs
+model
+save
+
 # C extensions
 *.so
 

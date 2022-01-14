@@ -5,6 +5,8 @@ __doc__ = """Snake friction case from X. Zhang et. al. Nat. Comm. 2021"""
 from collections import defaultdict
 from functools import partial
 
+from tqdm import tqdm
+
 import gym
 from gym import error, spaces, utils
 from gym.utils import seeding
@@ -14,12 +16,11 @@ from elastica.utils import _bspline
 
 import numpy as np
 
-#from examples.ContinuumSnakeCase.continuum_snake_postprocessing import (
-#    plot_snake_velocity,
-#    plot_video,
-#    compute_projected_velocity,
-#    plot_curvature,
-#)
+from gym_softrobot.utils.render.continuum_snake_postprocessing import (
+    plot_snake_velocity,
+    plot_video,
+    plot_curvature,
+)
 
 def compute_projected_velocity(plot_params: dict, period):
 
@@ -121,7 +122,7 @@ class ContinuumSnakeEnv(gym.Env):
 
     def __init__(self):
         # Action space
-        action_space_low = -np.ones(7) * 1e-2; action_space_low[-1] = 0.0
+        action_space_low = -np.ones(7) * 1e-2; action_space_low[-1] = 0.5
         action_space_high = np.ones(7) * 1e-2; action_space_high[-1] = 3.0
         self.action_space = spaces.Box(action_space_low, action_space_high, dtype=np.float32)
 
@@ -193,8 +194,8 @@ class ContinuumSnakeEnv(gym.Env):
 
     def render(self, mode='human', close=False):
         filename_plot = "continuum_snake_velocity.png"
-        plot_snake_velocity(self.data, self.period, filename_plot, SAVE_FIGURE)
-        plot_curvature(self.data, self.shearable_rod.rest_lengths, self.period, SAVE_FIGURE)
+        plot_snake_velocity(self.data, self.period, filename_plot, 1)
+        plot_curvature(self.data, self.shearable_rod.rest_lengths, self.period, 1)
 
         if SAVE_VIDEO:
             filename_video = "continuum_snake.mp4"

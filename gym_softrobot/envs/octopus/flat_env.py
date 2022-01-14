@@ -138,7 +138,7 @@ class FlatEnv(core.Env):
         r0 = L0 * 0.011
 
         rigid_rod_length = r0 * 2
-        rigid_rod_radius = 0.005 * 10
+        rigid_rod_radius = 0.05
 
         # radius_base = r0     # radius of the arm at the base
         # radius_tip = r0     # radius of the arm at the tip

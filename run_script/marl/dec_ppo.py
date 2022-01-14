@@ -20,7 +20,12 @@ from stable_baselines3.common.buffers import DictRolloutBuffer, RolloutBuffer
 from custom_ppo import CustomPPO
 
 
-class CustomDecPPO(CustomPPO):
+class CustomDecPPO(PPO):
+    def __init__(self, n_agent=5, progress_bar=True, **kwargs):
+        self.n_agent = n_agent
+        self.progress_bar = progress_bar
+        super(CustomDecPPO, self).__init__(**kwargs)
+
     def _setup_model(self) -> None:
         super(CustomPPO, self)._setup_model()
         """ Customize model to support multiple body """
@@ -32,7 +37,7 @@ class CustomDecPPO(CustomPPO):
             device=self.device,
             gamma=self.gamma,
             gae_lambda=self.gae_lambda,
-            n_envs=self.n_envs*self.n_duplicate_data*self.n_agent,
+            n_envs=self.n_envs*self.n_agent,
         )
 
     def collect_rollouts(
@@ -59,7 +64,7 @@ class CustomDecPPO(CustomPPO):
         self.policy.set_training_mode(False)
 
         n_steps = 0
-        env_num_envs = env.num_envs * self.n_duplicate_data * self.n_agent
+        env_num_envs = env.num_envs * self.n_agent
 
         rollout_buffer.reset()
         # Sample new weights for the state dependent exploration
@@ -102,7 +107,7 @@ class CustomDecPPO(CustomPPO):
             # Reshape actions
             reshaped_actions = np.reshape(
                     clipped_actions,
-                    [env.num_envs,self.n_duplicate_data,self.n_agent]+list(self.action_space.shape))
+                    [env.num_envs,self.n_agent]+list(self.action_space.shape))
 
             try:
                 new_obs, rewards, _, infos = env.step(reshaped_actions)

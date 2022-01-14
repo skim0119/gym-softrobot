@@ -20,11 +20,6 @@ from gym_softrobot.envs.octopus.build import build_octopus
 from gym_softrobot.utils.custom_elastica.callback_func import RodCallBack, RigidCylinderCallBack
 from gym_softrobot.utils.render.post_processing import plot_video
 
-def z_rotation(vector, theta):
-    theta = theta / 180.0 * np.pi
-    R = np.array([[np.cos(theta), -np.sin(theta),0.0],[np.sin(theta), np.cos(theta),0],[0.0,0.0,1.0]])
-    return np.dot(R,vector.T).T
-
 
 class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
     pass
@@ -67,9 +62,6 @@ class FlatEnv(core.Env):
         self.n_elems = n_elems
         self.n_seg = n_elems-1
         self.policy_mode = policy_mode
-
-        self.friction_symmetry = False
-        self.friction_coef = 1.0
 
         # Spaces
         self.n_action = 3 # number of interpolation point

@@ -8,12 +8,10 @@ import types
 
 from functools import partial
 import sys
-
-from set_environment import Environment
-
-from callback_func import OthersCallBack
+sys.path.append("..")
 
 import gym
+import gym_softrobot
 
 from stable_baselines3.common.vec_env import SubprocVecEnv
 from stable_baselines3.common.env_util import make_vec_env
@@ -24,13 +22,13 @@ if __name__ == "__main__":
     """ Create simulation environment
     Total number of simulataneous data-collection is n_envs
     """
-    runid = 1  # TAG: Repeated run will append another id
+    runid = 2  # TAG: Repeated run will append another id
 
     final_time = 10.0
     fps = 4
     n_elems = 9
     n_arm = 8
-    n_envs = 4
+    n_envs = 12
     mode = "decentralized"
 
     # Set policy
@@ -38,7 +36,7 @@ if __name__ == "__main__":
         from stable_baselines3 import PPO as module #A2C,DDPG,SAC
         policy = "MultiInputPolicy"
     elif mode == "decentralized": # Fully Decentralized
-        from custom_decppo import CustomDecPPO as module
+        from marl.dec_ppo import DecPPO as module
         policy = "MultiInputPolicy"
     elif mode == "DTCE":
         raise NotImplementedError
@@ -47,19 +45,19 @@ if __name__ == "__main__":
 
     # Number of steps to run for each environment per update 
     # The total rollout buffer size will be n_steps * n_envs (* n_arm if decentralized)
-    n_steps = 120
+    n_steps = 40
     loop_freq = n_steps * n_envs
 
     #env = Environment(final_time, time_step = 8e-6,recording_fps=30,n_elems=n_elems)
     env_kwargs = {
             'final_time': final_time,
-            'time_step': 8e-5, #8e-6,
+            'time_step': 5e-5, #8e-6,
             'recording_fps': fps,
             'n_elems': n_elems,
             'n_arm': n_arm,
             'policy_mode': mode,
         }
-    env = make_vec_env(Environment, n_envs=n_envs, env_kwargs=env_kwargs, vec_env_cls=SubprocVecEnv)
+    env = make_vec_env('OctoFlat-v0', n_envs=n_envs, env_kwargs=env_kwargs, vec_env_cls=SubprocVecEnv)
     state = env.reset()
 
     """ Save Configuration """
@@ -67,11 +65,6 @@ if __name__ == "__main__":
     tensorboard_log = f"./logs/{algo}/"
     tb_log_name = f"{algo}_run_{runid}"
     model_save_path = f"model/{algo}/run_{runid}"
-
-    """ Read arm params """
-    #step_skip = env.step_skip
-    #others_parameters_dict = defaultdict(list)
-    #others_callback = OthersCallBack(step_skip, others_parameters_dict)
 
     """ Start the simulation """
     print("Running simulation ...")
@@ -86,6 +79,7 @@ if __name__ == "__main__":
                 tensorboard_log=tensorboard_log,
                 n_steps=n_steps,
                 learning_rate=1e-3,
+                n_agent=n_arm,
                 progress_bar=True,
             )
     policy_kwargs = {
@@ -104,7 +98,7 @@ if __name__ == "__main__":
 
     """ Trains """
     print("----- Training -----")
-    checkpoint_callback = CheckpointCallback(save_freq=20, save_path=model_save_path,
+    checkpoint_callback = CheckpointCallback(save_freq=40, save_path=model_save_path,
             name_prefix='rl_model', verbose=2)
     model.learn(
             total_timesteps=10000000,

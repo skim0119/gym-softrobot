@@ -223,9 +223,6 @@ class FlatEnv(core.Env):
             #self.shearable_rods[arm_i].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
 
     def step(self, action):
-        err_msg = f"{action!r} ({type(action)}) invalid: expected {self.action_space}"
-        assert self.action_space.contains(action), err_msg
-
         rest_kappa = action # alias
 
         """ Set intrinsic strains (set actions) """
@@ -251,9 +248,7 @@ class FlatEnv(core.Env):
         survive_reward = 0.0
         forward_reward = 0.0
         control_cost = 0.0 # 0.5 * np.square(rest_kappa.ravel()).mean()
-        bending_energy = sum([rod.compute_bending_energy() for rod in self.shearable_rods])
-        if np.isnan(bending_energy):
-            bending_energy = 100
+        bending_energy = 0.0 #sum([rod.compute_bending_energy() for rod in self.shearable_rods])
         #shear_energy = sum([rod.compute_shear_energy() for rod in self.shearable_rods])
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(np.concatenate(
@@ -264,7 +259,7 @@ class FlatEnv(core.Env):
         if invalid_values_condition == True:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
-            survive_reward = -20.0
+            survive_reward = -50.0
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             forward_reward = (np.linalg.norm(self._target - xposafter) - 
@@ -275,8 +270,7 @@ class FlatEnv(core.Env):
         if self.counter>=250 or self.time>self.final_time:
             done=True
 
-        #reward = forward_reward - control_cost + survive_reward - bending_energy
-        reward = forward_reward
+        reward = forward_reward - control_cost + survive_reward - bending_energy
         #reward *= 10 # Reward scaling
         #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
             

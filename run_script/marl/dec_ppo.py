@@ -17,18 +17,16 @@ from stable_baselines3.common.vec_env import VecEnv
 from stable_baselines3 import PPO
 from stable_baselines3.common.buffers import DictRolloutBuffer, RolloutBuffer
 
-from custom_ppo import CustomPPO
 
-
-class CustomDecPPO(PPO):
+class DecPPO(PPO):
     def __init__(self, n_agent=5, progress_bar=True, **kwargs):
         self.n_agent = n_agent
         self.progress_bar = progress_bar
-        super(CustomDecPPO, self).__init__(**kwargs)
+        super(DecPPO, self).__init__(**kwargs)
 
     def _setup_model(self) -> None:
-        super(CustomPPO, self)._setup_model()
-        """ Customize model to support multiple body """
+        super(DecPPO, self)._setup_model()
+        """ Customize model to support multiple arm """
         buffer_cls = DictRolloutBuffer if isinstance(self.observation_space, gym.spaces.Dict) else RolloutBuffer
         self.rollout_buffer = buffer_cls(
             self.n_steps,
@@ -87,7 +85,7 @@ class CustomDecPPO(PPO):
             obs = {}
             for key, space in self.observation_space.spaces.items():
                 if key == 'shared':
-                    val = np.repeat(self._last_obs[key], self.n_agent, axis=2)
+                    val = np.repeat(self._last_obs[key], self.n_agent, axis=0)
                 else:
                     val = self._last_obs[key]
                 obs[key] = np.reshape(val, [env_num_envs]+list(space.shape))
@@ -110,14 +108,16 @@ class CustomDecPPO(PPO):
                     [env.num_envs,self.n_agent]+list(self.action_space.shape))
 
             try:
-                new_obs, rewards, _, infos = env.step(reshaped_actions)
+                new_obs, reward, done, infos = env.step(reshaped_actions)
             except EOFError:
                 print(reshaped_actions)
                 raise EOFError("Caught")
 
             # Reshape reward and dones
-            rewards = np.repeat(np.reshape(rewards, [-1]), self.n_agent)
-            dones = np.repeat(np.reshape([info['done'] for info in infos], [-1]), self.n_agent)
+            rewards = np.repeat(reward, self.n_agent)
+            dones = np.repeat(done, self.n_agent)
+
+            # Reshape infos
 
             self.num_timesteps += env_num_envs
 
@@ -137,15 +137,15 @@ class CustomDecPPO(PPO):
 
             # Handle timeout by bootstraping with value function
             # see GitHub issue #633
-            # TODO
             '''
             for idx, done in enumerate(dones):
+                info_idx = idx // self.n_agent
                 if (
                     done
-                    and infos[idx].get("terminal_observation") is not None
-                    and infos[idx].get("TimeLimit.truncated", False)
+                    and infos[info_idx].get("terminal_observation") is not None
+                    and infos[info_idx].get("TimeLimit.truncated", False)
                 ):
-                    terminal_obs = self.policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
+                    terminal_obs = self.policy.obs_to_tensor(infos[info_idx]["terminal_observation"])[0]
                     with th.no_grad():
                         terminal_value = self.policy.predict_values(terminal_obs)[0]
                     rewards[idx] += self.gamma * terminal_value
@@ -158,7 +158,7 @@ class CustomDecPPO(PPO):
         obs = {}
         for key, space in self.observation_space.spaces.items():
             if key == 'shared':
-                val = np.repeat(self._last_obs[key], self.n_agent, axis=2)
+                val = np.repeat(self._last_obs[key], self.n_agent, axis=0)
             else:
                 val = self._last_obs[key]
             obs[key] = np.reshape(val, [env_num_envs]+list(space.shape))

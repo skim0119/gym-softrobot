@@ -45,6 +45,7 @@ class FlatEnv(core.Env):
             recording_fps=5,
             n_elems=10,
             n_arm=5,
+            n_action=3,
             config_generate_video=False,
             config_save_head_data=False,
             policy_mode='centralized'
@@ -64,7 +65,7 @@ class FlatEnv(core.Env):
         self.policy_mode = policy_mode
 
         # Spaces
-        self.n_action = 3 # number of interpolation point
+        self.n_action = n_action # number of interpolation point
         shared_space = 17
         if policy_mode == 'centralized':
             self.action_space = spaces.Box(-np.inf, np.inf, shape=(self.n_arm*self.n_action,), dtype=np.float32)
@@ -199,7 +200,7 @@ class FlatEnv(core.Env):
         return states
 
     def set_action(self, action):
-        reshaped_kappa  = action.reshape((self.n_arm, self.n_action))
+        reshaped_kappa = action.reshape((self.n_arm, self.n_action))
         if self.policy_mode == "decentralized":
             self._prev_action[:] = reshaped_kappa
         elif self.policy_mode == "centralized":

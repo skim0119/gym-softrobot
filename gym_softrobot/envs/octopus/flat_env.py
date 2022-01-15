@@ -108,7 +108,6 @@ class FlatEnv(core.Env):
 
         # Rendering-related
         self.viewer = None
-        self.state_image = None
 
         # Determinism
         self.seed()
@@ -333,15 +332,19 @@ class FlatEnv(core.Env):
         cartheight = 30.0
 
         if self.viewer is None:
-            from gym.utils.render import pyglet_rendering
+            from gym_softrobot.utils.render import pyglet_rendering
+            from gym_softrobot.utils.render.povray_rendering import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
+            renderer = Session()
+            renderer.add_rods(self.shearable_rods)
+            renderer.add_rigid_body(self.rigid_rod)
+            renderer.add_rigid_body(self._target, 2)
 
-        if self.state_image is None:
-            return None
+        state_image = renderer.render()
 
-        self.viewer.imshow(self.state_image)
+        self.viewer.imshow(state_image)
 
-        return self.state_image
+        return state_image
 
     def close(self):
         if self.viewer:

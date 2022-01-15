@@ -65,18 +65,26 @@ class FlatEnv(core.Env):
         self.policy_mode = policy_mode
 
         # Spaces
-        self.n_action = n_action # number of interpolation point
+        self.n_action = n_action * 3 # number of interpolation point (3 for 3 curvatures)
         shared_space = 17
         if policy_mode == 'centralized':
-            self.action_space = spaces.Box(-np.inf, np.inf, shape=(self.n_arm*self.n_action,), dtype=np.float32)
-            self._observation_size = (self.n_arm, (self.n_seg + (self.n_elems+1) * 4 + self.n_action))
+            action_size = (n_arm*self.n_action,)
+            action_low = np.ones(self.n_action) * (-22); action_low[self.n_action//3:] = -5
+            action_high = np.ones(self.n_action) * (22); action_high[self.n_action//3:] =  5
+            action_low = np.repeat(action_low, n_arm)
+            action_high = np.repeat(action_high, n_arm)
+            self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
+            self._observation_size = (n_arm, (self.n_seg + (self.n_elems+1) * 4 + self.n_action))
             self.observation_space = spaces.Dict({
                 "individual": spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
                 "shared": spaces.Box(-np.inf, np.inf, shape=(shared_space,), dtype=np.float32)
             })
         elif policy_mode == 'decentralized':
-            self.action_space = spaces.Box(-np.inf, np.inf, shape=(self.n_action,), dtype=np.float32)
-            self._observation_size = ((self.n_seg + (self.n_elems+1) * 4 + self.n_action),)
+            action_size = (self.n_action,)
+            action_low = np.ones(action_size) * (-22); action_low[self.n_action//3:] = -5
+            action_high = np.ones(action_size) * (22); action_high[self.n_action//3:] =  5
+            self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
+            self._observation_size = ((self.n_seg + (self.n_elems+1) * 4 + self.n_action + n_arm),)
             self.observation_space = spaces.Dict({
                 "individual": spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
                 "shared": spaces.Box(-np.inf, np.inf, shape=(shared_space,), dtype=np.float32)
@@ -170,7 +178,7 @@ class FlatEnv(core.Env):
 
         # Set Target
         self._target = (2-1)*self.np_random.random(2) + 1
-        self._target /= np.linalg.norm(self._target)
+        #self._target /= np.linalg.norm(self._target) # I don't see why this is here
 
         # Initial State
         state = self.get_state()
@@ -187,13 +195,16 @@ class FlatEnv(core.Env):
         vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
         if self.policy_mode == 'decentralized':
             previous_action = self._prev_action[:, :]
+            individual_state = np.hstack([
+                kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
+                previous_action, np.eye(self.n_arm)]).astype(np.float32)
         elif self.policy_mode == 'centralized':
             previous_action = self._prev_action.reshape([self.n_arm, self.n_action])
+            individual_state = np.hstack([
+                kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
+                previous_action]).astype(np.float32)
         else:
             raise NotImplementedError
-        individual_state = np.hstack([
-            kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
-            previous_action]).astype(np.float32)
         shared_state = np.concatenate([
             self._target, # 2
             self.rigid_rod.position_collection[:,0], # 3
@@ -212,18 +223,20 @@ class FlatEnv(core.Env):
             self._prev_action[:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
         else:
             raise NotImplementedError
+        reshaped_kappa = reshaped_kappa.reshape((self.n_arm, 3, self.n_action // 3))
         reshaped_kappa = np.concatenate([
-                np.zeros((self.n_arm, 1)),
+                np.zeros((self.n_arm, 3, 1)),
                 reshaped_kappa,
-                np.zeros((self.n_arm, 1)),
-            ], axis=1)
+                np.zeros((self.n_arm, 3, 1)),
+            ], axis=-1)
         reshaped_kappa = interp1d(
-                np.linspace(0,1,self.n_action+2),
+                np.linspace(0,1,self.n_action//3+2), # added zero on the boundary
                 reshaped_kappa,
-                kind='cubic'
+                kind='cubic',
+                axis=-1,
             )(np.linspace(0,1,self.n_seg))
         for arm_i in range(self.n_arm):
-            self.shearable_rods[arm_i].rest_kappa[0, :] = reshaped_kappa[arm_i]
+            self.shearable_rods[arm_i].rest_kappa[:, :] = reshaped_kappa[arm_i]
             #self.shearable_rods[arm_i].rest_sigma[1, :] = self.rest_sigma[1,:] #rest_sigma.copy()
             #self.shearable_rods[arm_i].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
 
@@ -272,7 +285,7 @@ class FlatEnv(core.Env):
 
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
-        if self.counter>=250 or self.time>self.final_time:
+        if self.time>self.final_time:
             done=True
 
         reward = forward_reward - control_cost + survive_reward - bending_energy

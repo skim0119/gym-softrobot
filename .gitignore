@@ -8,6 +8,8 @@ logs
 model
 save
 
+*.pov
+
 # C extensions
 *.so
 

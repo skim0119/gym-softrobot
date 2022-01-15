@@ -102,8 +102,13 @@ class FlatEnv(core.Env):
         else:
             raise NotImplementedError
 
+        # Configurations
         self.config_generate_video = config_generate_video
         self.config_save_head_data = config_save_head_data
+
+        # Rendering-related
+        self.viewer = None
+        self.renderer = None
 
         # Determinism
         self.seed()
@@ -315,7 +320,27 @@ class FlatEnv(core.Env):
             plot_video(self.rod_parameters_dict_list, filename_video, margin=0.2, fps=fps)
 
     def render(self, mode='human', close=False):
-        pass
+        maxwidth = 800
+
+        if self.viewer is None:
+            from gym_softrobot.utils.render import pyglet_rendering
+            from gym_softrobot.utils.render.povray_rendering import Session
+            self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
+            self.renderer = Session(width=maxwidth, height=maxwidth*3//4)
+            self.renderer.add_rods(self.shearable_rods)
+            self.renderer.add_rigid_body(self.rigid_rod)
+            self.renderer.add_point(self._target.tolist()+[0], 0.05)
+
+        state_image = self.renderer.render()
+
+        self.viewer.imshow(state_image)
+
+        return state_image
 
     def close(self):
-        pass
+        if self.viewer:
+            self.viewer.close()
+            self.viewer = None
+        if self.renderer:
+            self.renderer.close()
+            self.renderer = None

@@ -100,6 +100,7 @@ class FlatEnv(core.Env):
 
         # Rendering-related
         self.viewer = None
+        self.state_image = None
 
         # Determinism
         self.seed()
@@ -306,6 +307,7 @@ class FlatEnv(core.Env):
             plot_video(self.rod_parameters_dict_list, filename_video, margin=0.2, fps=fps)
 
     def render(self, mode='human', close=False):
+        maxwidth = 600
         screen_width = 600
         screen_height = 400
 
@@ -318,57 +320,15 @@ class FlatEnv(core.Env):
         cartheight = 30.0
 
         if self.viewer is None:
-            from gym.utils import pyglet_rendering
+            from gym.utils.render import pyglet_rendering
+            self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
 
-            self.viewer = pyglet_rendering.Viewer(screen_width, screen_height)
-            l, r, t, b = -cartwidth / 2, cartwidth / 2, cartheight / 2, -cartheight / 2
-            axleoffset = cartheight / 4.0
-            cart = pyglet_rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
-            self.carttrans = pyglet_rendering.Transform()
-            cart.add_attr(self.carttrans)
-            self.viewer.add_geom(cart)
-            l, r, t, b = (
-                -polewidth / 2,
-                polewidth / 2,
-                polelen - polewidth / 2,
-                -polewidth / 2,
-            )
-            pole = pyglet_rendering.FilledPolygon([(l, b), (l, t), (r, t), (r, b)])
-            pole.set_color(0.8, 0.6, 0.4)
-            self.poletrans = pyglet_rendering.Transform(translation=(0, axleoffset))
-            pole.add_attr(self.poletrans)
-            pole.add_attr(self.carttrans)
-            self.viewer.add_geom(pole)
-            self.axle = pyglet_rendering.make_circle(polewidth / 2)
-            self.axle.add_attr(self.poletrans)
-            self.axle.add_attr(self.carttrans)
-            self.axle.set_color(0.5, 0.5, 0.8)
-            self.viewer.add_geom(self.axle)
-            self.track = pyglet_rendering.Line((0, carty), (screen_width, carty))
-            self.track.set_color(0, 0, 0)
-            self.viewer.add_geom(self.track)
-
-            self._pole_geom = pole
-
-        if self.state is None:
+        if self.state_image is None:
             return None
 
-        # Edit the pole polygon vertex
-        pole = self._pole_geom
-        l, r, t, b = (
-            -polewidth / 2,
-            polewidth / 2,
-            polelen - polewidth / 2,
-            -polewidth / 2,
-        )
-        pole.v = [(l, b), (l, t), (r, t), (r, b)]
+        self.viewer.imshow(self.state_image)
 
-        x = self.state
-        cartx = x[0] * scale + screen_width / 2.0  # MIDDLE OF CART
-        self.carttrans.set_translation(cartx, carty)
-        self.poletrans.set_rotation(-x[2])
-
-        return self.viewer.render(return_rgb_array=mode == "rgb_array")
+        return self.state_image
 
     def close(self):
         if self.viewer:

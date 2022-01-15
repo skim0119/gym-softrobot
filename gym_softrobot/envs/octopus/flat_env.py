@@ -94,8 +94,12 @@ class FlatEnv(core.Env):
         else:
             raise NotImplementedError
 
+        # Configurations
         self.config_generate_video = config_generate_video
         self.config_save_head_data = config_save_head_data
+
+        # Rendering-related
+        self.viewer = None
 
         # Determinism
         self.seed()

@@ -16,8 +16,8 @@ _PARAM = {
         "youngs_modulus": 1e6,
         "arm_density": 1000.0,
         "body_arm_k": 1e6,
-        "body_arm_kt": 1e-2,
-        "head_radius": 0.05,
+        "body_arm_kt": 5e-1,
+        "head_radius": 0.15,
         "head_density": 1000.0,
         "friction_multiplier": 0.02,
         "friction_symmetry": False

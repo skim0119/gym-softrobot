@@ -22,7 +22,7 @@ if __name__ == "__main__":
     """ Create simulation environment
     Total number of simulataneous data-collection is n_envs
     """
-    runid = 3  # TAG: Repeated run will append another id
+    runid = 4  # TAG: Repeated run will append another id
 
     final_time = 10.0
     fps = 4

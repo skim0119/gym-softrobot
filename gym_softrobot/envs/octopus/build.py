@@ -37,7 +37,7 @@ def build_octopus(
 
     """ Set up an arm """
     L0 = 0.35                # total length of the arm
-    r0 = L0 * 0.011
+    r0 = L0 * 0.03
 
     rigid_rod_length = r0 * 2
     rigid_rod_radius = param['head_radius']

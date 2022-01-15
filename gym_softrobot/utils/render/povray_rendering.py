@@ -19,22 +19,47 @@ class ElasitcaRod(Geom, ElasticaTexture):
         self.rod = rod
 
     def __call__(self):
-        sphere_sweep = SphereSweep('b_spline', 4, (-2,-2,0), 0.1, [-2,2,0], 0.1, [2,-2,0],0.1,[1,1,1],0.1,
-                ElasticaTexture.texture)
+        pos_rad_pair = []
+        pos = self.rod.position_collection 
+        rad = self.rod.radius
+        rad = np.concatenate([rad[0], 0.5*(rad[:-1]+rad[1:]), rad[-1]])
+        for i in range(self.rod.n_elems+1):
+            pos_rad_pair.append(pos[:,i].tolist())
+            pos_rad_pair.append(rad[i])
+
+        return SphereSweep(
+            'b_spline',
+            len(pos_rad_pair),
+            *pos_rad_pair,
+            ElasticaTexture.texture
+        )
 
 class ElasticaCylinder(Geom, ElasticaTexture):
     def __init__(self, body):
         self.body = body
 
     def __call__(self):
-        sphere_sweep = SphereSweep('b_spline', 4, (-2,-2,0), 0.1, [-2,2,0], 0.1, [2,-2,0],0.1,[1,1,1],0.1,
-                ElasticaTexture.texture)
+        rad = self.body.radius
+        length = self.body.length
+        tangent = self.body.director_collection[2,:,0]
+        position1 = self.body.position_collection[:,0]
+        position2 = position1 + length * tangent
+        return SphereSweep(
+            'b_spline',
+            2,
+            position1.tolist(),
+            rad,
+            position2.tolist(),
+            rad, 
+            ElasticaTexture.texture
+        )
 
 class Sphere(Geom):
+    pigment = Pigment( 'color', [1,0,1], 'transmit', 0.0 )
+    texture = Texture( pigment, Finish( 'phong', 1))
+
     def __init__(self, point, radius):
-        self.point = point
-        self.radius = radius
-        self.sphere = Sphere( [0,1,2], 2, Texture( Pigment( 'color', [1,0,1] )))
+        self.sphere = Sphere( point, self.radius, Sphere.texture)
 
     def __call__(self):
         return self.sphere

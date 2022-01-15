@@ -22,7 +22,7 @@ if __name__ == "__main__":
     """ Create simulation environment
     Total number of simulataneous data-collection is n_envs
     """
-    runid = 2  # TAG: Repeated run will append another id
+    runid = 3  # TAG: Repeated run will append another id
 
     final_time = 10.0
     fps = 4
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     #env = Environment(final_time, time_step = 8e-6,recording_fps=30,n_elems=n_elems)
     env_kwargs = {
             'final_time': final_time,
-            'time_step': 5e-5, #8e-6,
+            'time_step': 4e-5, #8e-6,
             'recording_fps': fps,
             'n_elems': n_elems,
             'n_arm': n_arm,

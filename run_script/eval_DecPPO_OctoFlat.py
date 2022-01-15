@@ -25,6 +25,7 @@ def main(ids):
     """ Create simulation environment
     Total number of simulataneous data-collection is n_envs
     """
+    runid = 3
     final_time = 30.0
     n_elems = 9
     n_arm = 8
@@ -46,7 +47,7 @@ def main(ids):
 
     env_kwargs = {
             'final_time': final_time,
-            'time_step': 5e-5, #8e-6,
+            'time_step': 4e-5, #8e-6,
             'recording_fps': fps,
             'n_elems': n_elems,
             'n_arm': n_arm, 
@@ -63,7 +64,7 @@ def main(ids):
 
     # Load
     print("----- Loading -----")
-    model_path = "model/PPO_decentralized/run_2/rl_model_1056000_steps.zip"
+    model_path = f"model/PPO_decentralized/run_{runid}/rl_model_11040_steps.zip"
     model = module.load(model_path)
 
     total_steps = int(final_time * fps)#750 # 751
@@ -100,7 +101,7 @@ def main(ids):
             break
 
     """ Save the data of the simulation """
-    path = f'PPO_{mode}_{ids}.mp4' # Name
+    path = f'PPO_{mode}_{runid}_{ids}.mp4' # Name
     env.save_data(path, fps)
 
 if __name__=="__main__":

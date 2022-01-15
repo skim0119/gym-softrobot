@@ -78,7 +78,7 @@ if __name__ == "__main__":
                 verbose=2, 
                 tensorboard_log=tensorboard_log,
                 n_steps=n_steps,
-                learning_rate=1e-3,
+                learning_rate=4e-4,
                 n_agent=n_arm,
                 progress_bar=True,
             )

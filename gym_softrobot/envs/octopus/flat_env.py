@@ -108,6 +108,7 @@ class FlatEnv(core.Env):
 
         # Rendering-related
         self.viewer = None
+        self.renderer = None
 
         # Determinism
         self.seed()
@@ -319,28 +320,18 @@ class FlatEnv(core.Env):
             plot_video(self.rod_parameters_dict_list, filename_video, margin=0.2, fps=fps)
 
     def render(self, mode='human', close=False):
-        maxwidth = 600
-        screen_width = 600
-        screen_height = 400
-
-        world_width = self.x_threshold * 2
-        scale = screen_width / world_width
-        carty = 100  # TOP OF CART
-        polewidth = 10.0
-        polelen = scale * (2 * self.length)
-        cartwidth = 50.0
-        cartheight = 30.0
+        maxwidth = 800
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
             from gym_softrobot.utils.render.povray_rendering import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
-            renderer = Session()
-            renderer.add_rods(self.shearable_rods)
-            renderer.add_rigid_body(self.rigid_rod)
-            renderer.add_rigid_body(self._target, 2)
+            self.renderer = Session(width=maxwidth, height=maxwidth*3//4)
+            self.renderer.add_rods(self.shearable_rods)
+            self.renderer.add_rigid_body(self.rigid_rod)
+            self.renderer.add_point(self._target.tolist()+[0], 0.1)
 
-        state_image = renderer.render()
+        state_image = self.renderer.render()
 
         self.viewer.imshow(state_image)
 
@@ -350,3 +341,6 @@ class FlatEnv(core.Env):
         if self.viewer:
             self.viewer.close()
             self.viewer = None
+        if self.renderer:
+            self.renderer.close()
+            self.renderer = None

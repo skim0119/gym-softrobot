@@ -111,7 +111,7 @@ class FixedJoint2Rigid(FreeJoint):
         return rigid_rod_connection_dir
 
     def apply_torques(self, rod_one, index_one, rod_two, index_two):
-        self._apply_soft_director(
+        self._apply_hard_director_boundary(
                 index_one,
                 index_two,
                 rod_one.director_collection,
@@ -131,7 +131,7 @@ class FixedJoint2Rigid(FreeJoint):
 
     @staticmethod
     @njit(cache=True)
-    def _apply_torques(
+    def _apply_hard_director_boundary(
             index_one,
             index_two,
             rod_one_director_collection,

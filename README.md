@@ -3,10 +3,11 @@
   <img src="https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg">
 </div>
 
-
 The environment is designed to leverage reinforcement learning methods into soft-robotics control, inspired from slender-body living creatures.
 The code is built on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for slender structure.
 We intend this package to be easy-to-install and fully compatible to [OpenAI Gym](https://github.com/openai/gym).
+
+> The package is under development, in Pre-Alpha phase. We are planning to complete the initial set of environment by the end of January 2022.
 
 Requirements:
 - Python 3.8+
@@ -61,14 +62,14 @@ More advanced algorithms are still under development.
 
 ### Octopus[Multi-arm control]
 
-- `OctoFlat-v0`
-- `OctoReach-v0`
-- `OctoSwim-v0`
-- `OctoHunt-v0`
+- `OctoFlat-v0` [Pre-Alpha]
+- `OctoReach-v0` [Working in Process]
+- `OctoSwim-v0` [Working in Process]
+- `OctoHunt-v0` [Working in Process]
 
 ### Snake
 
-- 'ContinuumSnake-v0'
+- 'ContinuumSnake-v0' [Pre-Alpha]
 
 ### Simple Control
 

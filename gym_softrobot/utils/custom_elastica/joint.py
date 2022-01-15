@@ -111,17 +111,35 @@ class FixedJoint2Rigid(FreeJoint):
         return rigid_rod_connection_dir
 
     def apply_torques(self, rod_one, index_one, rod_two, index_two):
-        self._apply_torques(
-                index_one, index_two,
-                self.rigid_rod_pos,
-                self.rigid_rod_connection_dir,
-                rod_two.position_collection,
+        self._apply_soft_director(
+                index_one,
+                index_two,
                 rod_one.director_collection,
                 rod_two.director_collection,
-                rod_two.rest_lengths,
-                rod_one.external_torques,
-                rod_two.external_torques,
-                self.k, self.nu, self.kt, self.angle, self.radius)
+            )
+        #self._apply_torques(
+        #        index_one, index_two,
+        #        self.rigid_rod_pos,
+        #        self.rigid_rod_connection_dir,
+        #        rod_two.position_collection,
+        #        rod_one.director_collection,
+        #        rod_two.director_collection,
+        #        rod_two.rest_lengths,
+        #        rod_one.external_torques,
+        #        rod_two.external_torques,
+        #        self.k, self.nu, self.kt, self.angle, self.radius)
+
+    @staticmethod
+    @njit(cache=True)
+    def _apply_torques(
+            index_one,
+            index_two,
+            rod_one_director_collection,
+            rod_two_director_collection,
+        ):
+        for i in range(3):
+            for j in range(3):
+                rod_two_director_collection[i,j,index_one] = rod_one_director_collection[i,j,index_two]
 
     @staticmethod
     @njit(cache=True)

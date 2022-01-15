@@ -119,7 +119,7 @@ class DecPPO(PPO):
 
             # Reshape infos
 
-            self.num_timesteps += env_num_envs
+            self.num_timesteps += env.num_envs#env_num_envs
 
             # Give access to local variables
             callback.update_locals(locals())

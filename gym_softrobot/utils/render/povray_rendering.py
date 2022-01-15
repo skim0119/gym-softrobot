@@ -12,9 +12,6 @@ For some reason, POVray use left-hand system
 (x,y,z) -> (x,z,y)
 """
 
-def coord2pov(vec):
-    vec[[0,1,2],...]=vec[[0,2,1],...]
-
 class Geom:
     @abstractmethod
     def __call__(self):
@@ -35,7 +32,8 @@ class ElasticaRod(Geom, ElasticaTexture):
         rad = self.rod.radius
         rad = np.concatenate([rad[0:1], 0.5*(rad[:-1]+rad[1:]), rad[-1:]])
         for i in range(n_data):
-            pos_rad_pair.append(pos[:,i].tolist())
+            x,z,y = pos[:,i] # transformation
+            pos_rad_pair.append([x,y,z])
             pos_rad_pair.append(rad[i])
 
         return vapory.SphereSweep(
@@ -58,9 +56,11 @@ class ElasticaCylinder(Geom):
         tangent = self.body.director_collection[2,:,0]
         position1 = self.body.position_collection[:,0]
         position2 = position1 + length * tangent
+        position1 = [position1[0], position1[2], position1[1]]
+        position2 = [position2[0], position2[2], position2[1]]
         return vapory.Cylinder(
-            position1.tolist(),
-            position2.tolist(),
+            position1,
+            position2,
             rad, 
             ElasticaCylinder.texture
         )
@@ -70,8 +70,9 @@ class Sphere(Geom):
     texture = vapory.Texture( pigment, vapory.Finish( 'phong', 1))
 
     def __init__(self, loc, radius):
+        x,z,y = loc
         self.sphere = vapory.Sphere(
-            loc,
+            [x,y,z],
             radius,
             Sphere.texture
         )
@@ -86,7 +87,7 @@ class Session:
         self.height = height
 
         # Assets
-        self.camera = vapory.Camera( 'location', [0.5,0.5,-1], 'look_at', [0,0,1] )
+        self.camera = vapory.Camera( 'location', [1.7,0.7,-1.2], 'look_at', [0.5,0,1] )
         self.light = vapory.LightSource( [2,4,-3], 'color', [1,1,1] )
 
         #self.background_path = "default.inc"

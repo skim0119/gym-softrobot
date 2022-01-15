@@ -329,7 +329,7 @@ class FlatEnv(core.Env):
             self.renderer = Session(width=maxwidth, height=maxwidth*3//4)
             self.renderer.add_rods(self.shearable_rods)
             self.renderer.add_rigid_body(self.rigid_rod)
-            self.renderer.add_point(self._target.tolist()+[0], 0.1)
+            self.renderer.add_point(self._target.tolist()+[0], 0.05)
 
         state_image = self.renderer.render()
 

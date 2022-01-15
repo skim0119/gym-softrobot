@@ -1,10 +1,14 @@
 <div align="center">
+
 <h1> Soft-Robot Control Environment (gym-softrobot) </h1>
-  <img src="https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg">
+  <a href="https://github.com/skim0119/gym-softrobot/blob/main/LICENSE"><img src="https://img.shields.io/apm/l/atomic-design-ui.svg?style=flat"></a>
+  <a href="https://github.com/skim0119/gym-softrobot"><img src="https://img.shields.io/github/release/skim0119/gym-softrobot.svg?style=flat"></a>
+  <img src="https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg?style=flat">
 </div>
 
-The environment is designed to leverage reinforcement learning methods into soft-robotics control, inspired from slender-body living creatures.
-The code is built on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for slender structure.
+The environment is designed to leverage reinforcement learning methods into soft-robotics control.
+Our inspiration is from slender-body living creatures, such as octopus or snake.
+The code is based on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for slender structure.
 We intend this package to be easy-to-install and fully compatible to [OpenAI Gym](https://github.com/openai/gym).
 
 > The package is under development, in Pre-Alpha phase. We are planning to complete the initial set of environment by the end of January 2022.
@@ -56,6 +60,8 @@ for episode in range(2):
 We tested the environment using [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3) for centralized control.
 More advanced algorithms are still under development.
 
+If you have your own algorithm that you would like to test out, you are welcome to reach out to us.
+
 ## Environment Design
 
 ## Included Environments
@@ -76,5 +82,11 @@ More advanced algorithms are still under development.
 ## Contribution
 
 We are currently developing the package internally.
+  
+## Author
+  
+![GitHub Contributors Image][badge-Contributors-image]
 
+<!-- -->
 [badge-CI]: https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg
+[badge-Contributors-image]: https://contrib.rocks/image?repo=skim0119/gym-softrobot

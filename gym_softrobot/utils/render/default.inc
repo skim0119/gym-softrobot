@@ -62,13 +62,13 @@ union{
                                finish { phong 1}
                              }
 
-object{ AxisXYZ( 2.70, 2.70, 2.70, Texture_A_Dark, Texture_A_Light) scale 0.25 }
+//object{ AxisXYZ( 2.70, 2.70, 2.70, Texture_A_Dark, Texture_A_Light) scale 0.25 }
 //-------------------------------------------------- end of coordinate axes
 
 
 // ground -----------------------------------------------------------------
 //---------------------------------<<< settings of squared plane dimensions
-#declare RasterScale = 0.50;
+#declare RasterScale = 0.10;
 #declare RasterHalfLine  = 0.03;
 #declare RasterHalfLineZ = 0.03;
 //-------------------------------------------------------------------------

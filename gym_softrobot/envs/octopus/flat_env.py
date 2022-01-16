@@ -44,7 +44,7 @@ class FlatEnv(core.Env):
             time_step=5.0e-5,
             recording_fps=5,
             n_elems=10,
-            n_arm=5,
+            n_arm=8,
             n_action=3,
             config_generate_video=False,
             config_save_head_data=False,
@@ -302,7 +302,7 @@ class FlatEnv(core.Env):
         states = self.get_state()
 
         # Info
-        info = {'time':self.time}
+        info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
 
         self.counter += 1
 

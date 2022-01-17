@@ -15,8 +15,8 @@ from scipy.spatial.transform import Rotation as Rot
 _PARAM = {
         "youngs_modulus": 1e6,
         "arm_density": 1000.0,
-        "body_arm_k": 1e6,
-        "body_arm_kt": 5e-1,
+        "body_arm_k": 0, #1e6,
+        "body_arm_kt": 0, #e-1,
         "head_radius": 0.05,
         "head_density": 1000.0,
         "friction_multiplier": 0.02,
@@ -37,7 +37,7 @@ def build_octopus(
 
     """ Set up an arm """
     L0 = 0.35                # total length of the arm
-    r0 = L0 * 0.03
+    r0 = L0 * 0.04
 
     rigid_rod_length = r0 * 2
     rigid_rod_radius = param['head_radius']
@@ -74,7 +74,7 @@ def build_octopus(
         simulator.append(rod)
 
     """ Add head """
-    start = np.zeros((3,))
+    start = np.zeros((3,)); start[2] = -r0
     direction = np.array([0.0, 0.0, 1.0])
     normal = np.array([0.0, 1.0, 0.0])
     binormal = np.cross(direction, normal)
@@ -144,8 +144,8 @@ def build_octopus(
     for arm_i in range(n_arm):
         simulator.add_forcing_to(shearable_rods[arm_i]).using(
             AnisotropicFrictionalPlane,
-            k=1.0,
-            nu=1e-6,
+            k=4e2,
+            nu=1e1,
             plane_origin=origin_plane,
             plane_normal=normal_plane,
             slip_velocity_tol=slip_velocity_tol,
@@ -157,8 +157,8 @@ def build_octopus(
     static_mu_array = 2 * kinetic_mu_array
     simulator.add_forcing_to(rigid_rod).using(
         AnisotropicFrictionalPlaneRigidBody,
-        k=1.0,
-        nu=1e0,
+        k=8e2,
+        nu=1e1,
         plane_origin=origin_plane,
         plane_normal=normal_plane,
         slip_velocity_tol=slip_velocity_tol,

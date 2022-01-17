@@ -51,7 +51,7 @@ class ElasticaCylinder(Geom):
         self.body = body
 
     def __call__(self):
-        rad = self.body.radius[0]
+        rad = self.body.radius[0] * 2
         length = self.body.length
         tangent = self.body.director_collection[2,:,0]
         position1 = self.body.position_collection[:,0]
@@ -87,7 +87,8 @@ class Session:
         self.height = height
 
         # Assets
-        self.camera = vapory.Camera( 'location', [1.7,0.7,-1.2], 'look_at', [0.5,0,1] )
+        #self.camera = vapory.Camera( 'location', [1.7,0.7,-1.2], 'look_at', [0.5,0,1] )
+        self.camera = vapory.Camera( 'location', [0.8,0.7,-1.2], 'look_at', [0.0,0,0] )
         self.light = vapory.LightSource( [2,4,-3], 'color', [1,1,1] )
 
         #self.background_path = "default.inc"

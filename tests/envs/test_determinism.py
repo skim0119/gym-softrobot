@@ -54,11 +54,9 @@ def test_env(spec):
         assert r1 == r2, f"[{i}] r1: {r1}, r2: {r2}"
         assert d1 == d2, f"[{i}] d1: {d1}, d2: {d2}"
 
-        # Go returns a Pachi game board in info, which doesn't
-        # properly check equality. For now, we hack around this by
-        # just skipping Go.
-        if spec.id not in ["Go9x9-v0", "Go19x19-v0"]:
-            assert_equals(i1, i2, f"[{i}] ")
+        # We use extra information to pass the references, which may not be equal.
+        # Hence, the 'info' is not asserted equal.
+        # assert_equals(i1, i2, f"[{i}] ")
 
 
 def assert_equals(a, b, prefix=None):

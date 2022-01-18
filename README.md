@@ -17,7 +17,8 @@ Requirements:
 - Python 3.8+
 - OpenAI Gym 0.21.0
 - PyElastica 0.2+
-- Matplotlib (optional for display rendering and plotting)
+- Matplotlib (optional for display rendering and plotting)	
+- POVray (optional for 3D rendering)
 
 Please use this bibtex to cite in your publications:
 
@@ -55,6 +56,9 @@ for episode in range(2):
             break
 ```
 
+We use [POVray](https://wiki.povray.org/content/HowTo:Install_POV) python wrapper [Vapory](https://github.com/Zulko/vapory) to visualize the motion in 3D.
+POVray is not a requirement to run the environment, but it is necessary to use `env.render()` function as typical gym environment.
+
 ## Reinforcement Learning Example
 
 We tested the environment using [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3) for centralized control.
@@ -82,9 +86,9 @@ If you have your own algorithm that you would like to test out, you are welcome 
 ## Contribution
 
 We are currently developing the package internally.
-  
+
 ## Author
-  
+
 ![GitHub Contributors Image][badge-Contributors-image]
 
 <!-- -->

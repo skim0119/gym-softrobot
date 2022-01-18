@@ -53,7 +53,7 @@ class ElasticaCylinder(Geom):
         self.body = body
 
     def __call__(self):
-        rad = self.body.radius[0]# * 2
+        rad = self.body.radius[0]
         length = self.body.length
         tangent = self.body.director_collection[2,:,0]
         position1 = self.body.position_collection[:,0]

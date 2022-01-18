@@ -17,7 +17,7 @@ _PARAM = {
         "arm_density": 1000.0,
         "body_arm_k": 1e6,
         "body_arm_kt": 1e-2,
-        "head_radius": 0.02,
+        "head_radius": 0.04,
         "head_density": 1000.0,
         "friction_multiplier": 0.02,
         "friction_symmetry": False
@@ -65,7 +65,7 @@ def build_octopus(
             base_length=L0,
             base_radius=r0,
             density=param['arm_density'],
-            nu=1e-3,
+            nu=1e-2,
             youngs_modulus=param['youngs_modulus'],
             poisson_ratio=0.5,
             # nu_for_torques=damp_coefficient*((radius_mean/radius_base)**4),

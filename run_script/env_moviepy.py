@@ -13,7 +13,7 @@ env = gym.make('OctoFlat-v0', recording_fps=fps)
 observation = env.reset()
 def make_frame(step):
     frame = env.render()
-    action = env.action_space.sample()  * 0 + 22
+    action = env.action_space.sample()
     observation, reward, done, info = env.step(action)
     print(f"{step=:2}| {reward=}, {done=}")
     if done:

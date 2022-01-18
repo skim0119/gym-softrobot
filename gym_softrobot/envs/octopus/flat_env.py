@@ -41,7 +41,7 @@ class FlatEnv(core.Env):
 
     def __init__(self,
             final_time=5.0,
-            time_step=5.0e-5,
+            time_step=7.0e-5,
             recording_fps=5,
             n_elems=10,
             n_arm=8,
@@ -289,7 +289,7 @@ class FlatEnv(core.Env):
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
         #reward *= 10 # Reward scaling
-        #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
+        print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
             
 
         """ Return state:

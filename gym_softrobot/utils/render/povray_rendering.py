@@ -39,7 +39,7 @@ class ElasticaRod(Geom, ElasticaTexture):
             pos_rad_pair.append(rad[i])
 
         return vapory.SphereSweep(
-            'b_spline',
+            'linear_spline', #'b_spline',
             n_data,
             *pos_rad_pair,
             ElasticaRod.texture
@@ -53,7 +53,7 @@ class ElasticaCylinder(Geom):
         self.body = body
 
     def __call__(self):
-        rad = self.body.radius[0] * 2
+        rad = self.body.radius[0]# * 2
         length = self.body.length
         tangent = self.body.director_collection[2,:,0]
         position1 = self.body.position_collection[:,0]

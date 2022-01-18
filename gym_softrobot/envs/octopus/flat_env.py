@@ -264,9 +264,11 @@ class FlatEnv(core.Env):
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
-        control_panelty = 0.05 * np.square(rest_kappa.ravel()).mean()
+        control_panelty = 0.0 #0.005 * np.square(rest_kappa.ravel()).mean()
         bending_energy = 0.0 #sum([rod.compute_bending_energy() for rod in self.shearable_rods])
         shear_energy = 0.0 # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
+        floating_panelty = 0.0
+        orientation_panelty = 0.0
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(np.concatenate(
             [rod.position_collection for rod in self.shearable_rods] + 
@@ -277,14 +279,14 @@ class FlatEnv(core.Env):
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
             survive_reward = -50.0
-            floating_panelty = 10
-            orientation_panelty = 10
+            #floating_panelty = 10
+            #orientation_panelty = 10
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             forward_reward = (np.linalg.norm(self._target - xposafter) - 
-                np.linalg.norm(self._target - xposbefore))
-            floating_panelty = min(0.01 * np.abs(self.rigid_rod.position_collection[2,0]), 10)
-            orientation_panelty = min(0.5 * np.arccos(np.dot(np.array([0, 0, 1.0]), self.rigid_rod.director_collection[2,:,0])), 10)
+                np.linalg.norm(self._target - xposbefore)) * 10 
+            #floating_panelty = min(0.01 * np.abs(self.rigid_rod.position_collection[2,0]), 10)
+            #orientation_panelty = min(0.5 * np.arccos(np.dot(np.array([0, 0, 1.0]), self.rigid_rod.director_collection[2,:,0])), 10)
 
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
         timelimit = False

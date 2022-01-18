@@ -320,17 +320,26 @@ class FlatEnv(core.Env):
 
     def render(self, mode='human', close=False):
         maxwidth = 800
+        aspect_ratio = (3/4)
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
             from gym_softrobot.utils.render.povray_rendering import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
-            self.renderer = Session(width=maxwidth, height=maxwidth*3//4)
+            self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods(self.shearable_rods)
             self.renderer.add_rigid_body(self.rigid_rod)
             self.renderer.add_point(self._target.tolist()+[0], 0.05)
 
-        state_image = self.renderer.render()
+        # Temporary rendering to add side-view
+        state_image = self.renderer.render(maxwidth, int(maxwidth*aspect_ratio*0.7))
+        state_image_flat = self.renderer.render(
+                maxwidth,
+                int(maxwidth*aspect_ratio*0.3),
+                camera_param=('location',[0.0, 0.0, -0.5],'look_at',[0.0,0,0])
+            )
+
+        state_image = np.vstack([state_image, state_image_flat])
 
         self.viewer.imshow(state_image)
 

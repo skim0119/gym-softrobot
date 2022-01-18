@@ -21,6 +21,11 @@ register(
 #    entry_point='gym_softrobot.envs.octopus:HuntEnv',
 #)
 
+register(
+    id='OctoArmSingle-v0',
+    entry_point='gym_softrobot.envs.octopus:ArmSingleEnv',
+)
+
 """ Snake Environment """
 register(
     id='ContinuumSnake-v0',

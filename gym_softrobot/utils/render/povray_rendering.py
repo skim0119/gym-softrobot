@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import vapory
 
@@ -37,7 +39,7 @@ class ElasticaRod(Geom, ElasticaTexture):
             pos_rad_pair.append(rad[i])
 
         return vapory.SphereSweep(
-            'b_spline',
+            'linear_spline', #'b_spline',
             n_data,
             *pos_rad_pair,
             ElasticaRod.texture
@@ -51,7 +53,7 @@ class ElasticaCylinder(Geom):
         self.body = body
 
     def __call__(self):
-        rad = self.body.radius[0] * 2
+        rad = self.body.radius[0]
         length = self.body.length
         tangent = self.body.director_collection[2,:,0]
         position1 = self.body.position_collection[:,0]
@@ -87,8 +89,6 @@ class Session:
         self.height = height
 
         # Assets
-        #self.camera = vapory.Camera( 'location', [1.7,0.7,-1.2], 'look_at', [0.5,0,1] )
-        self.camera = vapory.Camera( 'location', [0.8,0.7,-1.2], 'look_at', [0.0,0,0] )
         self.light = vapory.LightSource( [2,4,-3], 'color', [1,1,1] )
 
         #self.background_path = "default.inc"
@@ -107,14 +107,28 @@ class Session:
     def add_point(self, loc:list, radius:float):
         self.object_collection.append(Sphere(loc, radius))
 
-    def render(self):
+    def render(self,
+        width:Optional[int]=None,
+        height:Optional[int]=None,
+        camera_param:Optional[tuple]=None
+    ):
+        if not camera_param:
+            #camera = vapory.Camera( 'location', [1.7,0.7,-1.2], 'look_at', [0.5,0,1] )
+            #camera = vapory.Camera( 'location', [0.8,0.7,-1.2], 'look_at', [0.0,0,0] )
+            camera = vapory.Camera( 'location', [0.5,0.4,-0.9], 'look_at', [0.0,0,0] )
+        else:
+            camera = vapory.Camera(*camera_param)
+        if not width:
+            width = self.width
+        if not height:
+            height = self.height
         objects = [obj() for obj in self.object_collection]
         objects.append(self.light)
         scene = vapory.Scene(
-                    self.camera,
+                    camera,
                     objects=objects,
                     included=[self.background_path])
-        return scene.render(width=self.width, height=self.height)
+        return scene.render(width=width, height=height)
 
     def close(self):
         self.object_collection.clear()

@@ -13,6 +13,7 @@ import sys
 sys.path.append("..")
 
 import gym
+from gym.wrappers import Monitor
 import gym_softrobot
 
 from stable_baselines3.common.vec_env import SubprocVecEnv #DummyVecEnv
@@ -53,7 +54,8 @@ def main(ids):
             'n_arm': n_arm, 
             'policy_mode': mode,
         }
-    env = gym.make('OctoFlat-v0',**env_kwargs, config_generate_video=True)
+    env = Monitor(gym.make('OctoFlat-v0',**env_kwargs, config_generate_video=True),
+            'save/run', force=True)
     state = env.reset()
 
 

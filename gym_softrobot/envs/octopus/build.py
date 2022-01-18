@@ -15,9 +15,9 @@ from scipy.spatial.transform import Rotation as Rot
 _PARAM = {
         "youngs_modulus": 1e6,
         "arm_density": 1000.0,
-        "body_arm_k": 0, #1e6,
-        "body_arm_kt": 0, #e-1,
-        "head_radius": 0.05,
+        "body_arm_k": 1e6,
+        "body_arm_kt": 1e0,
+        "head_radius": 0.04,
         "head_density": 1000.0,
         "friction_multiplier": 0.02,
         "friction_symmetry": False
@@ -37,7 +37,7 @@ def build_octopus(
 
     """ Set up an arm """
     L0 = 0.35                # total length of the arm
-    r0 = L0 * 0.04
+    r0 = L0 * 0.02
 
     rigid_rod_length = r0 * 2
     rigid_rod_radius = param['head_radius']
@@ -65,7 +65,7 @@ def build_octopus(
             base_length=L0,
             base_radius=r0,
             density=param['arm_density'],
-            nu=1e-3,
+            nu=1e-2,
             youngs_modulus=param['youngs_modulus'],
             poisson_ratio=0.5,
             # nu_for_torques=damp_coefficient*((radius_mean/radius_base)**4),

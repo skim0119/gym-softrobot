@@ -25,7 +25,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
     pass
 
 
-class FlatEnv(core.Env):
+class Flat3DEnv(core.Env):
     """
     Description:
     Source:
@@ -41,7 +41,7 @@ class FlatEnv(core.Env):
 
     def __init__(self,
             final_time=5.0,
-            time_step=7.0e-5,
+            time_step=5.0e-5,
             recording_fps=5,
             n_elems=10,
             n_arm=8,
@@ -65,12 +65,12 @@ class FlatEnv(core.Env):
         self.policy_mode = policy_mode
 
         # Spaces
-        self.n_action = n_action  # number of interpolation point (3 curvatures)
+        self.n_action = n_action * 3 # number of interpolation point (3 for 3 curvatures)
         shared_space = 17
         if policy_mode == 'centralized':
             action_size = (n_arm*self.n_action,)
-            action_low = np.ones(self.n_action) * (-22)
-            action_high = np.ones(self.n_action) * (22)
+            action_low = np.ones(self.n_action) * (-22); action_low[self.n_action//3:] = -5
+            action_high = np.ones(self.n_action) * (22); action_high[self.n_action//3:] =  5
             action_low = np.repeat(action_low, n_arm)
             action_high = np.repeat(action_high, n_arm)
             self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
@@ -81,8 +81,8 @@ class FlatEnv(core.Env):
             })
         elif policy_mode == 'decentralized':
             action_size = (self.n_action,)
-            action_low = np.ones(action_size) * (-22)
-            action_high = np.ones(action_size) * (22)
+            action_low = np.ones(action_size) * (-22); action_low[self.n_action//3:] = -5
+            action_high = np.ones(action_size) * (22); action_high[self.n_action//3:] =  5
             self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
             self._observation_size = ((self.n_seg + (self.n_elems+1) * 4 + self.n_action + n_arm),)
             self.observation_space = spaces.Dict({
@@ -92,7 +92,7 @@ class FlatEnv(core.Env):
         else:
             raise NotImplementedError
         self.metadata= {}
-        self.reward_range=100.0
+        self.reward_range=50.0
         if policy_mode == 'centralized':
             self._prev_action = np.zeros(list(self.action_space.shape),
                     dtype=self.action_space.dtype)
@@ -223,19 +223,20 @@ class FlatEnv(core.Env):
             self._prev_action[:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
         else:
             raise NotImplementedError
+        reshaped_kappa = reshaped_kappa.reshape((self.n_arm, 3, self.n_action // 3))
         reshaped_kappa = np.concatenate([
-                np.zeros((self.n_arm, 1)),
+                np.zeros((self.n_arm, 3, 1)),
                 reshaped_kappa,
-                np.zeros((self.n_arm, 1)),
+                np.zeros((self.n_arm, 3, 1)),
             ], axis=-1)
         reshaped_kappa = interp1d(
-                np.linspace(0,1,self.n_action+2), # added zero on the boundary
+                np.linspace(0,1,self.n_action//3+2), # added zero on the boundary
                 reshaped_kappa,
                 kind='cubic',
                 axis=-1,
             )(np.linspace(0,1,self.n_seg))
         for arm_i in range(self.n_arm):
-            self.shearable_rods[arm_i].rest_kappa[0, :] = reshaped_kappa[arm_i]
+            self.shearable_rods[arm_i].rest_kappa[:, :] = reshaped_kappa[arm_i]
             #self.shearable_rods[arm_i].rest_sigma[1, :] = self.rest_sigma[1,:] #rest_sigma.copy()
             #self.shearable_rods[arm_i].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
 
@@ -264,7 +265,7 @@ class FlatEnv(core.Env):
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
-        control_panelty = 0.05 * np.square(rest_kappa.ravel()).mean()
+        control_cost = 0.0 # 0.5 * np.square(rest_kappa.ravel()).mean()
         bending_energy = 0.0 #sum([rod.compute_bending_energy() for rod in self.shearable_rods])
         shear_energy = 0.0 # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
@@ -277,24 +278,19 @@ class FlatEnv(core.Env):
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
             survive_reward = -50.0
-            floating_panelty = 10
-            orientation_panelty = 10
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             forward_reward = (np.linalg.norm(self._target - xposafter) - 
-                np.linalg.norm(self._target - xposbefore))
-            floating_panelty = min(0.01 * np.abs(self.rigid_rod.position_collection[2,0]), 10)
-            orientation_panelty = min(0.5 * np.arccos(np.dot(np.array([0, 0, 1.0]), self.rigid_rod.director_collection[2,:,0])), 10)
+                np.linalg.norm(self._target - xposbefore)) * 1e3
 
+        # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
-        timelimit = False
         if self.time>self.final_time:
-            timelimit = True
             done=True
 
-        reward = forward_reward - control_panelty + survive_reward - bending_energy - floating_panelty - orientation_panelty
+        reward = forward_reward - control_cost + survive_reward - bending_energy
         #reward *= 10 # Reward scaling
-        #print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}, {shear_energy=:.3f}, {floating_panelty=:.3f}, {orientation_panelty=:.3f}')
+        #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
             
 
         """ Return state:
@@ -306,8 +302,7 @@ class FlatEnv(core.Env):
         states = self.get_state()
 
         # Info
-        info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod,
-                'TimeLimit.truncated': timelimit}
+        info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
 
         self.counter += 1
 
@@ -326,34 +321,17 @@ class FlatEnv(core.Env):
 
     def render(self, mode='human', close=False):
         maxwidth = 800
-        aspect_ratio = (3/4)
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
             from gym_softrobot.utils.render.povray_rendering import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
-            self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
+            self.renderer = Session(width=maxwidth, height=maxwidth*3//4)
             self.renderer.add_rods(self.shearable_rods)
             self.renderer.add_rigid_body(self.rigid_rod)
             self.renderer.add_point(self._target.tolist()+[0], 0.05)
 
-        # Temporary rendering to add side-view
-        state_image = self.renderer.render(maxwidth, int(maxwidth*aspect_ratio*0.7))
-        state_image_side = self.renderer.render(
-                maxwidth//2,
-                int(maxwidth*aspect_ratio*0.3),
-                camera_param=('location',[0.0, 0.0, -0.5],'look_at',[0.0,0,0])
-            )
-        state_image_top = self.renderer.render(
-                maxwidth//2,
-                int(maxwidth*aspect_ratio*0.3),
-                camera_param=('location',[0.0, 0.3, 0.0],'look_at',[0.0,0,0])
-            )
-
-        state_image = np.vstack([
-            state_image,
-            np.hstack([state_image_side, state_image_top])
-        ])
+        state_image = self.renderer.render()
 
         self.viewer.imshow(state_image)
 

@@ -7,6 +7,8 @@ __pycache__/
 logs
 model
 save
+*.mp4
+.DS_Store
 
 *.pov
 

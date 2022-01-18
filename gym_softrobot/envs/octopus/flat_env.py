@@ -265,7 +265,7 @@ class FlatEnv(core.Env):
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
-        control_cost = 0.0 # 0.5 * np.square(rest_kappa.ravel()).mean()
+        control_panelty = 0.05 * np.square(rest_kappa.ravel()).mean()
         bending_energy = 0.0 #sum([rod.compute_bending_energy() for rod in self.shearable_rods])
         shear_energy = 0.0 # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
@@ -278,19 +278,24 @@ class FlatEnv(core.Env):
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
             survive_reward = -50.0
+            floating_panelty = 10
+            orientation_panelty = 10
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             forward_reward = (np.linalg.norm(self._target - xposafter) - 
-                np.linalg.norm(self._target - xposbefore)) * 1e3
+                np.linalg.norm(self._target - xposbefore))
+            floating_panelty = min(0.01 * np.abs(self.rigid_rod.position_collection[2,0]), 10)
+            orientation_panelty = min(0.5 * np.arccos(np.dot(np.array([0, 0, 1.0]), self.rigid_rod.director_collection[2,:,0])), 10)
 
-        # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
+        timelimit = False
         if self.time>self.final_time:
+            timelimit = True
             done=True
 
-        reward = forward_reward - control_cost + survive_reward - bending_energy
+        reward = forward_reward - control_panelty + survive_reward - bending_energy - floating_panelty - orientation_panelty
         #reward *= 10 # Reward scaling
-        #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
+        #print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}, {shear_energy=:.3f}, {floating_panelty=:.3f}, {orientation_panelty=:.3f}')
             
 
         """ Return state:
@@ -302,7 +307,8 @@ class FlatEnv(core.Env):
         states = self.get_state()
 
         # Info
-        info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
+        info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod,
+                'TimeLimit.truncated': timelimit}
 
         self.counter += 1
 

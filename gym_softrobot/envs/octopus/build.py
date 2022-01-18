@@ -17,7 +17,7 @@ _PARAM = {
         "arm_density": 1000.0,
         "body_arm_k": 0, #1e6,
         "body_arm_kt": 0, #e-1,
-        "head_radius": 0.05,
+        "head_radius": 0.02,
         "head_density": 1000.0,
         "friction_multiplier": 0.02,
         "friction_symmetry": False
@@ -37,7 +37,7 @@ def build_octopus(
 
     """ Set up an arm """
     L0 = 0.35                # total length of the arm
-    r0 = L0 * 0.04
+    r0 = L0 * 0.02
 
     rigid_rod_length = r0 * 2
     rigid_rod_radius = param['head_radius']
@@ -85,12 +85,12 @@ def build_octopus(
     simulator.append(rigid_rod)
 
     """ Set up boundary conditions """
-    for arm_i in range(n_arm):
-        _k = param['body_arm_k']
-        _kt = param['body_arm_kt']
-        simulator.connect(
-            first_rod=rigid_rod, second_rod=shearable_rods[arm_i], first_connect_idx=-1, second_connect_idx=0
-        ).using(FixedJoint2Rigid, k=_k, nu=1e-3, kt=_kt,angle=angle_list[arm_i],radius=rigid_rod_radius)
+    #for arm_i in range(n_arm):
+    #    _k = param['body_arm_k']
+    #    _kt = param['body_arm_kt']
+    #    simulator.connect(
+    #        first_rod=rigid_rod, second_rod=shearable_rods[arm_i], first_connect_idx=-1, second_connect_idx=0
+    #    ).using(FixedJoint2Rigid, k=_k, nu=1e-3, kt=_kt,angle=angle_list[arm_i],radius=rigid_rod_radius)
 
     """Add gravity forces"""
     _g = -9.81

@@ -25,7 +25,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
     pass
 
 
-class FlatEnv(core.Env):
+class Flat3DEnv(core.Env):
     """
     Description:
     Source:
@@ -65,12 +65,12 @@ class FlatEnv(core.Env):
         self.policy_mode = policy_mode
 
         # Spaces
-        self.n_action = n_action  # number of interpolation point (3 curvatures)
+        self.n_action = n_action * 3 # number of interpolation point (3 for 3 curvatures)
         shared_space = 17
         if policy_mode == 'centralized':
             action_size = (n_arm*self.n_action,)
-            action_low = np.ones(self.n_action) * (-22)
-            action_high = np.ones(self.n_action) * (22)
+            action_low = np.ones(self.n_action) * (-22); action_low[self.n_action//3:] = -5
+            action_high = np.ones(self.n_action) * (22); action_high[self.n_action//3:] =  5
             action_low = np.repeat(action_low, n_arm)
             action_high = np.repeat(action_high, n_arm)
             self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
@@ -81,8 +81,8 @@ class FlatEnv(core.Env):
             })
         elif policy_mode == 'decentralized':
             action_size = (self.n_action,)
-            action_low = np.ones(action_size) * (-22)
-            action_high = np.ones(action_size) * (22)
+            action_low = np.ones(action_size) * (-22); action_low[self.n_action//3:] = -5
+            action_high = np.ones(action_size) * (22); action_high[self.n_action//3:] =  5
             self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
             self._observation_size = ((self.n_seg + (self.n_elems+1) * 4 + self.n_action + n_arm),)
             self.observation_space = spaces.Dict({
@@ -92,7 +92,7 @@ class FlatEnv(core.Env):
         else:
             raise NotImplementedError
         self.metadata= {}
-        self.reward_range=100.0
+        self.reward_range=50.0
         if policy_mode == 'centralized':
             self._prev_action = np.zeros(list(self.action_space.shape),
                     dtype=self.action_space.dtype)
@@ -223,19 +223,20 @@ class FlatEnv(core.Env):
             self._prev_action[:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
         else:
             raise NotImplementedError
+        reshaped_kappa = reshaped_kappa.reshape((self.n_arm, 3, self.n_action // 3))
         reshaped_kappa = np.concatenate([
-                np.zeros((self.n_arm, 1)),
+                np.zeros((self.n_arm, 3, 1)),
                 reshaped_kappa,
-                np.zeros((self.n_arm, 1)),
+                np.zeros((self.n_arm, 3, 1)),
             ], axis=-1)
         reshaped_kappa = interp1d(
-                np.linspace(0,1,self.n_action+2), # added zero on the boundary
+                np.linspace(0,1,self.n_action//3+2), # added zero on the boundary
                 reshaped_kappa,
                 kind='cubic',
                 axis=-1,
             )(np.linspace(0,1,self.n_seg))
         for arm_i in range(self.n_arm):
-            self.shearable_rods[arm_i].rest_kappa[0, :] = reshaped_kappa[arm_i]
+            self.shearable_rods[arm_i].rest_kappa[:, :] = reshaped_kappa[arm_i]
             #self.shearable_rods[arm_i].rest_sigma[1, :] = self.rest_sigma[1,:] #rest_sigma.copy()
             #self.shearable_rods[arm_i].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
 

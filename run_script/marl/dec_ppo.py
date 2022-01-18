@@ -140,12 +140,23 @@ class DecPPO(PPO):
             '''
             for idx, done in enumerate(dones):
                 info_idx = idx // self.n_agent
+                arm_id = idx % self.n_agent
                 if (
                     done
                     and infos[info_idx].get("terminal_observation") is not None
                     and infos[info_idx].get("TimeLimit.truncated", False)
                 ):
-                    terminal_obs = self.policy.obs_to_tensor(infos[info_idx]["terminal_observation"])[0]
+                    # Reshape spaces
+                    last_obs = infos[info_idx]['terminal_observation']
+                    terminal_obs = {}
+                    for key, space in self.observation_space.spaces.items():
+                        if key == 'shared':
+                            val = last_obs[key][None,:]
+                        else:
+                            val = last_obs[key][arm_id:arm_id+1,...]
+                        terminal_obs[key] = np.reshape(val, [1]+list(space.shape))
+
+                    terminal_obs = self.policy.obs_to_tensor(terminal_obs)[0]
                     with th.no_grad():
                         terminal_value = self.policy.predict_values(terminal_obs)[0]
                     rewards[idx] += self.gamma * terminal_value

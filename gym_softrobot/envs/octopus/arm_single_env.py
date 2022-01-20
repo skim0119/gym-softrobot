@@ -16,7 +16,7 @@ from elastica import *
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
 
-from gym_softrobot.envs.octopus.build import build_octopus
+from gym_softrobot.envs.octopus.build import build_arm
 from gym_softrobot.utils.custom_elastica.callback_func import RodCallBack, RigidCylinderCallBack
 from gym_softrobot.utils.render.post_processing import plot_video
 
@@ -44,10 +44,8 @@ class ArmSingleEnv(core.Env):
             time_step=7.0e-5,
             recording_fps=5,
             n_elems=10,
-            n_arm=8,
             n_action=3,
             config_generate_video=False,
-            config_save_head_data=False,
             policy_mode='centralized'
         ):
 
@@ -59,52 +57,25 @@ class ArmSingleEnv(core.Env):
         self.recording_fps = recording_fps
         self.step_skip = int(1.0 / (recording_fps * time_step))
 
-        self.n_arm = n_arm
         self.n_elems = n_elems
         self.n_seg = n_elems-1
         self.policy_mode = policy_mode
 
         # Spaces
         self.n_action = n_action  # number of interpolation point (3 curvatures)
-        shared_space = 17
-        if policy_mode == 'centralized':
-            action_size = (n_arm*self.n_action,)
-            action_low = np.ones(self.n_action) * (-22)
-            action_high = np.ones(self.n_action) * (22)
-            action_low = np.repeat(action_low, n_arm)
-            action_high = np.repeat(action_high, n_arm)
-            self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
-            self._observation_size = (n_arm, (self.n_seg + (self.n_elems+1) * 4 + self.n_action))
-            self.observation_space = spaces.Dict({
-                "individual": spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
-                "shared": spaces.Box(-np.inf, np.inf, shape=(shared_space,), dtype=np.float32)
-            })
-        elif policy_mode == 'decentralized':
-            action_size = (self.n_action,)
-            action_low = np.ones(action_size) * (-22)
-            action_high = np.ones(action_size) * (22)
-            self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
-            self._observation_size = ((self.n_seg + (self.n_elems+1) * 4 + self.n_action + n_arm),)
-            self.observation_space = spaces.Dict({
-                "individual": spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
-                "shared": spaces.Box(-np.inf, np.inf, shape=(shared_space,), dtype=np.float32)
-            })
-        else:
-            raise NotImplementedError
+        action_size = (self.n_action,)
+        action_low = np.ones(action_size) * (-22)
+        action_high = np.ones(action_size) * (22)
+        self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
+        self._observation_size = ((self.n_seg + (self.n_elems+1) * 4 + self.n_action + 2),) # 2 for target
+        self.observation_space = spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32)
+
         self.metadata= {}
         self.reward_range=100.0
-        if policy_mode == 'centralized':
-            self._prev_action = np.zeros(list(self.action_space.shape),
-                    dtype=self.action_space.dtype)
-        elif policy_mode == 'decentralized':
-            self._prev_action = np.zeros([n_arm]+list(self.action_space.shape),
-                    dtype=self.action_space.dtype)
-        else:
-            raise NotImplementedError
+        self._prev_action = np.zeros(list(self.action_space.shape), dtype=self.action_space.dtype)
 
         # Configurations
         self.config_generate_video = config_generate_video
-        self.config_save_head_data = config_save_head_data
 
         # Rendering-related
         self.viewer = None
@@ -136,27 +107,18 @@ class ArmSingleEnv(core.Env):
     def reset(self):
         self.simulator = BaseSimulator()
 
-        self.shearable_rods, self.rigid_rod = build_octopus(
+        self.shearable_rod = build_arm(
                 self.simulator,
-                self.n_arm,
                 self.n_elems,
             )
 
         # CallBack
         if self.config_generate_video:
-            self.rod_parameters_dict_list=[]
-            for arm in self.shearable_rods:
-                rod_parameters_dict = defaultdict(list)
-                self.simulator.collect_diagnostics(arm).using(
-                    RodCallBack,
-                    step_skip=self.step_skip,
-                    callback_params=rod_parameters_dict
-                )
-                self.rod_parameters_dict_list.append(rod_parameters_dict)
-        if self.config_save_head_data:
-            self.head_dict = defaultdict(list)
-            self.simulator.collect_diagnostics(self.rigid_rod).using(
-                RigidCylinderCallBack, step_skip=self.step_skip, callback_params=self.head_dict
+            self.rod_parameters_dict = defaultdict(list)
+            self.simulator.collect_diagnostics(self.shearable_rod).using(
+                RodCallBack,
+                step_skip=self.step_skip,
+                callback_params=rod_parameters_dict
             )
 
         """ Finalize the simulator and create time stepper """
@@ -166,78 +128,47 @@ class ArmSingleEnv(core.Env):
             self.StatefulStepper, self.simulator
         )
 
-        # """ Return
-        #     (1) total time steps for the simulation step iterations
-        #     (2) systems for controller design
-        # """
-        # systems = [self.shearable_rod]
-        self.rest_sigma=np.zeros_like(self.shearable_rods[0].sigma)
         self.time= np.float64(0.0)
         self.counter=0
-        # self.bias=self.shearable_rod.compute_position_center_of_mass()[0].copy()
 
         # Set Target
-        self._target = (2-1)*self.np_random.random(2) + 1
+        self._target = (2-0.5)*self.np_random.random(2) + 0.5
         #self._target /= np.linalg.norm(self._target) # I don't see why this is here
 
         # Initial State
         state = self.get_state()
 
+        # Preprocessing
+        self.prev_dist_to_target = np.linalg.norm(self.shearable_rod.compute_position_center_of_mass()[:2] - self._target, ord=2)
+        #self.prev_cm_vel = self.shearable_rod.compute_velocity_center_of_mass()
+
         return state
 
     def get_state(self):
-        states = {}
         # Build state
-        kappa_state = np.vstack([rod.kappa[0] for rod in self.shearable_rods])
-        pos_state1 = np.vstack([rod.position_collection[0] for rod in self.shearable_rods]) # x
-        pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods]) # y
-        vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods]) # x
-        vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
-        if self.policy_mode == 'decentralized':
-            previous_action = self._prev_action[:, :]
-            individual_state = np.hstack([
-                kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
-                previous_action, np.eye(self.n_arm)]).astype(np.float32)
-        elif self.policy_mode == 'centralized':
-            previous_action = self._prev_action.reshape([self.n_arm, self.n_action])
-            individual_state = np.hstack([
-                kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
-                previous_action]).astype(np.float32)
-        else:
-            raise NotImplementedError
-        shared_state = np.concatenate([
-            self._target, # 2
-            self.rigid_rod.position_collection[:,0], # 3
-            self.rigid_rod.velocity_collection[:,0], # 3
-            self.rigid_rod.director_collection[:,:,0].ravel(), # 9
-            ], dtype=np.float32)
-        states["individual"] = individual_state
-        states["shared"] = shared_state
-        return states
+        rod = self.shearable_rod
+        kappa_state = rod.kappa[0]
+        pos_state1 = rod.position_collection[0] # x
+        pos_state2 = rod.position_collection[1] # y
+        vel_state1 = rod.velocity_collection[0] # x
+        vel_state2 = rod.velocity_collection[1] # y
+        previous_action = self._prev_action.copy()
+        target = self._target
+        state = np.hstack([
+            kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
+            previous_action, target]).astype(np.float32)
+        return state
 
-    def set_action(self, action):
-        reshaped_kappa = action.reshape((self.n_arm, self.n_action))
-        if self.policy_mode == "decentralized":
-            self._prev_action[:] = reshaped_kappa
-        elif self.policy_mode == "centralized":
-            self._prev_action[:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
-        else:
-            raise NotImplementedError
-        reshaped_kappa = np.concatenate([
-                np.zeros((self.n_arm, 1)),
-                reshaped_kappa,
-                np.zeros((self.n_arm, 1)),
-            ], axis=-1)
-        reshaped_kappa = interp1d(
+    def set_action(self, action) -> None:
+        self._prev_action[:] = action
+        action = np.concatenate([[0], action, [0]], axis=-1)
+        action = interp1d(
                 np.linspace(0,1,self.n_action+2), # added zero on the boundary
-                reshaped_kappa,
+                action,
                 kind='cubic',
                 axis=-1,
             )(np.linspace(0,1,self.n_seg))
-        for arm_i in range(self.n_arm):
-            self.shearable_rods[arm_i].rest_kappa[0, :] = reshaped_kappa[arm_i]
-            #self.shearable_rods[arm_i].rest_sigma[1, :] = self.rest_sigma[1,:] #rest_sigma.copy()
-            #self.shearable_rods[arm_i].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
+        self.shearable_rod.rest_kappa[0, :] = action # Planar curvature
 
     def step(self, action):
         rest_kappa = action # alias
@@ -246,7 +177,6 @@ class ArmSingleEnv(core.Env):
         self.set_action(rest_kappa)
 
         """ Post-simulation """
-        xposbefore = self.rigid_rod.position_collection[0:2,0].copy() 
 
         """ Run the simulation for one step """
         stime = time.perf_counter()
@@ -259,42 +189,41 @@ class ArmSingleEnv(core.Env):
                 self.time_step,
             )
         etime = time.perf_counter()
+        #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
 
         """ Done is a boolean to reset the environment before episode is completed """
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
         control_panelty = 0.005 * np.square(rest_kappa.ravel()).mean()
-        bending_energy = 0.0 #sum([rod.compute_bending_energy() for rod in self.shearable_rods])
-        shear_energy = 0.0 # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(np.concatenate(
-            [rod.position_collection for rod in self.shearable_rods] + 
-            [rod.velocity_collection for rod in self.shearable_rods]
+            [self.shearable_rod.position_collection, self.shearable_rod.velocity_collection]
             ))
 
-        if invalid_values_condition == True:
+        if invalid_values_condition:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
             survive_reward = -50.0
-            floating_panelty = 10
-            orientation_panelty = 10
         else:
-            xposafter = self.rigid_rod.position_collection[0:2,0]
-            forward_reward = (np.linalg.norm(self._target - xposafter) - 
-                np.linalg.norm(self._target - xposbefore))
-            floating_panelty = min(0.01 * np.abs(self.rigid_rod.position_collection[2,0]), 10)
-            orientation_panelty = min(0.5 * np.arccos(np.dot(np.array([0, 0, 1.0]), self.rigid_rod.director_collection[2,:,0])), 10)
+            cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
+            dist_to_target = np.linalg.norm(cm_pos - self._target, ord=2)
+            forward_reward = (self.prev_dist_to_target - dist_to_target) * 10
+            self.prev_dist_to_target = dist_to_target
+            """ Goal """
+            if dist_to_target < 0.1:
+                survive_reward = 100.0
+                done = True
 
-        #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
+        """ Time limit """
         timelimit = False
         if self.time>self.final_time:
             timelimit = True
             done=True
 
-        reward = forward_reward - control_panelty + survive_reward - bending_energy - floating_panelty - orientation_panelty
+        reward = forward_reward - control_panelty + survive_reward
         #reward *= 10 # Reward scaling
-        print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}, {shear_energy=:.3f}, {floating_panelty=:.3f}, {orientation_panelty=:.3f}')
+        print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}')
             
 
         """ Return state:
@@ -306,23 +235,16 @@ class ArmSingleEnv(core.Env):
         states = self.get_state()
 
         # Info
-        info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod,
-                'TimeLimit.truncated': timelimit}
+        info = {'time':self.time, 'rod':self.shearable_rod, 'TimeLimit.truncated': timelimit}
 
         self.counter += 1
 
         return states, reward, done, info
 
     def save_data(self, filename_video, fps):
-        
-        if self.config_save_head_data:
-            print("Saving data to pickle files ...", end='\r')
-            np.savez(algo+"_head",**self.head_dict)
-            print("Saving data to pickle files ... Done!")
-
         if self.config_generate_video:
             filename_video = f"save/{filename_video}"
-            plot_video(self.rod_parameters_dict_list, filename_video, margin=0.2, fps=fps)
+            plot_video(self.rod_parameters_dict, filename_video, margin=0.2, fps=fps)
 
     def render(self, mode='human', close=False):
         maxwidth = 800
@@ -333,8 +255,7 @@ class ArmSingleEnv(core.Env):
             from gym_softrobot.utils.render.povray_rendering import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
-            self.renderer.add_rods(self.shearable_rods)
-            self.renderer.add_rigid_body(self.rigid_rod)
+            self.renderer.add_rods([self.shearable_rod]) # TODO: maybe need add_rod instead
             self.renderer.add_point(self._target.tolist()+[0], 0.05)
 
         # Temporary rendering to add side-view

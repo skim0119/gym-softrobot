@@ -223,7 +223,7 @@ class ArmSingleEnv(core.Env):
 
         reward = forward_reward - control_panelty + survive_reward
         #reward *= 10 # Reward scaling
-        print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}')
+        #print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}')
             
 
         """ Return state:

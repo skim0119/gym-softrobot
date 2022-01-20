@@ -8,6 +8,7 @@ from elastica.timestepper import extend_stepper_interface
 from elastica.interaction import AnisotropicFrictionalPlaneRigidBody
 
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
+from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
 from gym_softrobot.utils.actuation.forces.drag_force import DragForce
 
 from scipy.spatial.transform import Rotation as Rot
@@ -83,6 +84,12 @@ def build_octopus(
 
     rigid_rod = Cylinder(start, direction, normal, rigid_rod_length, rigid_rod_radius, density)
     simulator.append(rigid_rod)
+
+    """ Constraint body """
+    simulator.constrain(rigid_rod).using(
+        # Upright rigid rod need restoration force/torque against the floor
+        BodyBoundaryCondition, constrained_position_idx=(0,), constrained_director_idx=(0,)
+    )
 
     """ Set up boundary conditions """
     for arm_i in range(n_arm):

@@ -39,25 +39,21 @@ Please use this bibtex to cite in your publications:
 pip install gym-softrobot
 ```
 
-To test the installation, you can run couple steps of the environment as the following.
-```py
-import gym 
-import gym_softrobot
-env = gym.make('OctoFlat-v0', policy_mode='centralized')
+To test the installation, we provide few debugging script.
+The environment can be tested using the following command.
 
-# env is created, now we can use it: 
-for episode in range(2): 
-    observation = env.reset()
-    for step in range(50):
-        action = env.action_space.sample() 
-        observation, reward, done, info = env.step(action)
-        print(f"{episode=:2} |{step=:2}, {reward=}, {done=}")
-        if done:
-            break
+```bash
+python -m gym_softrobot.debug.make     # Make environment and run 10 steps
+python -m gym_softrobot.debug.registry # Print gym-softrobot environment
 ```
 
 We use [POVray](https://wiki.povray.org/content/HowTo:Install_POV) python wrapper [Vapory](https://github.com/Zulko/vapory) to visualize the motion in 3D.
 POVray is not a requirement to run the environment, but it is necessary to use `env.render()` function as typical gym environment.
+
+If you would like to test `POVray` with `gym-softrobot`, use
+```bash
+python -m gym_softrobot.debug.render  # Render 10 frames using vapory
+```
 
 ## Reinforcement Learning Example
 

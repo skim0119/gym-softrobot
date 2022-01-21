@@ -9,6 +9,8 @@ from shutil import rmtree
 
 from setuptools import Command, find_packages, setup
 
+from gym_softrobot.version import VERSION
+
 # Package meta-data.
 NAME = "gym-softrobot"
 DESCRIPTION = "Soft-robotics control environment package for OpenAI Gym"
@@ -16,7 +18,7 @@ URL = "https://github.com/skim0119/gym-softrobot"
 EMAIL = "skim449@illinois.edu"
 AUTHOR = "skim0119"
 REQUIRES_PYTHON = ">=3.8.0"
-VERSION = "0.0.6"
+VERSION = f"{VERSION}"
 
 # What packages are required for this module to be executed?
 REQUIRED = ["gym>=0.21.0", "pyelastica>=0.2.0", "matplotlib>=3.3.2", "pyglet", "vapory"]
@@ -105,7 +107,7 @@ setup(
         "Intended Audience :: Science/Research",
         "Intended Audience :: Education",
     ],
-    download_url="https://github.com/skim0119/gym-softrobot/archive/refs/tags/v0.0.6.tar.gz",
+    download_url=f"https://github.com/skim0119/gym-softrobot/archive/refs/tags/v{VERSION}.tar.gz",
     install_requires=REQUIRED,
     extras_require=EXTRAS,
     include_package_data=True,

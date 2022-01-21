@@ -264,8 +264,8 @@ class FlatEnv(core.Env):
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
-        control_panelty = 0.005 * np.square(rest_kappa.ravel()).mean()
-        bending_energy = sum([rod.compute_bending_energy() for rod in self.shearable_rods]) * 0.001
+        control_panelty = 0.0 # 0.005 * np.square(rest_kappa.ravel()).mean()
+        bending_energy = 0.0 #np.mean([rod.compute_bending_energy().mean() for rod in self.shearable_rods]) * 0.001
         shear_energy = 0.0 # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(np.concatenate(
@@ -279,9 +279,11 @@ class FlatEnv(core.Env):
             survive_reward = -50.0
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
-            dist_to_target = np.linalg.norm(self._target - xposafter)
-            forward_reward = (dist_to_target - 
-                np.linalg.norm(self._target - xposbefore)) * 10 
+            to_target = self._target - xposafter
+            dist_to_target = np.linalg.norm(to_target)
+            #forward_reward = (dist_to_target - 
+            #    np.linalg.norm(self._target - xposbefore)) * 100
+            forward_reward = np.dot(self.rigid_rod.velocity_collection[:2,0], to_target / dist_to_target)
             """ touched """
             if dist_to_target < 0.1:
                 survive_reward = 100.0
@@ -290,7 +292,6 @@ class FlatEnv(core.Env):
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
         timelimit = False
         if self.time>self.final_time:
-            survive_reward = -10.0
             timelimit = True
             done=True
 

@@ -23,9 +23,9 @@ _OCTOPUS_PROPERTIES = { # default parameters
         "body_arm_k": 1e6,
         "body_arm_kt": 1e0,
         "head_radius": 0.04,
-        "head_density": 1000.0,
+        "head_density": 700.0,
         # Friction Properties
-        "friction_multiplier": 0.10,
+        "friction_multiplier": 0.05,
         "friction_symmetry": False
     }
 _DEFAULT_SCALE_LENGTH = {
@@ -106,9 +106,11 @@ def build_octopus(
         simulator.add_forcing_to(shearable_rods[arm_i]).using(
                 GravityForces, acc_gravity=gravitational_acc
             )
+    '''
     simulator.add_forcing_to(rigid_rod).using(
                 GravityForces, acc_gravity=gravitational_acc
             )
+    '''
 
     """ Add drag force """
     # dl = L0 / n_elem
@@ -157,6 +159,7 @@ def build_octopus(
             static_mu_array=static_mu_array,
             kinetic_mu_array=kinetic_mu_array,
         )
+    '''
     mu = L0 / (period * period * np.abs(_g) * froude)
     kinetic_mu_array = np.array([mu, mu, mu])  # [forward, backward, sideways]
     static_mu_array = 2 * kinetic_mu_array
@@ -170,6 +173,7 @@ def build_octopus(
         static_mu_array=static_mu_array,
         kinetic_mu_array=kinetic_mu_array,
     )
+    '''
 
     return shearable_rods, rigid_rod
 

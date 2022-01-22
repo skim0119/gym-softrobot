@@ -69,13 +69,14 @@ If you have your own algorithm that you would like to test out, you are welcome 
 ### Octopus[Multi-arm control]
 
 - `OctoFlat-v0` [Pre-Alpha]
+- `OctoArmSingle-v0` [Pre-Alpha]
 - `OctoReach-v0` [Working in Process]
 - `OctoSwim-v0` [Working in Process]
 - `OctoHunt-v0` [Working in Process]
 
 ### Snake
 
-- 'ContinuumSnake-v0' [Pre-Alpha]
+- `ContinuumSnake-v0` [Pre-Alpha]
 
 ### Simple Control
 

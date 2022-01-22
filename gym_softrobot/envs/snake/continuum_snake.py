@@ -21,6 +21,7 @@ from gym_softrobot.utils.render.continuum_snake_postprocessing import (
     plot_video,
     plot_curvature,
 )
+from gym_softrobot.utils.render.post_processing import plot_video
 
 def compute_projected_velocity(plot_params: dict, period):
 
@@ -193,6 +194,7 @@ class ContinuumSnakeEnv(gym.Env):
 
 
     def render(self, mode='human', close=False):
+        '''
         filename_plot = "continuum_snake_velocity.png"
         plot_snake_velocity(self.data, self.period, filename_plot, 1)
         plot_curvature(self.data, self.shearable_rod.rest_lengths, self.period, 1)
@@ -206,6 +208,40 @@ class ContinuumSnakeEnv(gym.Env):
                 xlim=(0, 4),
                 ylim=(-1, 1),
             )
+        '''
+        maxwidth = 800
+        aspect_ratio = (3/4)
+
+        if self.viewer is None:
+            from gym_softrobot.utils.render import pyglet_rendering
+            from gym_softrobot.utils.render.povray_rendering import Session
+            self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
+            self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
+            self.renderer.add_rods(self.shearable_rods)
+            self.renderer.add_rigid_body(self.rigid_rod)
+            self.renderer.add_point(self._target.tolist()+[0], 0.05)
+
+        # Temporary rendering to add side-view
+        state_image = self.renderer.render(maxwidth, int(maxwidth*aspect_ratio*0.7))
+        state_image_side = self.renderer.render(
+                maxwidth//2,
+                int(maxwidth*aspect_ratio*0.3),
+                camera_param=('location',[0.0, 0.0, -0.5],'look_at',[0.0,0,0])
+            )
+        state_image_top = self.renderer.render(
+                maxwidth//2,
+                int(maxwidth*aspect_ratio*0.3),
+                camera_param=('location',[0.0, 0.3, 0.0],'look_at',[0.0,0,0])
+            )
+
+        state_image = np.vstack([
+            state_image,
+            np.hstack([state_image_side, state_image_top])
+        ])
+
+        self.viewer.imshow(state_image)
+
+        return state_image
 
     def close(self):
         pass

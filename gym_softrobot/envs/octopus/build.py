@@ -25,7 +25,7 @@ _OCTOPUS_PROPERTIES = { # default parameters
         "head_radius": 0.04,
         "head_density": 700.0,
         # Friction Properties
-        "friction_multiplier": 0.05,
+        "friction_multiplier": 1.00,
         "friction_symmetry": False
     }
 _DEFAULT_SCALE_LENGTH = {

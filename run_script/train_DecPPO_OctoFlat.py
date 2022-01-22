@@ -22,10 +22,10 @@ if __name__ == "__main__":
     """ Create simulation environment
     Total number of simulataneous data-collection is n_envs
     """
-    runid = 4  # TAG: Repeated run will append another id
+    runid = 8  # TAG: Repeated run will append another id
 
     final_time = 10.0
-    fps = 4
+    fps = 10
     n_elems = 9
     n_arm = 8
     n_envs = 12
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     # Number of steps to run for each environment per update 
     # The total rollout buffer size will be n_steps * n_envs (* n_arm if decentralized)
-    n_steps = 40
+    n_steps = 120
     loop_freq = n_steps * n_envs
 
     #env = Environment(final_time, time_step = 8e-6,recording_fps=30,n_elems=n_elems)
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     """ Trains """
     print("----- Training -----")
-    checkpoint_callback = CheckpointCallback(save_freq=40, save_path=model_save_path,
+    checkpoint_callback = CheckpointCallback(save_freq=400, save_path=model_save_path,
             name_prefix='rl_model', verbose=2)
     model.learn(
             total_timesteps=10000000,

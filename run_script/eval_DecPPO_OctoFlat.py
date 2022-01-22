@@ -26,11 +26,11 @@ def main(ids):
     """ Create simulation environment
     Total number of simulataneous data-collection is n_envs
     """
-    runid = 3
+    runid = 8
     final_time = 30.0
+    fps = 10
     n_elems = 9
     n_arm = 8
-    fps = 4
 
     mode = "decentralized"
 
@@ -48,7 +48,6 @@ def main(ids):
 
     env_kwargs = {
             'final_time': final_time,
-            'time_step': 4e-5, #8e-6,
             'recording_fps': fps,
             'n_elems': n_elems,
             'n_arm': n_arm, 
@@ -66,10 +65,11 @@ def main(ids):
 
     # Load
     print("----- Loading -----")
-    model_path = f"model/PPO_decentralized/run_{runid}/rl_model_11040_steps.zip"
+    model_path = f"model/PPO_decentralized/run_{runid}/rl_model_1248000_steps.zip"
     model = module.load(model_path)
 
     total_steps = int(final_time * fps)#750 # 751
+    total_reward = 0
     for k_sim in tqdm(range(total_steps)):
         if mode == "decentralized":
             # Reshape spaces
@@ -97,16 +97,20 @@ def main(ids):
         action_kappa = np.reshape(action_kappa, [n_arm,-1])
         action_kappa = np.clip(action_kappa, env.action_space.low, env.action_space.high)
         state, reward, done, info = env.step(action_kappa)
-        print(f'action stat: mean={action_kappa.mean()}, std={action_kappa.std()}, max={action_kappa.max()}, min={action_kappa.min()}, absmin={np.abs(action_kappa).min()}')
+        #print(f'action stat: mean={action_kappa.mean()}, std={action_kappa.std()}, max={action_kappa.max()}, min={action_kappa.min()}, absmin={np.abs(action_kappa).min()}')
         #print(info['time'])
+        total_reward += reward
         if done:
             break
 
+    lx = info['body'].position_collection[0]
+    ly = info['body'].position_collection[1]
+
     """ Save the data of the simulation """
-    path = f'PPO_{mode}_{runid}_{ids}.mp4' # Name
+    path = f'PPO_{mode}_{runid}_{ids}_r{total_reward}_lx{lx}_ly{ly}.mp4' # Name
     env.save_data(path, fps)
 
 if __name__=="__main__":
-    for i in range(10):
+    for i in range(3):
         main(i)
 

@@ -6,6 +6,12 @@ register(
     entry_point='gym_softrobot.envs.octopus:FlatEnv',
 )
 
+register(
+    id='OctoFlatLite-v0',
+    entry_point='gym_softrobot.envs.octopus:FlatEnv',
+    kwargs=dict(n_arm=1, n_action=8),
+)
+
 #register(
 #    id='OctoReach-v0',
 #    entry_point='gym_softrobot.envs.octopus:ReachEnv',

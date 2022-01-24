@@ -278,6 +278,9 @@ class FlatEnv(core.Env):
             self.shearable_rods[i].position_collection[:2,:])[0])
             for i in range(self.n_arm-1)])
 
+        xposafter = self.rigid_rod.position_collection[0:2,0]
+        to_target = self._target - xposafter
+        dist_to_target = np.linalg.norm(to_target)
         if invalid_values_condition == True:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
@@ -286,9 +289,6 @@ class FlatEnv(core.Env):
             done = True
             survive_reward = -30.0
         else:
-            xposafter = self.rigid_rod.position_collection[0:2,0]
-            to_target = self._target - xposafter
-            dist_to_target = np.linalg.norm(to_target)
             #forward_reward = (dist_to_target - 
             #    np.linalg.norm(self._target - xposbefore)) * 100
             forward_reward = np.dot(self.rigid_rod.velocity_collection[:2,0], to_target / dist_to_target)
@@ -306,6 +306,8 @@ class FlatEnv(core.Env):
         reward = forward_reward - control_panelty + survive_reward - bending_energy
         #reward *= 10 # Reward scaling
         #print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}, {shear_energy=:.3f}, {floating_panelty=:.3f}, {orientation_panelty=:.3f}')
+        if done:
+            reward -= (dist_to_target-0.1)
             
 
         """ Return state:

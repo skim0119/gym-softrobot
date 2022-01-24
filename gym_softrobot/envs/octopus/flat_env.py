@@ -18,6 +18,7 @@ from elastica._calculus import _isnan_check
 
 from gym_softrobot.envs.octopus.build import build_octopus
 from gym_softrobot.utils.custom_elastica.callback_func import RodCallBack, RigidCylinderCallBack
+from gym_softrobot.utils.intersection import intersection
 from gym_softrobot.utils.render.post_processing import plot_video
 
 
@@ -66,7 +67,7 @@ class FlatEnv(core.Env):
 
         # Spaces
         self.n_action = n_action  # number of interpolation point (3 curvatures)
-        shared_space = 17
+        shared_space = 13
         if policy_mode == 'centralized':
             action_size = (n_arm*self.n_action,)
             action_low = np.ones(self.n_action) * (-22)
@@ -187,10 +188,11 @@ class FlatEnv(core.Env):
 
     def get_state(self):
         states = {}
+        cx, cy, _ = self.rigid_rod.position_collection[:,0]
         # Build state
         kappa_state = np.vstack([rod.kappa[0] for rod in self.shearable_rods])
-        pos_state1 = np.vstack([rod.position_collection[0] for rod in self.shearable_rods]) # x
-        pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods]) # y
+        pos_state1 = np.vstack([rod.position_collection[0]-cx for rod in self.shearable_rods]) # x
+        pos_state2 = np.vstack([rod.position_collection[1]-cy for rod in self.shearable_rods]) # y
         vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods]) # x
         vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
         if self.policy_mode == 'decentralized':
@@ -206,9 +208,9 @@ class FlatEnv(core.Env):
         else:
             raise NotImplementedError
         shared_state = np.concatenate([
-            self._target, # 2
-            self.rigid_rod.position_collection[:,0], # 3
-            self.rigid_rod.velocity_collection[:,0], # 3
+            self._target-self.rigid_rod.position_collection[:2,0], # 2
+            #self.rigid_rod.position_collection[:,0], # 3
+            self.rigid_rod.velocity_collection[:2,0], # 2
             self.rigid_rod.director_collection[:,:,0].ravel(), # 9
             ], dtype=np.float32)
         states["individual"] = individual_state
@@ -272,11 +274,17 @@ class FlatEnv(core.Env):
             [rod.position_collection for rod in self.shearable_rods] + 
             [rod.velocity_collection for rod in self.shearable_rods]
             ))
+        arm_crossing = sum([len(intersection(self.shearable_rods[i-1].position_collection[:2,:],
+            self.shearable_rods[i].position_collection[:2,:])[0])
+            for i in range(self.n_arm-1)])
 
         if invalid_values_condition == True:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
             survive_reward = -50.0
+        elif arm_crossing:
+            done = True
+            survive_reward = -30.0
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             to_target = self._target - xposafter

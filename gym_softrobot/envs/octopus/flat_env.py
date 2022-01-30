@@ -287,7 +287,7 @@ class FlatEnv(core.Env):
             survive_reward = -50.0
         elif arm_crossing:
             done = True
-            survive_reward = -30.0
+            survive_reward = -1.0
         else:
             #forward_reward = (dist_to_target - 
             #    np.linalg.norm(self._target - xposbefore)) * 100

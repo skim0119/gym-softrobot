@@ -13,7 +13,7 @@ from tests.envs.spec_list import spec_list
 def test_env_render_result_is_immutable(spec):
     env = spec.make()
     env.reset()
-    output = env.render(mode="ansi")
+    output = env.render()
     assert isinstance(output, str)
     env.close()
 """

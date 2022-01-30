@@ -5,7 +5,7 @@ import numpy as np
 
 from elastica import *
 from elastica.timestepper import extend_stepper_interface
-from elastica.interaction import AnisotropicFrictionalPlaneRigidBody
+from elastica.experimental.interaction import AnisotropicFrictionalPlaneRigidBody
 
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition

@@ -285,13 +285,10 @@ class FlatEnv(core.Env):
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
             survive_reward = -50.0
-        elif arm_crossing:
-            done = True
-            survive_reward = -1.0
         else:
-            #forward_reward = (dist_to_target - 
-            #    np.linalg.norm(self._target - xposbefore)) * 100
-            forward_reward = np.dot(self.rigid_rod.velocity_collection[:2,0], to_target / dist_to_target)
+            survive_reward = -2.0 * arm_crossing
+            forward_reward = (dist_to_target - np.linalg.norm(self._target - xposbefore)) / (self.step_skip * self.time_step)
+            #forward_reward = np.dot(self.rigid_rod.velocity_collection[:2,0], to_target / dist_to_target)
             """ touched """
             if dist_to_target < 0.1:
                 survive_reward = 100.0
@@ -305,7 +302,10 @@ class FlatEnv(core.Env):
 
         reward = forward_reward - control_panelty + survive_reward - bending_energy
         #reward *= 10 # Reward scaling
-        #print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}, {shear_energy=:.3f}, {floating_panelty=:.3f}, {orientation_panelty=:.3f}')
+        #print(f'  {reward=:.3f}: {forward_reward=:.8f}')
+        #print(f'                 {control_panelty=:.3f}, {survive_reward=:.3f}')
+        #print(f'                 {bending_energy=:.3f}, {shear_energy=:.3f}')
+        #print(f'                 {dist_to_target-0.1=:.3f}')
         if done:
             reward -= (dist_to_target-0.1)
             

@@ -286,7 +286,7 @@ class FlatEnv(core.Env):
             done = True
             survive_reward = -50.0
         else:
-            survive_reward = -2.0 * arm_crossing
+            survive_reward = -0.02 * arm_crossing
             forward_reward = (dist_to_target - np.linalg.norm(self._target - xposbefore)) / (self.step_skip * self.time_step)
             #forward_reward = np.dot(self.rigid_rod.velocity_collection[:2,0], to_target / dist_to_target)
             """ touched """

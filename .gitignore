@@ -9,6 +9,7 @@ model
 save
 *.mp4
 .DS_Store
+.vscode
 
 *.pov
 

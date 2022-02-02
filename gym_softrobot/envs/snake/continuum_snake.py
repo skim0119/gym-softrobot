@@ -214,7 +214,7 @@ class ContinuumSnakeEnv(gym.Env):
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
-            from gym_softrobot.utils.render.povray_rendering import Session
+            from gym_softrobot.utils.render.povray_renderer import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods(self.shearable_rods)

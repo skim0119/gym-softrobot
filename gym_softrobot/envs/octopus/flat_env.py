@@ -16,10 +16,13 @@ from elastica import *
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
 
+from gym_softrobot import RENDERER_CONFIG
+from gym_softrobot.config import RendererType
 from gym_softrobot.envs.octopus.build import build_octopus
 from gym_softrobot.utils.custom_elastica.callback_func import RodCallBack, RigidCylinderCallBack
 from gym_softrobot.utils.intersection import intersection
 from gym_softrobot.utils.render.post_processing import plot_video
+from gym_softrobot.utils.render.base_renderer import BaseRenderer, BaseElasticaRendererSession
 
 
 class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
@@ -343,8 +346,20 @@ class FlatEnv(core.Env):
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
-            from gym_softrobot.utils.render.povray_rendering import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
+
+        if self.renderer is None:
+            # Switch renderer depending on configuration
+            if RENDERER_CONFIG == RendererType.POVRAY:
+                from gym_softrobot.utils.render.povray_renderer import Session
+            elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
+                from gym_softrobot.utils.render.matplotlib_renderer import Session
+            else:
+                raise NotImplementedError("Rendering module is not imported properly")
+            assert issubclass(Session, BaseRenderer), \
+                "Rendering module is not properly subclassed"
+            assert issubclass(Session, BaseElasticaRendererSession), \
+                "Rendering module is not properly subclassed"
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods(self.shearable_rods)
             self.renderer.add_rigid_body(self.rigid_rod)

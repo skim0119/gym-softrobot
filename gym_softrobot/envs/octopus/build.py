@@ -1,3 +1,7 @@
+__doc__="""
+Module contains elastica interface to create octopus model.
+"""
+
 from typing import Optional, Tuple
 import json
 

@@ -5,6 +5,9 @@ import vapory
 
 from abc import ABC, abstractmethod
 
+from gym_softrobot.config import RendererType
+from gym_softrobot.utils.render.base_renderer import BaseRenderer, BaseElasticaRendererSession
+
 import pkg_resources
 
 """
@@ -14,7 +17,7 @@ For some reason, POVray use left-hand system
 (x,y,z) -> (x,z,y)
 """
 
-class Geom:
+class Geom(ABC):
     @abstractmethod
     def __call__(self):
         pass
@@ -82,7 +85,8 @@ class Sphere(Geom):
     def __call__(self):
         return self.sphere
 
-class Session:
+class Session(BaseElasticaRendererSession, BaseRenderer):
+
     def __init__(self, width, height):
         self.object_collection = []
         self.width = width
@@ -96,6 +100,10 @@ class Session:
             __name__,
             'default.inc'
         )
+
+    @property
+    def type(self):
+        return RendererType.POVRAY
 
     def add_rods(self, rods):
         for rod in rods:

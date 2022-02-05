@@ -1,5 +1,7 @@
 from gym.envs.registration import register
 
+from gym_softrobot.config import *
+
 """ Octopus Environment """
 register(
     id='OctoFlat-v0',
@@ -43,3 +45,7 @@ register(
 #    id='InertialPull-v0',
 #    entry_point='gym_softrobot.envs.simple_control:InertialPullEnv',
 #)
+
+
+""" Global Configuration Parameters """
+RENDERER_CONFIG = RendererType.POVRAY

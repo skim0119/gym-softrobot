@@ -27,7 +27,26 @@ python -m gym_softrobot.debug.make     # Make environment and run 10 steps
 python -m gym_softrobot.debug.registry # Print gym-softrobot environment
 ```
 
-We use [POVray](https://wiki.povray.org/content/HowTo:Install_POV) python wrapper [Vapory](https://github.com/Zulko/vapory) to visualize the motion in 3D.
+Requirements:
+- Python 3.8+
+- OpenAI Gym 0.21.0
+- PyElastica 0.2+
+- Matplotlib (optional for display rendering and plotting)	
+- POVray (optional for 3D rendering)
+	
+### Rendering
+
+We support two different backends for the rendering: [POVray](https://wiki.povray.org/content/HowTo:Install_POV) and [Matplotlib](https://matplotlib.org/).
+The default is set to use POVray, but the configuration can be switched by adding following lines.
+
+```py
+from gym_softrobot.config import RendererType
+gym_softrobot.RENDERER_CONFIG = RendererType.MATPLOTLIB  # Default: POVRAY
+```
+
+#### POVray 
+
+To make a good-looking 3D videos and figures, we use [POVray](https://wiki.povray.org/content/HowTo:Install_POV) python wrapper [Vapory](https://github.com/Zulko/vapory).
 POVray is not a requirement to run the environment, but it is necessary to use `env.render()` function as typical gym environment.
 
 If you would like to test `POVray` with `gym-softrobot`, use
@@ -36,13 +55,9 @@ If you would like to test `POVray` with `gym-softrobot`, use
 python -m gym_softrobot.debug.render  # Render 10 frames using vapory
 ```
 
-Requirements:
-- Python 3.8+
-- OpenAI Gym 0.21.0
-- PyElastica 0.2+
-- Matplotlib (optional for display rendering and plotting)	
-- POVray (optional for 3D rendering)
+#### Matplotlib
 
+We provide secondary rendering tool using [Matplotlib](https://matplotlib.org/) for a quick debugging and sanity checking.
 
 ## Reinforcement Learning Example
 

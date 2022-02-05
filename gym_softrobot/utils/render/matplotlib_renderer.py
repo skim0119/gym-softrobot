@@ -1,7 +1,13 @@
 from typing import Optional
 
 import numpy as np
+
+import matplotlib
+matplotlib.use("Agg")  # Must be before importing matplotlib.pyplot or pylab!
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.colors import to_rgb
+from mpl_toolkits.mplot3d import proj3d, Axes3D
 
 from abc import ABC, abstractmethod
 
@@ -18,9 +24,58 @@ def render_figure(fig:plt.figure):
     dpi_res = fig.get_dpi()
     w, h = int(np.ceil(w * dpi_res)), int(np.ceil(h*dpi_res))
 
-    canvas = plt.FigureCanvasAgg(fig)
-    data, (w, h) = canvas.print_to_buffer()
+    canvas = FigureCanvasAgg(fig)
+    canvas.draw()
+    data = np.asarray(canvas.buffer_rgba())[:,:,:3]
     return data
+
+def convert_marker_size(radius, ax):
+    """
+    Convert marker size from radius to s (in scatter plot).
+
+    Parameters
+    ----------
+    radius : np.array or float
+        Array (or a number) of radius
+    ax : matplotlib.Axes
+    """
+    xlim = ax.get_xlim()
+    ylim = ax.get_ylim()
+    max_axis_length = max(abs(xlim[1]-xlim[0]), abs(ylim[1]-ylim[0]))
+    scaling_factor = 8.6e2 * (2*0.1) / max_axis_length
+    return np.pi * (scaling_factor * radius) ** 2
+    #ppi = 72 # standard point size in matplotlib is 72 points per inch (ppi), no matter the dpi
+    #point_whole_ax = 5 * 0.8 * ppi
+    #point_radius= 2 * radius / 1.0 * point_whole_ax
+    #return point_radius**2
+
+def set_axes_equal(ax):
+    '''Make axes of 3D plot have equal scale so that spheres appear as spheres,
+    cubes as cubes, etc..  This is one possible solution to Matplotlib's
+    ax.set_aspect('equal') and ax.axis('equal') not working for 3D.
+
+    Input
+      ax: a matplotlib axis, e.g., as output from plt.gca().
+    '''
+
+    x_limits = ax.get_xlim3d()
+    y_limits = ax.get_ylim3d()
+    z_limits = ax.get_zlim3d()
+
+    x_range = abs(x_limits[1] - x_limits[0])
+    x_middle = np.mean(x_limits)
+    y_range = abs(y_limits[1] - y_limits[0])
+    y_middle = np.mean(y_limits)
+    z_range = abs(z_limits[1] - z_limits[0])
+    z_middle = np.mean(z_limits)
+
+    # The plot bounding box is a sphere in the sense of the infinity
+    # norm, hence I call half the max range the plot radius.
+    plot_radius = 0.5*max([x_range, y_range, z_range])
+
+    ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+    ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+    ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
 class Geom(ABC):
     @abstractmethod
@@ -29,66 +84,110 @@ class Geom(ABC):
 
 
 class ElasticaRod(Geom):
-    def __init__(self, rod):
-        self.rod = rod
+    # RGB color must be 2d array 
+    rgb_color = np.array([[0.35, 0.29, 1.0]])
 
-    def __call__(self):
-        n_data = self.rod.n_elems + 1
-        pos_rad_pair = []
+    def __init__(self, rod, ax):
+        self.rod = rod
+        self.ax = ax
+
+        # Initialize scatter plot
+        pos, rad = self.get_position_radius()
+        self.scatter = ax.scatter(pos[0,:], pos[1,:], pos[2,:], s=convert_marker_size(rad, ax), c=ElasticaRod.rgb_color)
+
+    def get_position_radius(self):
         pos = self.rod.position_collection
         rad = self.rod.radius
-        rad = np.concatenate([rad[0:1], 0.5 * (rad[:-1] + rad[1:]), rad[-1:]])
-        for i in range(n_data):
-            x, z, y = pos[:, i]  # transformation
-            pos_rad_pair.append([x, y, z])
-            pos_rad_pair.append(rad[i])
+        if not pos.shape[-1] == rad.shape[0]:
+            # radius defined at element, while position defined at node.
+            # typical elastica has n_node = n_elem + 1 (unless the rod is circular)
+            pos = 0.5 * (pos[..., 1:] + pos[..., :-1])
+        return pos, rad
 
-        return vapory.SphereSweep(
-            "linear_spline", n_data, *pos_rad_pair, ElasticaRod.texture  #'b_spline',
-        )
+    def __call__(self):
+        # Update scatter plot positions
+        pos, rad = self.get_position_radius()
+        self.scatter._offsets3d = tuple(pos)
+
+        # Updater radius
+        self.scatter.set_sizes(convert_marker_size(rad, self.ax))
+        
+        return self.scatter
+
+class ElasticaRodDirector(Geom):
+    # TODO
+    def __init__(self, rod, ax):
+        self.rod = rod
+        self.ax = ax
+
+    def __call__(self):
+        return None
 
 
 class ElasticaCylinder(Geom):
-    pigment = vapory.Pigment("color", [0.35, 0.29, 1.0], "transmit", 0.0)
-    texture = vapory.Texture(pigment, vapory.Finish("phong", 1))
+    rgb_color = np.array([[0.35, 0.29, 1.0]])
 
-    def __init__(self, body):
+    def __init__(self, body, ax):
         self.body = body
+        self.ax = ax
 
-    def __call__(self):
+        # Initialize scatter plot
+        pos1, pos2, rad = self.get_position_radius()
+        end_caps = np.vstack((pos1, pos2))
+        size = convert_marker_size(rad, ax)
+        self.scatter = ax.scatter(end_caps[:,0], end_caps[:,1], end_caps[:,2], s=size, c=ElasticaCylinder.rgb_color)
+        self.line, = ax.plot(end_caps[:,0], end_caps[:,1], end_caps[:,2], linewidth=size**0.5, c=ElasticaCylinder.rgb_color)
+
+    def get_position_radius(self):
         rad = self.body.radius[0]
         length = self.body.length
         tangent = self.body.director_collection[2, :, 0]
-        position1 = self.body.position_collection[:, 0]
-        position2 = position1 + length * tangent
-        position1 = [position1[0], position1[2], position1[1]]
-        position2 = [position2[0], position2[2], position2[1]]
-        return vapory.Cylinder(position1, position2, rad, ElasticaCylinder.texture)
-
-
-class Sphere(Geom):
-    pigment = vapory.Pigment("color", [1, 0, 1], "transmit", 0.0)
-    texture = vapory.Texture(pigment, vapory.Finish("phong", 1))
-
-    def __init__(self, loc, radius):
-        x, z, y = loc
-        self.sphere = vapory.Sphere([x, y, z], radius, Sphere.texture)
+        pos1 = self.body.position_collection[:, 0]
+        pos2 = pos1 + length * tangent
+        return pos1, pos2, rad
 
     def __call__(self):
-        return self.sphere
+        # Update scatter plot positions
+        pos1, pos2, rad = self.get_position_radius()
+        end_caps = np.vstack((pos1, pos2))
+        self.scatter._offsets3d = end_caps[:,0], end_caps[:,1], end_caps[:,2]
+
+        # Update line plot positions
+        self.line.set_data(end_caps[:,0], end_caps[:,1])
+        self.line.set_3d_properties(end_caps[:,2])
+
+        # Updater radius (rigid body)
+        
+        return [self.scatter, self.line]
+
+
+class ElasticaSphere(Geom):
+    rgb_color = np.array([1.0, 0.0, 1.0])
+
+    def __init__(self, loc, radius, ax):
+        # Initialize scatter plot
+        self.scatter = ax.scatter(loc[0], loc[1], loc[2], s=convert_marker_size(radius, ax), c=ElasticaSphere.rgb_color)
+
+    def __call__(self):
+        return self.scatter
 
 
 class Session(BaseElasticaRendererSession, BaseRenderer):
-    def __init__(self, width, height):
+    def __init__(self, width, height, dpi=100):
         self.object_collection = []
         self.width = width
         self.height = height
+        self.dpi = dpi
 
-        # Assets
-        self.light = vapory.LightSource([2, 4, -3], "color", [1, 1, 1])
-
-        # self.background_path = "default.inc"
-        self.background_path = pkg_resources.resource_filename(__name__, "default.inc")
+        px = 1.0 / dpi
+        self.fig = plt.figure(
+            figsize=(width*px,height*px),
+            frameon=True,
+            dpi=dpi,
+        )
+        self.ax = plt.axes(projection="3d")
+        self.ax.axis('auto')
+        set_axes_equal(self.ax)
 
     @property
     def type(self):
@@ -96,34 +195,37 @@ class Session(BaseElasticaRendererSession, BaseRenderer):
 
     def add_rods(self, rods):
         for rod in rods:
-            self.object_collection.append(ElasticaRod(rod))
+            self.object_collection.append(ElasticaRod(rod, self.ax))
+            # TODO Maybe give another configuration to plot the directors
+            # self.object_collection.append(ElasticaRodDirector(rod, self.ax))
 
     def add_rigid_body(self, body):
-        self.object_collection.append(ElasticaCylinder(body))
+        self.object_collection.append(ElasticaCylinder(body, self.ax))
 
     def add_point(self, loc: list, radius: float):
-        self.object_collection.append(Sphere(loc, radius))
+        # Add static sphere
+        self.object_collection.append(ElasticaSphere(loc, radius, self.ax))
 
     def render(
         self,
         width: Optional[int] = None,
         height: Optional[int] = None,
-        camera_param: Optional[tuple] = None,
+        camera_param: Optional[tuple] = None, # POVray parameter
+        **kwargs
     ):
-        if not camera_param:
-            # camera = vapory.Camera( 'location', [1.7,0.7,-1.2], 'look_at', [0.5,0,1] )
-            # camera = vapory.Camera( 'location', [0.8,0.7,-1.2], 'look_at', [0.0,0,0] )
-            camera = vapory.Camera("location", [0.5, 0.4, -0.9], "look_at", [0.0, 0, 0])
-        else:
-            camera = vapory.Camera(*camera_param)
+        # Reset width and height
         if not width:
             width = self.width
         if not height:
             height = self.height
+
+        # Maybe convert povray cmaera_param to matplotlib viewpoint
+
         objects = [obj() for obj in self.object_collection]
-        objects.append(self.light)
-        scene = vapory.Scene(camera, objects=objects, included=[self.background_path])
-        return scene.render(width=width, height=height)
+        set_axes_equal(self.ax)
+        rendered_data = render_figure(self.fig)
+        return rendered_data
 
     def close(self):
+        plt.close(plt.gcf())
         self.object_collection.clear()

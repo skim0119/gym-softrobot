@@ -1,6 +1,9 @@
 import gym 
 import gym_softrobot
 
+from gym_softrobot.config import RendererType
+gym_softrobot.RENDERER_CONFIG = RendererType.MATPLOTLIB
+
 def main():
     env = gym.make('OctoFlat-v0', recording_fps=30)
 

@@ -1,6 +1,6 @@
 from gym.envs.registration import register
 
-from config import *
+from gym_softrobot.config import *
 
 """ Octopus Environment """
 register(

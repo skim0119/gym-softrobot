@@ -42,7 +42,7 @@ def convert_marker_size(radius, ax):
     xlim = ax.get_xlim()
     ylim = ax.get_ylim()
     max_axis_length = max(abs(xlim[1]-xlim[0]), abs(ylim[1]-ylim[0]))
-    scaling_factor = 8.6e2 * (2*0.1) / max_axis_length
+    scaling_factor = 3.0e3 * (2*0.1) / max_axis_length
     return np.pi * (scaling_factor * radius) ** 2
     #ppi = 72 # standard point size in matplotlib is 72 points per inch (ppi), no matter the dpi
     #point_whole_ax = 5 * 0.8 * ppi
@@ -186,8 +186,9 @@ class Session(BaseElasticaRendererSession, BaseRenderer):
             dpi=dpi,
         )
         self.ax = plt.axes(projection="3d")
-        self.ax.axis('auto')
-        set_axes_equal(self.ax)
+        self.ax.set_xlabel("x")
+        self.ax.set_ylabel("y")
+        self.ax.set_zlabel("z")
 
     @property
     def type(self):
@@ -222,10 +223,15 @@ class Session(BaseElasticaRendererSession, BaseRenderer):
         # Maybe convert povray cmaera_param to matplotlib viewpoint
 
         objects = [obj() for obj in self.object_collection]
-        set_axes_equal(self.ax)
+        self.rescale_axis()
         rendered_data = render_figure(self.fig)
         return rendered_data
 
     def close(self):
         plt.close(plt.gcf())
         self.object_collection.clear()
+
+    def rescale_axis(self):
+        self.ax.relim()
+        self.ax.autoscale_view()
+        set_axes_equal(self.ax)

@@ -137,6 +137,7 @@ class ArmSingleEnv(core.Env):
         # Set Target
         self._target = (2-0.5)*self.np_random.random(2) + 0.5
         #self._target /= np.linalg.norm(self._target) # I don't see why this is here
+        print(self._target)
 
         # Initial State
         state = self.get_state()
@@ -272,7 +273,7 @@ class ArmSingleEnv(core.Env):
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods([self.shearable_rod]) # TODO: maybe need add_rod instead
-            self.renderer.add_point(self._target.tolist()+[0], 0.05)
+            self.renderer.add_point(self._target.tolist()+[0], 0.02)
 
         # POVRAY
         if RENDERER_CONFIG == RendererType.POVRAY:

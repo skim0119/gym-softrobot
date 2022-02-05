@@ -2,10 +2,11 @@ import gym
 import gym_softrobot
 
 from gym_softrobot.config import RendererType
-gym_softrobot.RENDERER_CONFIG = RendererType.MATPLOTLIB
+
+#gym_softrobot.RENDERER_CONFIG = RendererType.MATPLOTLIB
 
 def main():
-    env = gym.make('OctoFlat-v0', recording_fps=30)
+    env = gym.make('OctoArmSingle-v0', recording_fps=30)
 
     observation = env.reset()
     for step in range(10):

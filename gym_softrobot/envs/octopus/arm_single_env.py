@@ -16,9 +16,12 @@ from elastica import *
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
 
+from gym_softrobot import RENDERER_CONFIG
+from gym_softrobot.config import RendererType
 from gym_softrobot.envs.octopus.build import build_arm
 from gym_softrobot.utils.custom_elastica.callback_func import RodCallBack, RigidCylinderCallBack
 from gym_softrobot.utils.render.post_processing import plot_video
+from gym_softrobot.utils.render.base_renderer import BaseRenderer, BaseElasticaRendererSession
 
 
 class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
@@ -252,29 +255,47 @@ class ArmSingleEnv(core.Env):
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
-            from gym_softrobot.utils.render.povray_renderer import Session
+            self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
+
+        if self.renderer is None:
+            # Switch renderer depending on configuration
+            if RENDERER_CONFIG == RendererType.POVRAY:
+                from gym_softrobot.utils.render.povray_renderer import Session
+            elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
+                from gym_softrobot.utils.render.matplotlib_renderer import Session
+            else:
+                raise NotImplementedError("Rendering module is not imported properly")
+            assert issubclass(Session, BaseRenderer), \
+                "Rendering module is not properly subclassed"
+            assert issubclass(Session, BaseElasticaRendererSession), \
+                "Rendering module is not properly subclassed"
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods([self.shearable_rod]) # TODO: maybe need add_rod instead
             self.renderer.add_point(self._target.tolist()+[0], 0.05)
 
-        # Temporary rendering to add side-view
-        state_image = self.renderer.render(maxwidth, int(maxwidth*aspect_ratio*0.7))
-        state_image_side = self.renderer.render(
-                maxwidth//2,
-                int(maxwidth*aspect_ratio*0.3),
-                camera_param=('location',[0.0, 0.0, -0.5],'look_at',[0.0,0,0])
-            )
-        state_image_top = self.renderer.render(
-                maxwidth//2,
-                int(maxwidth*aspect_ratio*0.3),
-                camera_param=('location',[0.0, 0.3, 0.0],'look_at',[0.0,0,0])
-            )
+        # POVRAY
+        if RENDERER_CONFIG == RendererType.POVRAY:
+            state_image = self.renderer.render(maxwidth, int(maxwidth*aspect_ratio*0.7))
+            state_image_side = self.renderer.render(
+                    maxwidth//2,
+                    int(maxwidth*aspect_ratio*0.3),
+                    camera_param=('location',[0.0, 0.0, -0.5],'look_at',[0.0,0,0])
+                )
+            state_image_top = self.renderer.render(
+                    maxwidth//2,
+                    int(maxwidth*aspect_ratio*0.3),
+                    camera_param=('location',[0.0, 0.3, 0.0],'look_at',[0.0,0,0])
+                )
 
-        state_image = np.vstack([
-            state_image,
-            np.hstack([state_image_side, state_image_top])
-        ])
+            state_image = np.vstack([
+                state_image,
+                np.hstack([state_image_side, state_image_top])
+            ])
+        elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
+            state_image = self.renderer.render()
+        else:
+            raise NotImplementedError("Rendering module is not imported properly")
 
         self.viewer.imshow(state_image)
 

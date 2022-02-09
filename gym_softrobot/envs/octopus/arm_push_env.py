@@ -92,21 +92,6 @@ class ArmPushEnv(core.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def summary(self,):
-        print(f"""
-        {self.final_time=}
-        {self.time_step=}
-        {self.total_steps=}
-        {self.step_skip=}
-        simulation time per action: {1.0/self.step_skip=}
-        max number of action per episode: {self.total_steps/self.step_skip}
-
-        {self.n_elems=}
-        {self.action_space=}
-        {self.observation_space=}
-        {self.reward_range=}
-        """)
-
     def reset(self):
         self.simulator = BaseSimulator()
 
@@ -246,6 +231,7 @@ class ArmPushEnv(core.Env):
         return states, reward, done, info
 
     def save_data(self, filename_video, fps):
+        """ Pass """
         if self.config_generate_video:
             filename_video = f"save/{filename_video}"
             plot_video(self.rod_parameters_dict, filename_video, margin=0.2, fps=fps)
@@ -294,6 +280,7 @@ class ArmPushEnv(core.Env):
                 np.hstack([state_image_side, state_image_top])
             ])
         elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
+            # TODO Maybe add 2D rendering instead
             state_image = self.renderer.render()
         else:
             raise NotImplementedError("Rendering module is not imported properly")

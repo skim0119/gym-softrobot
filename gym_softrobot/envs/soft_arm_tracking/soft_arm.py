@@ -3,7 +3,7 @@
 
 import sys
 sys.path.append("../../../")
-
+import setuptools
 
 from MuscleTorquesWithBspline import MuscleTorquesWithVaryingBetaSplines
 from elastica._calculus import _isnan_check
@@ -76,24 +76,34 @@ class SoftArmTracking(gym.Env):
 
     def __init__(self, **kwargs):
 
-
         if kwargs:
             print('The following default parameters are being overwritten to the displayed value:')
             for key in kwargs.keys():
                 print('    %s:' % (key), kwargs[key])
         print('')
+
         ''' numerical parameters '''
         self.n_elem = kwargs.get("n_elem", 40) 
-        self.sim_dt = kwargs.get("sim_dt", 2.0e-4) #seconds
+        self.sim_dt = kwargs.get("sim_dt", 2.0e-4) # seconds
 
         ''' Environment time parameters '''
-        self.max_episode_final_time = kwargs.get("max_episode_final_time",5) #seconds
-        self.RL_update_interval = kwargs.get("RL_update_interval",0.01) #This is 100 updates per second
+        self.RL_update_interval = kwargs.get("RL_update_interval",0.01) # This is 100 updates per second
         self.num_steps_per_update = np.rint(self.RL_update_interval/self.sim_dt).astype(int)
 
+        ''' Target mode and parameters '''
+        self.mode = kwargs.get("mode",1)
+        if self.mode == 1:
+            self.target_location = kwargs.get("target_location",np.array([500,  500., 500]))
+            self.max_episode_final_time = kwargs.get("max_episode_final_time",5) # seconds
+        elif self.mode == 2:
+            self.target_v_scale = kwargs.get("target_v_scale",0.1)
+            self.max_episode_final_time = kwargs.get("max_episode_final_time",20) # seconds
+
+        self.num_timesteps_per_episode = np.rint(self.max_episode_final_time / self.RL_update_interval).astype(int)
+
         ''' Arm parameters '''
-        self.base_length = kwargs.get("base_length",1000) #mm
-        self.radius = kwargs.get("radius",25) #mm
+        self.base_length = kwargs.get("base_length",1) * 1000 # m --> mm
+        self.radius = kwargs.get("radius",0.025) * 1000 # m --> mm
         self.youngs_modulus = kwargs.get("youngs_modulus",2e6) #Pa -- kg/s2 m --> g/s2 mm (does not require rescaling)
         self.damping = self.youngs_modulus * 1e-7 * 10 #kg/m s --> g/mm s (does not require rescaling)
         self.torque_damping_ratio = 1*1e6 #ratio of torque to force damping coefficient (1e6 accounts for g/mm/s unit conversion -- ratio usually defined in kg/m/s)
@@ -117,11 +127,6 @@ class SoftArmTracking(gym.Env):
         self.torque_scale = kwargs.get("torque_scale",10)
         self.max_rate_of_change_of_activation = kwargs.get("max_rate_of_change_of_activation",np.infty)
 
-        ''' Target parameters '''
-        self.mode = kwargs.get("mode",1)
-        self.target_location = kwargs.get("target_location",np.array([500,  500., 500]))
-        self.target_v_scale = kwargs.get("target_v_scale",0.1)
-
         self.StatefulStepper = PositionVerlet()
 
         ''' State and action space parameters '''
@@ -138,7 +143,10 @@ class SoftArmTracking(gym.Env):
         self.rendering_fps = 30
         self.step_skip = np.rint(1.0 / (self.rendering_fps * self.sim_dt)).astype(int)
 
-    def get_state(self):
+        #
+        self.get_state = kwargs.get("custom_state_fn",self.get_state_default)
+
+    def get_state_default(self):
         """
         Returns current state of the system to the controller.
 
@@ -185,12 +193,10 @@ class SoftArmTracking(gym.Env):
 
         # self.render()
 
-        # set binormal activations to 0 if solving 2D case
         self.spline_points_func_array_normal_dir[:] = action[: self.number_of_control_points] 
         self.spline_points_func_array_binormal_dir[:] = action[self.number_of_control_points :] 
 
         for _ in range(int(self.num_steps_per_update)):
-            # print('step:', i)
             self.time_tracker = self.do_step(
                 self.StatefulStepper,
                 self.stages_and_updates,
@@ -209,20 +215,20 @@ class SoftArmTracking(gym.Env):
         # observe current state: current as sensed signal
         state = self.get_state()
 
-        """ Done is a boolean to reset the environment before episode is completed """
+        """ Done is a boolean to reset the environment when episode is completed """
         done = False
 
-        # Position of the rod cannot be NaN, it is not valid, stop the simulation
+        # Check if the episode blew up and is returning NaNs in the state.
         invalid_values_condition = _isnan_check(state) 
         if invalid_values_condition == True:
             reward = -100
             state = np.nan_to_num(self.get_state())
             done = True
-            print('Episode blew up. Maybe try a smaller dt?')
+            print('Episode blew up after %i steps. Maybe try a smaller dt?' & self.tick )
 
         if self.tick * self.sim_dt >= self.max_episode_final_time:
             done = True
-            print('Episode has reached max time')
+            # print('Episode has reached max time')
 
 
         self._target = self.wsol[self.tick]
@@ -365,8 +371,6 @@ class SoftArmTracking(gym.Env):
 
         return state
 
-
-
     def render(self, mode='human', close=False):
         maxwidth = 800
         aspect_ratio = (3/4)
@@ -438,7 +442,15 @@ if __name__ == '__main__':
 
     model = PPO.load('POLICY', env = env)
     obs = env.reset()
-    for _ in range(500):
+    score = 0
+    for _ in range(env.num_timesteps_per_episode):
         action, _states = model.predict(obs)
         obs, rewards, dones, info = env.step(action)
         env.render()
+        score += rewards 
+    env.close()
+
+    print('--------------------')
+    print('Final score:', np.round(score,4) )
+    print('--------------------')
+

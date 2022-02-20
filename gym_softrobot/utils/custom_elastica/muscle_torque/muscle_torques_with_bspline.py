@@ -156,7 +156,9 @@ class MuscleTorquesWithVaryingBetaSplines(NoForces):
             )
 
         self.compute_muscle_torques(
-            self.torque_magnitude_cache, self.direction, system.external_torques,
+            self.torque_magnitude_cache,
+            self.direction,
+            system.external_torques,
         )
 
         if self.counter % self.step_skip == 0:

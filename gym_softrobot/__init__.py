@@ -46,6 +46,12 @@ register(
 #    entry_point='gym_softrobot.envs.simple_control:InertialPullEnv',
 #)
 
+""" Soft Arm Environment """
+register(
+    id='SoftArmTracking-v0',
+    entry_point='gym_softrobot.envs.soft_arm:SoftArmTrackingEnv',
+)
+
 
 """ Global Configuration Parameters """
 RENDERER_CONFIG = RendererType.POVRAY

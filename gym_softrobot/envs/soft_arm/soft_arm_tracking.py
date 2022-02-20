@@ -97,7 +97,7 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
     return target_trajectory
 
 
-class SoftArmTracking(gym.Env):
+class SoftArmTrackingEnv(gym.Env):
     metadata = {"render.modes": ["rgb", "human"]}
 
     def __init__(self, **kwargs):

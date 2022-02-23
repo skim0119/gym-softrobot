@@ -97,42 +97,96 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
     return target_trajectory
 
 
-class SoftArmTracking(gym.Env):
+class SoftArmTrackingEnv(gym.Env):
     metadata = {"render.modes": ["rgb", "human"]}
 
-    def __init__(self):
-        self.n_elem = 40
-        self.sim_dt = 2.0e-4
-        self.RL_update_interval = 0.01  # This is 100 updates per second
+    def __init__(self, **kwargs):
+
+        if kwargs:
+            print(
+                "The following default parameters are being overwritten to the displayed value:"
+            )
+            for key in kwargs.keys():
+                print("    %s:" % (key), kwargs[key])
+        print("")
+
+        """ numerical parameters """
+        self.n_elem = kwargs.get("n_elem", 40)
+        self.sim_dt = kwargs.get("sim_dt", 2.0e-4)  # seconds
+
+        """ Environment time parameters """
+        self.RL_update_interval = kwargs.get(
+            "RL_update_interval", 0.01
+        )  # This is 100 updates per second
         self.num_steps_per_update = np.rint(
             self.RL_update_interval / self.sim_dt
         ).astype(int)
-        self.youngs_modulus = 2e6
-        poisson_ratio = 0.45
-        self.shear_modulus = 0.5 * self.youngs_modulus / (poisson_ratio + 1.0)
 
-        self.torque_scale = 10
+        """ Target mode and parameters """
+        self.mode = kwargs.get("mode", 1)
+        if self.mode == 1:
+            self.target_location = kwargs.get(
+                "target_location", np.array([500, 500.0, 500])
+            )
+            self.max_episode_final_time = kwargs.get(
+                "max_episode_final_time", 5
+            )  # seconds
+        elif self.mode == 2:
+            self.target_v_scale = kwargs.get("target_v_scale", 0.1)
+            self.max_episode_final_time = kwargs.get(
+                "max_episode_final_time", 20
+            )  # seconds
 
-        self.max_episode_final_time = 5  # seconds
+        self.num_timesteps_per_episode = np.rint(
+            self.max_episode_final_time / self.RL_update_interval
+        ).astype(int)
 
-        self.base_length = 1000
-        self.radius = 50
-        self.COLLECT_DATA_FOR_POSTPROCESSING = False
+        """ Arm parameters """
+        self.base_length = kwargs.get("base_length", 1) * 1000  # m --> mm
+        self.radius = kwargs.get("radius", 0.025) * 1000  # m --> mm
+        self.youngs_modulus = kwargs.get(
+            "youngs_modulus", 2e6
+        )  # Pa -- kg/s2 m --> g/s2 mm (does not require rescaling)
+        self.damping = (
+            self.youngs_modulus * 1e-7 * 10
+        )  # kg/m s --> g/mm s (does not require rescaling)
+        self.torque_damping_ratio = (
+            1 * 1e6
+        )  # ratio of torque to force damping coefficient (1e6 accounts for g/mm/s unit conversion -- ratio usually defined in kg/m/s)
 
-        self.number_of_control_points = 4
-        self.number_of_observation_segments = self.number_of_control_points
+        if "poisson_ratio" in kwargs.keys():
+            poisson_ratio = kwargs.get("poisson_ratio")
+            self.shear_modulus = (
+                0.5 * self.youngs_modulus / (poisson_ratio + 1.0)
+            )  # Pa -- kg/s2 m --> g/s2 mm (does not require rescaling)
+        elif "shear_modulus" in kwargs.keys():
+            self.shear_modulus = kwargs.get(
+                "shear_modulus"
+            )  # Pa -- kg/s2 m --> g/s2 mm (does not require rescaling)
+        else:
+            poisson_ratio = 0.45  # Default is to assume a Poisson ratio of 0.45
+            self.shear_modulus = (
+                0.5 * self.youngs_modulus / (poisson_ratio + 1.0)
+            )  # Pa -- kg/s2 m --> g/s2 mm (does not require rescaling)
 
-        self.rendering_fps = 30
-        self.step_skip = np.rint(1.0 / (self.rendering_fps * self.sim_dt)).astype(int)
+        self.density = kwargs.get("density", 1000) * 1e-6  # kg/m3 --> g/mm3
 
-        self.max_rate_of_change_of_activation = np.infty
-        self.target_v_scale = 0.1
+        """ Add gravity? """
+        self.gravity_mode = kwargs.get("gravity_mode", 0)
 
-        self.mode = 1
-        self.target_location = np.array([500, 500.0, 500])
+        """ Torque activation parameters """
+        self.torque_scale = kwargs.get("torque_scale", 10)
+        self.max_rate_of_change_of_activation = kwargs.get(
+            "max_rate_of_change_of_activation", np.infty
+        )
 
         self.StatefulStepper = PositionVerlet()
 
+        """ State and action space parameters """
+        self.number_of_control_points = kwargs.get("number_of_control_points", 4)
+        self.number_of_observation_segments = kwargs.get(
+            "number_of_observation_segments", self.number_of_control_points
+        )
         # normal and/or binormal direction activation (3D)
         self.action_space = gym.spaces.Box(
             low=-1.0,
@@ -147,10 +201,17 @@ class SoftArmTracking(gym.Env):
             dtype=np.float64,
         )
 
+        """ Rendering and logging parameters """
         self.viewer = None
         self.renderer = None
+        self.COLLECT_DATA_FOR_POSTPROCESSING = False
+        self.rendering_fps = 30
+        self.step_skip = np.rint(1.0 / (self.rendering_fps * self.sim_dt)).astype(int)
 
-    def get_state(self):
+        #
+        self.get_state = kwargs.get("custom_state_fn", self.get_state_default)
+
+    def get_state_default(self):
         """
         Returns current state of the system to the controller.
 
@@ -209,7 +270,6 @@ class SoftArmTracking(gym.Env):
 
         # self.render()
 
-        # set binormal activations to 0 if solving 2D case
         self.spline_points_func_array_normal_dir[:] = action[
             : self.number_of_control_points
         ]
@@ -218,7 +278,6 @@ class SoftArmTracking(gym.Env):
         ]
 
         for _ in range(int(self.num_steps_per_update)):
-            # print('step:', i)
             self.time_tracker = self.do_step(
                 self.StatefulStepper,
                 self.stages_and_updates,
@@ -227,13 +286,10 @@ class SoftArmTracking(gym.Env):
                 self.sim_dt,
             )
             self.tick += 1
-            self.sphere.position_collection[..., 0] = self.wsol[self.tick]
-            self.sphere.velocity_collection[..., 0] = self.velocity_sphere[self.tick]
 
         """ Reward Engineering """
         tip_to_target = (
-            self.sphere.position_collection[..., 0]
-            - self.shearable_rod.position_collection[..., -1]
+            self.wsol[self.tick] - self.shearable_rod.position_collection[..., -1]
         ) / 1000
         reward_dist = -np.square(np.linalg.norm(tip_to_target))
         reward = 1.0 * reward_dist  # + reward_orientation
@@ -241,20 +297,20 @@ class SoftArmTracking(gym.Env):
         # observe current state: current as sensed signal
         state = self.get_state()
 
-        """ Done is a boolean to reset the environment before episode is completed """
+        """ Done is a boolean to reset the environment when episode is completed """
         done = False
 
-        # Position of the rod cannot be NaN, it is not valid, stop the simulation
+        # Check if the episode blew up and is returning NaNs in the state.
         invalid_values_condition = _isnan_check(state)
         if invalid_values_condition == True:
             reward = -100
             state = np.nan_to_num(self.get_state())
             done = True
-            print("Episode blew up. Maybe try a smaller dt?")
+            print("Episode blew up after %i steps. Maybe try a smaller dt?" & self.tick)
 
         if self.tick * self.sim_dt >= self.max_episode_final_time:
             done = True
-            print("Episode has reached max time")
+            # print('Episode has reached max time')
 
         self._target = self.wsol[self.tick]
         return state, reward, done, {"ctime": self.time_tracker}
@@ -270,13 +326,11 @@ class SoftArmTracking(gym.Env):
 
         # Set the arm properties after defining rods
 
-        damping = self.youngs_modulus * 1e-7 * 1
-
         radius_tip = self.radius  # radius of the arm at the tip
         radius_base = radius_tip  # radius of the arm at the base
         radius_along_rod = np.linspace(radius_tip, radius_tip, self.n_elem)
 
-        # Arm is shearable Cosserat rod
+        # Arm is a shearable Cosserat rod
         self.shearable_rod = CosseratRod.straight_rod(
             self.n_elem,
             start,
@@ -284,22 +338,28 @@ class SoftArmTracking(gym.Env):
             normal,
             self.base_length,
             base_radius=radius_along_rod,
-            density=1000 * 1e-6,
-            nu=damping,
+            density=self.density,
+            nu=self.damping,
             youngs_modulus=self.youngs_modulus,
             shear_modulus=self.shear_modulus,
         )
 
-        self.shearable_rod.dissipation_constant_for_torques *= (
-            1e6  # accounts for the new g/mm/s units (compared to kg/m/s)
-        )
+        self.shearable_rod.dissipation_constant_for_torques *= self.torque_damping_ratio
+
         self.simulator.append(
             self.shearable_rod
         )  # Now rod is ready for simulation, append rod to simulation
         self.simulator.constrain(self.shearable_rod).using(
             OneEndFixedRod, constrained_position_idx=(0,), constrained_director_idx=(0,)
         )
-        # self.simulator.add_forcing_to(self.shearable_rod).using(GravityForces, acc_gravity=np.array([0.0, 9.81*1e3, 0.0]))
+        if self.gravity_mode == 1:
+            self.simulator.add_forcing_to(self.shearable_rod).using(
+                GravityForces, acc_gravity=np.array([0.0, -9.81 * 1e3, 0.0])
+            )  # Gravity points down -- for soft arm, might cause buckling
+        elif self.gravity_mode == 2:
+            self.simulator.add_forcing_to(self.shearable_rod).using(
+                GravityForces, acc_gravity=np.array([0.0, 9.81 * 1e3, 0.0])
+            )  # Gravity points up -- arm is hanging upside down.
 
         # Call back function to collect arm data from simulation
         if self.COLLECT_DATA_FOR_POSTPROCESSING:
@@ -355,8 +415,8 @@ class SoftArmTracking(gym.Env):
             )
 
         """
-        heuristic scaling of torque - not this works for a 25:1 slenderness ratio. Bending stiffness scales ~r^4 so if thicker or thinner, 
-        the torque value might need to be adjusted. This scaling is more designed for changing the youngs modulus 
+        heuristic scaling of torque - note: this works for a 25:1 slenderness ratio. Bending stiffness scales ~r^4 so if thicker or thinner, 
+        the torque_scale value might need to be adjusted. This scaling is more designed for changing the young's modulus 
         """
         self.alpha = self.torque_scale * self.radius * self.youngs_modulus
         # Add muscle torques acting on the arm for actuation
@@ -393,14 +453,13 @@ class SoftArmTracking(gym.Env):
         )
 
         ###--------------GENERATE TARGET TRAJECTORY--------------###
+        """ We are not adding the target into the trajectory to speed things up, you could do so if you wished however"""
         self.tick = 0
-
-        # TODO: change this to a object that will update thee target position as you go
-        target_trajectory = generate_trajectory(
-            self.max_episode_final_time, self.sim_dt, self.target_v_scale
-        )
-
         if self.mode == 2:
+            # TODO: change this to a object that will update the target position as you go
+            target_trajectory = generate_trajectory(
+                self.max_episode_final_time, self.sim_dt, self.target_v_scale
+            )
             self.wsol = target_trajectory
         elif self.mode == 1:
             end_time = self.max_episode_final_time * 1.1
@@ -408,60 +467,7 @@ class SoftArmTracking(gym.Env):
             self.wsol = np.zeros((numpoints, 3))
             self.wsol[:] = self.target_location
 
-        velocity_sphere = self.wsol * 0
-        velocity_sphere[:-1] = (self.wsol[1:] - self.wsol[:-1]) / self.sim_dt
-        velocity_sphere[-1] = velocity_sphere[-2]
-        self.velocity_sphere = velocity_sphere
-
-        ###--------------ADD TARGET TO SIMULATION--------------###
-        self.sphere_radius = 0.025 * 1000
-        target_position = self.wsol[0]
-        # initialize sphere
-        self.sphere = Sphere(
-            center=target_position,  # initialize target position of the ball
-            base_radius=self.sphere_radius,
-            density=1000 * 1e-6,
-        )
-        self.simulator.append(self.sphere)
-        self.sphere.velocity_collection[..., 0] = self.velocity_sphere[0]
-
-        if self.COLLECT_DATA_FOR_POSTPROCESSING:
-
-            # Call back function to collect target sphere data from simulation
-            class RigidSphereCallBack(CallBackBaseClass):
-                """
-                Call back function for target sphere
-                """
-
-                def __init__(self, step_skip: int, callback_params: dict):
-                    CallBackBaseClass.__init__(self)
-                    self.every = step_skip
-                    self.callback_params = callback_params
-
-                def make_callback(self, system, time, current_step: int):
-                    if current_step % self.every == 0:
-                        self.callback_params["time"].append(time)
-                        self.callback_params["step"].append(current_step)
-                        self.callback_params["position"].append(
-                            system.position_collection.copy()
-                        )
-                        self.callback_params["velocity"].append(
-                            system.velocity_collection.copy()
-                        )
-                        self.callback_params["radius"].append(
-                            copy.deepcopy(system.radius)
-                        )
-                        self.callback_params["com"].append(
-                            system.compute_position_center_of_mass()
-                        )
-                        return
-
-            self.post_processing_dict_sphere = defaultdict(list)
-            self.simulator.collect_diagnostics(self.sphere).using(
-                RigidSphereCallBack,
-                step_skip=self.step_skip,
-                callback_params=self.post_processing_dict_sphere,
-            )
+        self.sphere_radius = 0.0125 * 1000  # Just for rendering purposes
 
         ###--------------FINALIZE SIMULATION--------------###
         # Finalize simulation environment. After finalize, you cannot add
@@ -547,18 +553,9 @@ class SoftArmTracking(gym.Env):
 
 
 if __name__ == "__main__":
-
-    import gym
-
-    # import pybulletgym  # register PyBullet enviroments with open ai gym
-    import numpy as np
     from stable_baselines3 import PPO
-    from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
-    from stable_baselines3.common.env_util import make_vec_env
-    from stable_baselines3.common.utils import set_random_seed
-    from stable_baselines3.common.monitor import Monitor
 
-    env = SoftArmTracking()
+    env = SoftArmTracking(gravity_mode=1)
     model = PPO(
         "MlpPolicy",
         env,
@@ -566,13 +563,22 @@ if __name__ == "__main__":
         tensorboard_log="logs/tensorboard/",
     )
     model.learn(
-        total_timesteps=1000000,
+        total_timesteps=100000,
     )
-    # model.save('POLICY', )
+    model.save(
+        "POLICY",
+    )
 
-    # model = PPO.load('POLICY', env = env)
-    # obs = env.reset()
-    # for _ in range(500):
-    #     action, _states = model.predict(obs)
-    #     obs, rewards, dones, info = env.step(action)
-    #     env.render()
+    model = PPO.load("POLICY", env=env)
+    obs = env.reset()
+    score = 0
+    for _ in range(env.num_timesteps_per_episode):
+        action, _states = model.predict(obs)
+        obs, rewards, dones, info = env.step(action)
+        env.render()
+        score += rewards
+    env.close()
+
+    print("--------------------")
+    print("Final score:", np.round(score, 4))
+    print("--------------------")

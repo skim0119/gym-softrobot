@@ -137,7 +137,14 @@ class FlatEnv(core.Env):
         {self.reward_range=}
         """)
 
-    def reset(self):
+    def reset(
+		self,
+		*,
+		seed: Optional[int] = None,
+		return_info: bool = False,
+		options: Optional[dict] = None,
+	):
+        super().reset(seed=seed)
         self.simulator = BaseSimulator()
 
         self.shearable_rods, self.rigid_rod = build_octopus(

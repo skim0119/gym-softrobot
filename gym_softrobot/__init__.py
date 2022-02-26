@@ -34,6 +34,11 @@ register(
     entry_point='gym_softrobot.envs.octopus:ArmSingleEnv',
 )
 
+register(
+    id='OctoArmPush-v0',
+    entry_point='gym_softrobot.envs.octopus:ArmPushEnv',
+)
+
 """ Snake Environment """
 register(
     id='ContinuumSnake-v0',

@@ -259,7 +259,14 @@ class SoftArmTrackingEnv(gym.Env):
         self._target = self.wsol[self.tick]
         return state, reward, done, {"ctime": self.time_tracker}
 
-    def reset(self):
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None
+    ):
+        super().reset(seed=seed)
         self.simulator = BaseSimulator()
 
         ###--------------ADD ARM TO SIMULATION--------------###

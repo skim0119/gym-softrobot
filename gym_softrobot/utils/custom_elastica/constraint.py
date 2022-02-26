@@ -103,9 +103,9 @@ class ControllableFixConstraint(FreeRod):
 
     """ Modelled after sucker on octopus arm"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, index, **kwargs):
         super().__init__(**kwargs)
-        self.controller = self._Controller(**kwargs)
+        self.controller = self._Controller(index=index)
 
     @property
     def get_controller(self):

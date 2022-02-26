@@ -71,9 +71,9 @@ class ArmPushEnv(core.Env):
         # Spaces
         self.n_elem = 40
         n_action = self.n_elem - 1
-        self.action_space = spaces.Box(0.0, 1.0, shape=(n_action), dtype=np.float32)
+        self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
         self._observation_size = (
-            (self.n_elems + 1 + n_action),
+            (self.n_elem + 1 + n_action),
         )  # 2 for target
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
@@ -101,23 +101,19 @@ class ArmPushEnv(core.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
+    def reset(
+		self,
+		*,
+		seed: Optional[int] = None,
+		return_info: bool = False,
+		options: Optional[dict] = None,
+	):
+        super().reset(seed=seed)
         self.simulator = BaseSimulator()
         self.shearable_rod = self._build()
-        self.simulator.append(self.shearable_rod)
 
-        # CallBack
-        if self.config_generate_video:
-            self.rod_parameters_dict = defaultdict(list)
-            self.simulator.collect_diagnostics(self.shearable_rod).using(
-                RodCallBack,
-                step_skip=self.step_skip,
-                callback_params=self.rod_parameters_dict,
-            )
-
-        """ Finalize the simulator and create time stepper """
+        """ Create time stepper """
         self.StatefulStepper = PositionVerlet()
-        self.simulator.finalize()
         self.do_step, self.stages_and_updates = extend_stepper_interface(
             self.StatefulStepper, self.simulator
         )
@@ -157,12 +153,12 @@ class ArmPushEnv(core.Env):
             poisson_ratio=0.5,
             nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
         )
+        self.simulator.append(shearable_rod)
 
-        controllable_constraint = self.simulator.constrain(self.shearable_rod).using(
+        controller_id = self.simulator.constrain(shearable_rod).using(
             ControllableFixConstraint,
             index=0,
-        )
-        self.BC = controllable_constraint.get_controller
+        ).id()
 
         """ Add muscle actuation """
         self.muscle_layers = [
@@ -200,12 +196,26 @@ class ArmPushEnv(core.Env):
         for _ in self.muscle_layers:
             self.muscles_parameters.append(defaultdict(list))
 
-        self.simulator.add_forcing_to(self.shearable_rod).using(
+        self.simulator.add_forcing_to(shearable_rod).using(
             ApplyMuscle,
             muscles=self.muscle_layers,
             step_skip=self.step_skip,
             callback_params_list=self.muscles_parameters,
         )
+
+        # CallBack
+        if self.config_generate_video:
+            self.rod_parameters_dict = defaultdict(list)
+            self.simulator.collect_diagnostics(self.shearable_rod).using(
+                RodCallBack,
+                step_skip=self.step_skip,
+                callback_params=self.rod_parameters_dict,
+            )
+
+        self.simulator.finalize()
+
+        controllable_constraint = dict(self.simulator._constraints)[controller_id]
+        self.BC = controllable_constraint.get_controller
 
         return shearable_rod
 

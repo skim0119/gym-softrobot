@@ -2,6 +2,8 @@ __doc__ = """Snake friction case from X. Zhang et. al. Nat. Comm. 2021"""
 
 """ This environment is constructed based on the PyElastica:ContinuumSnakeCase """
 
+from typing import Optional
+
 from collections import defaultdict
 from functools import partial
 
@@ -142,7 +144,14 @@ class ContinuumSnakeEnv(gym.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def reset(self):
+    def reset(
+        self,
+        *,
+		seed: Optional[int] = None,
+		return_info: bool = False,
+		options: Optional[dict] = None,
+    ):
+        super().reset(seed=seed)
         self.snake_sim, self.stepper, self.muscle_torque, self.data = self._build()
         self.time= np.float64(0.0)
         return self.get_state()

@@ -33,7 +33,6 @@ from gym_softrobot.utils.custom_elastica.muscle_torque import (
     MuscleTorquesWithVaryingBetaSplines,
 )
 
-RENDERER_CONFIG = RendererType.MATPLOTLIB
 
 # Set base simulator class
 class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
@@ -98,7 +97,7 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
 
 
 class SoftArmTrackingEnv(gym.Env):
-    metadata = {"render.modes": ["rgb", "human"]}
+    metadata = {"render.modes": ["rgb_array", "human"]}
 
     def __init__(self):
         self.n_elem = 40
@@ -206,9 +205,6 @@ class SoftArmTrackingEnv(gym.Env):
         return state
 
     def step(self, action):
-
-        # self.render()
-
         # set binormal activations to 0 if solving 2D case
         self.spline_points_func_array_normal_dir[:] = action[
             : self.number_of_control_points
@@ -551,35 +547,3 @@ class SoftArmTrackingEnv(gym.Env):
         if self.renderer:
             self.renderer.close()
             self.renderer = None
-
-
-if __name__ == "__main__":
-
-    import gym
-
-    # import pybulletgym  # register PyBullet enviroments with open ai gym
-    import numpy as np
-    from stable_baselines3 import PPO
-    from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
-    from stable_baselines3.common.env_util import make_vec_env
-    from stable_baselines3.common.utils import set_random_seed
-    from stable_baselines3.common.monitor import Monitor
-
-    env = SoftArmTracking()
-    model = PPO(
-        "MlpPolicy",
-        env,
-        verbose=1,
-        tensorboard_log="logs/tensorboard/",
-    )
-    model.learn(
-        total_timesteps=1000000,
-    )
-    # model.save('POLICY', )
-
-    # model = PPO.load('POLICY', env = env)
-    # obs = env.reset()
-    # for _ in range(500):
-    #     action, _states = model.predict(obs)
-    #     obs, rewards, dones, info = env.step(action)
-    #     env.render()

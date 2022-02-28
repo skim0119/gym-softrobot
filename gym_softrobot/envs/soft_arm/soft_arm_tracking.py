@@ -510,7 +510,7 @@ class SoftArmTrackingEnv(gym.Env):
             self.renderer.add_rods(
                 [self.shearable_rod]
             )  # TODO: maybe need add_rod instead
-            self.renderer.add_point(self._target.tolist() + [0], self.sphere_radius)
+            self.renderer.add_point(self._target.tolist(), self.sphere_radius)
 
         # POVRAY
         if RENDERER_CONFIG == RendererType.POVRAY:

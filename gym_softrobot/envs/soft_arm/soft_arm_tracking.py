@@ -96,7 +96,7 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
     return target_trajectory
 
 
-class SoftArmTrackingEnv(gym.Env):
+class SoftArmTrackingEnv(core.Env):
     metadata = {"render.modes": ["rgb_array", "human"]}
 
     def __init__(self):
@@ -488,7 +488,6 @@ class SoftArmTrackingEnv(gym.Env):
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
-
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
 
         if self.renderer is None:
@@ -505,8 +504,6 @@ class SoftArmTrackingEnv(gym.Env):
             assert issubclass(
                 Session, BaseElasticaRendererSession
             ), "Rendering module is not properly subclassed"
-            self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
-            self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
             self.renderer.add_rods(
                 [self.shearable_rod]
             )  # TODO: maybe need add_rod instead

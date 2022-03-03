@@ -40,6 +40,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
 
 
 # TODO: generalize this as a Class for online trajectory generation.
+# TODO: remove np.random: use fixed generator from seed value. (determinism)
 def generate_trajectory(final_time, sim_dt, target_v_scale):
     end_time = (
         final_time * 1.1
@@ -99,7 +100,7 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
 class SoftArmTrackingEnv(core.Env):
     metadata = {"render.modes": ["rgb_array", "human"]}
 
-    def __init__(self):
+    def __init__(self, game_mode:int=1):
         self.n_elem = 40
         self.sim_dt = 2.0e-4
         self.RL_update_interval = 0.01  # This is 100 updates per second
@@ -127,7 +128,7 @@ class SoftArmTrackingEnv(core.Env):
         self.max_rate_of_change_of_activation = np.infty
         self.target_v_scale = 0.1
 
-        self.mode = 1
+        self.mode = game_mode
         self.target_location = np.array([500, 500.0, 500])
 
         self.StatefulStepper = PositionVerlet()
@@ -398,12 +399,12 @@ class SoftArmTrackingEnv(core.Env):
         ###--------------GENERATE TARGET TRAJECTORY--------------###
         self.tick = 0
 
-        # TODO: change this to a object that will update thee target position as you go
-        target_trajectory = generate_trajectory(
-            self.max_episode_final_time, self.sim_dt, self.target_v_scale
-        )
 
         if self.mode == 2:
+            # TODO: change this to a object that will update thee target position as you go
+            target_trajectory = generate_trajectory(
+                self.max_episode_final_time, self.sim_dt, self.target_v_scale
+            )
             self.wsol = target_trajectory
         elif self.mode == 1:
             end_time = self.max_episode_final_time * 1.1

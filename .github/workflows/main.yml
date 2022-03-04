@@ -45,7 +45,7 @@ jobs:
       - name: Display Graphics Prep
         if: startsWith(runner.os, 'Linux')
         run: |
-          apt-get install python-opengl
+          sudo apt-get install -y python-opengl
       
       # Cache the pip requirmenets for other tests. If requirements cached use them to speed up the build.
       # Ref: https://github.com/actions/cache/blob/main/examples.md#python---pip 

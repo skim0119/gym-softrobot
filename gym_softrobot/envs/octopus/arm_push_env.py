@@ -102,12 +102,12 @@ class ArmPushEnv(core.Env):
         return [seed]
 
     def reset(
-		self,
-		*,
-		seed: Optional[int] = None,
-		return_info: bool = False,
-		options: Optional[dict] = None,
-	):
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
+    ):
         super().reset(seed=seed)
         self.simulator = BaseSimulator()
         self.shearable_rod = self._build()
@@ -128,7 +128,10 @@ class ArmPushEnv(core.Env):
         # Initial State
         state = self.get_state()
 
-        return state
+        if return_info:
+            return state, {}
+        else:
+            return state
 
     def _build(self):
         """Set up arm params"""

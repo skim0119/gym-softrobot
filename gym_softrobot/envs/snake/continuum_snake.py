@@ -154,7 +154,10 @@ class ContinuumSnakeEnv(gym.Env):
         super().reset(seed=seed)
         self.snake_sim, self.stepper, self.muscle_torque, self.data = self._build()
         self.time= np.float64(0.0)
-        return self.get_state()
+        if return_info:
+            return self.get_state(), {}
+        else:
+            return self.get_state()
 
     def get_state(self):
         # Build state

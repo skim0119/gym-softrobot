@@ -147,8 +147,17 @@ class SoftArmTrackingEnv(core.Env):
             dtype=np.float64,
         )
 
+        # Determinism
+        self.seed()
+
+        # Rendering-related
         self.viewer = None
         self.renderer = None
+
+    def seed(self, seed=None):
+        # Deprecated in new gym
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
 
     def get_state(self):
         """
@@ -481,7 +490,10 @@ class SoftArmTrackingEnv(core.Env):
         state = self.get_state()
         self._target = self.wsol[self.tick]
 
-        return state
+        if return_info:
+            return state, {}
+        else:
+            return state
 
     def render(self, mode="human", close=False):
         maxwidth = 800

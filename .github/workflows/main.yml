@@ -43,7 +43,7 @@ jobs:
         run: python -c "import sys; print(sys.version)"
         
       - name: Display Graphics Prep
-        if: startsWith(runner.os 'Linux)
+        if: startsWith(runner.os 'Linux')
         run: |
           apt-get install python-opengl
       

@@ -45,7 +45,7 @@ jobs:
       - name: Display Graphics Prep
         if: startsWith(runner.os, 'Linux')
         run: |
-          sudo apt-get install -y python-opengl
+          sudo apt-get install -y python-opengl xvfb
       
       # Cache the pip requirmenets for other tests. If requirements cached use them to speed up the build.
       # Ref: https://github.com/actions/cache/blob/main/examples.md#python---pip 
@@ -96,8 +96,13 @@ jobs:
           fi
         
       # Run pytest
-      - name: Unittest using pytest and coverage
+      - name: Unittest using pytest and coverage (Linux)
         run: |
           if [[ "${{ matrix.python-version }}" == "3.8" ]]; then 
-            pytest --cov=./ --cov-report=xml
+            if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]
+            then
+              xvfb-run -s "-screen 0 1400x900x24" pytest --cov=./ --cov-report=xml
+            else
+              pytest --cov=./ --cov-report=xml
+            fi
           fi

@@ -99,9 +99,10 @@ jobs:
       - name: Unittest using pytest and coverage (Linux)
         run: |
           if [[ "${{ matrix.python-version }}" == "3.8" ]]; then 
-            if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]
+            then
               xvfb-run -s "-screen 0 1400x900x24" pytest --cov=./ --cov-report=xml
-            else;
+            else
               pytest --cov=./ --cov-report=xml
             fi
           fi

@@ -96,7 +96,14 @@ jobs:
           fi
         
       # Run pytest
-      - name: Unittest using pytest and coverage
+      - name: Unittest using pytest and coverage (Linux)
+        if: startsWith(runner.os, 'Linux')
+        run: |
+          if [[ "${{ matrix.python-version }}" == "3.8" ]]; then 
+            xvfb-run -s "-screen 0 1400x900x24" pytest --cov=./ --cov-report=xml
+          fi
+      - name: Unittest using pytest and coverage (Other)
+        if: startsWith(runner.os, 'macOS') or startsWith(runner.os, 'Windows')
         run: |
           if [[ "${{ matrix.python-version }}" == "3.8" ]]; then 
             pytest --cov=./ --cov-report=xml

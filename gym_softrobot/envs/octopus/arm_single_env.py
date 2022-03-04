@@ -282,7 +282,7 @@ class ArmSingleEnv(core.Env):
                 "Rendering module is not properly subclassed"
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
-            self.renderer.add_rods([self.shearable_rod]) # TODO: maybe need add_rod instead
+            self.renderer.add_rod(self.shearable_rod) # TODO: maybe need add_rod instead
             self.renderer.add_point(self._target.tolist()+[0], 0.02)
 
         # POVRAY

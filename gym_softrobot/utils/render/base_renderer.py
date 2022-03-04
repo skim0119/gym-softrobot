@@ -30,13 +30,13 @@ class BaseElasticaRendererSession(ABC):
     """
 
     @abstractmethod
-    def add_rods(self, rod: RodBase):
+    def add_rod(self, rod: RodBase):
         pass
 
     def add_rods(self, rods: Iterable[RodBase]):
         # Batch collector
         for rod in rods:
-            self.add_rods(rod)
+            self.add_rod(rod)
 
     @abstractmethod
     def add_rigid_body(self):

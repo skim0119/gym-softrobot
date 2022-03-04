@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Iterable
 
 import numpy as np
 
@@ -194,11 +194,10 @@ class Session(BaseElasticaRendererSession, BaseRenderer):
     def type(self):
         return RendererType.MATPLOTLIB
 
-    def add_rods(self, rods):
-        for rod in rods:
-            self.object_collection.append(ElasticaRod(rod, self.ax))
-            # TODO Maybe give another configuration to plot the directors
-            # self.object_collection.append(ElasticaRodDirector(rod, self.ax))
+    def add_rod(self, rod):
+        self.object_collection.append(ElasticaRod(rod, self.ax))
+        # TODO Maybe give another configuration to plot the directors
+        # self.object_collection.append(ElasticaRodDirector(rod, self.ax))
 
     def add_rigid_body(self, body):
         self.object_collection.append(ElasticaCylinder(body, self.ax))

@@ -1,6 +1,9 @@
+from typing import Iterable
 from abc import ABC, abstractmethod
 
 from gym_softrobot.config import RendererType
+
+from elastica.rod import RodBase
 
 
 class BaseRenderer(ABC):
@@ -27,8 +30,13 @@ class BaseElasticaRendererSession(ABC):
     """
 
     @abstractmethod
-    def add_rods(self):
+    def add_rods(self, rod: RodBase):
         pass
+
+    def add_rods(self, rods: Iterable[RodBase]):
+        # Batch collector
+        for rod in rods:
+            self.add_rods(rod)
 
     @abstractmethod
     def add_rigid_body(self):

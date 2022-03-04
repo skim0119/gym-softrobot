@@ -505,9 +505,8 @@ class SoftArmTrackingEnv(core.Env):
             assert issubclass(
                 Session, BaseElasticaRendererSession
             ), "Rendering module is not properly subclassed"
-            self.renderer.add_rods(
-                [self.shearable_rod]
-            )  # TODO: maybe need add_rod instead
+            self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
+            self.renderer.add_rod(self.shearable_rod)  
             self.renderer.add_point(self._target.tolist(), self.sphere_radius)
 
         # POVRAY

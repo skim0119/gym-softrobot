@@ -31,7 +31,12 @@ class ControllableFixConstraint(FreeRod):
         return self.controller
 
     def constrain_values(self, rod, time):
-        pass
+        if self.controller.flag:
+            self.nb_compute_constrain_values(
+                rod.position_collection,
+                rod.director_collection,
+                self.controller.index
+            )
 
     def constrain_rates(self, rod, time):
         if self.controller.flag:
@@ -43,11 +48,11 @@ class ControllableFixConstraint(FreeRod):
 
     @staticmethod
     @njit(cache=True)
-    def nb_compute_contrain_values(
-        position_collection, fixed_position, director_collection, fixed_directors, index
+    def nb_compute_constrain_values(
+        position_collection, director_collection, index
     ):
-        position_collection[..., index] = fixed_position
-        director_collection[..., index] = fixed_directors
+        position_collection[2, index] = 0
+        director_collection[2, :, index] = np.array([1,0,0])
 
     @staticmethod
     @njit(cache=True)

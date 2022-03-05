@@ -20,7 +20,7 @@ from gym_softrobot.config import RendererType
 from gym_softrobot.utils.custom_elastica.callback_func import (
     RodCallBack,
 )
-from gym_softrobot.utils.custom_elastica.constraint import ControllableFixConstraint
+from gym_softrobot.envs.octopus.controllable_constraint import ControllableFixConstraint
 from gym_softrobot.utils.render.base_renderer import (
     BaseRenderer,
     BaseElasticaRendererSession,
@@ -56,7 +56,7 @@ class ArmPushEnv(core.Env):
     def __init__(
         self,
         final_time: float = 2.5,
-        time_step: float = 3.0e-5,
+        time_step: float = 8.0e-5,
         recording_fps: int = 40,
         config_generate_video: bool = False,
         config_early_termination: bool = False
@@ -244,9 +244,9 @@ class ArmPushEnv(core.Env):
         if action == 0: # Fix last node and activate muscle
             self.BC.index = -1
             self.BC.turn_on()
-            self.muscle_layers[0].set_activation( 0.5 * scale)
-            self.muscle_layers[1].set_activation(-0.2 * scale)
-            self.muscle_layers[2].set_activation( 0.5 * scale)
+            self.muscle_layers[0].set_activation(-0.0 * scale)
+            self.muscle_layers[1].set_activation( 0.0 * scale)
+            self.muscle_layers[2].set_activation( 1.0 * scale)
         elif action == 1: # Fix first node and release muscle
             self.BC.index = 0
             self.BC.turn_on()

@@ -121,7 +121,7 @@ class ContinuumSnakeCallBack(CallBackBaseClass):
 
 
 class ContinuumSnakeEnv(gym.Env):
-    metadata = {'render.modes': ['rgb', 'human']}
+    metadata = {'render.modes': ['rgb_array', 'human']}
 
     def __init__(self):
         # Action space
@@ -139,6 +139,9 @@ class ContinuumSnakeEnv(gym.Env):
         # Determinism
         self.seed()
 
+        self.viewer = None
+        self.rendere = None
+
     def seed(self, seed=None):
         # Deprecated in new gym
         self.np_random, seed = seeding.np_random(seed)
@@ -154,7 +157,10 @@ class ContinuumSnakeEnv(gym.Env):
         super().reset(seed=seed)
         self.snake_sim, self.stepper, self.muscle_torque, self.data = self._build()
         self.time= np.float64(0.0)
-        return self.get_state()
+        if return_info:
+            return self.get_state(), {}
+        else:
+            return self.get_state()
 
     def get_state(self):
         # Build state
@@ -226,9 +232,7 @@ class ContinuumSnakeEnv(gym.Env):
             from gym_softrobot.utils.render.povray_renderer import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
-            self.renderer.add_rods(self.shearable_rods)
-            self.renderer.add_rigid_body(self.rigid_rod)
-            self.renderer.add_point(self._target.tolist()+[0], 0.05)
+            self.renderer.add_rod(self.shearable_rod)
 
         # Temporary rendering to add side-view
         state_image = self.renderer.render(maxwidth, int(maxwidth*aspect_ratio*0.7))

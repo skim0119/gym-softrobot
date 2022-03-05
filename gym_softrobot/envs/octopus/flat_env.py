@@ -110,17 +110,12 @@ class FlatEnv(core.Env):
         self.config_generate_video = config_generate_video
         self.config_save_head_data = config_save_head_data
 
-        # Rendering-related
-        self.viewer = None
-        self.renderer = None
-
         # Determinism
         self.seed()
 
-    def seed(self, seed=None):
-        # Deprecated in new gym
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
+        # Rendering-related
+        self.viewer = None
+        self.renderer = None
 
     def summary(self,):
         print(f"""
@@ -194,7 +189,10 @@ class FlatEnv(core.Env):
         # Initial State
         state = self.get_state()
 
-        return state
+        if return_info:
+            return state, {}
+        else:
+            return state
 
     def get_state(self):
         states = {}

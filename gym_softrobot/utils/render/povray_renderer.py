@@ -105,9 +105,8 @@ class Session(BaseElasticaRendererSession, BaseRenderer):
     def type(self):
         return RendererType.POVRAY
 
-    def add_rods(self, rods):
-        for rod in rods:
-            self.object_collection.append(ElasticaRod(rod))
+    def add_rod(self, rod):
+        self.object_collection.append(ElasticaRod(rod))
 
     def add_rigid_body(self, body):
         self.object_collection.append(ElasticaCylinder(body))

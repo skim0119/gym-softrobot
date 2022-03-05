@@ -7,6 +7,11 @@ from gym.utils.env_checker import check_env
 
 from tests.envs.spec_list import spec_list
 
+from gym_softrobot import RENDERER_CONFIG
+from gym_softrobot.config import RendererType
+
+RENDERER_CONFIG = RendererType.MATPLOTLIB
+
 
 # This runs a smoketest on each official registered env. We may want
 # to try also running environments which are not officially registered
@@ -46,11 +51,29 @@ def test_env(spec):
             observation.dtype == ob_space.dtype
         ), f"Step observation dtype: {ob.dtype}, expected: {ob_space.dtype}"
 
-    for mode in env.metadata.get("render.modes", []):
-        env.render(mode=mode)
+    # FIXME: Test rendering need to install povray on CI. It is disabled for now.
+    #for mode in env.metadata.get("render.modes", []):
+    #    env.render(mode=mode)
 
     # Make sure we can render the environment after close.
-    for mode in env.metadata.get("render.modes", []):
-        env.render(mode=mode)
+    #for mode in env.metadata.get("render.modes", []):
+    #    env.render(mode=mode)
 
     env.close()
+
+@pytest.mark.parametrize("spec", spec_list)
+def test_reset_info(spec):
+
+    with pytest.warns(None) as warnings:
+        env = spec.make()
+
+    ob_space = env.observation_space
+    obs = env.reset()
+    assert ob_space.contains(obs)
+    obs = env.reset(return_info=False)
+    assert ob_space.contains(obs)
+    obs, info = env.reset(return_info=True)
+    assert ob_space.contains(obs)
+    assert isinstance(info, dict)
+    env.close()
+

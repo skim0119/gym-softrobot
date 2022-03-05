@@ -21,7 +21,7 @@ REQUIRES_PYTHON = ">=3.8.0"
 VERSION = f"{VERSION}"
 
 # What packages are required for this module to be executed?
-REQUIRED = ["gym>=0.21.0", "pyelastica>=0.2.0", "matplotlib>=3.3.2", "pyglet", "vapory"]
+REQUIRED = ["gym>=0.21.0", "pyelastica>=0.2.0", "matplotlib>=3.3.2", "pyglet>=1.4.0", "vapory"]
 
 # What packages are optional?
 EXTRAS = {}

@@ -7,6 +7,12 @@ from gym.utils.env_checker import check_env
 
 from tests.envs.spec_list import spec_list
 
+from gym_softrobot import RENDERER_CONFIG
+from gym_softrobot.config import RendererType
+
+#RENDERER_CONFIG = RendererType.POVRAY
+RENDERER_CONFIG = RendererType.MATPLOTLIB
+
 @pytest.mark.parametrize("spec", spec_list)
 def test_env_render_result_np_array_for_rgb_mode(spec):
     env = spec.make()

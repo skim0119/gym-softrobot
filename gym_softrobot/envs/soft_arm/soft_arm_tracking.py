@@ -524,21 +524,8 @@ class SoftArmTrackingEnv(core.Env):
         # POVRAY
         if RENDERER_CONFIG == RendererType.POVRAY:
             state_image = self.renderer.render(
-                maxwidth, int(maxwidth * aspect_ratio * 0.7)
-            )
-            state_image_side = self.renderer.render(
-                maxwidth // 2,
-                int(maxwidth * aspect_ratio * 0.3),
-                camera_param=("location", [0.0, 0.0, -0.5], "look_at", [0.0, 0, 0]),
-            )
-            state_image_top = self.renderer.render(
-                maxwidth // 2,
-                int(maxwidth * aspect_ratio * 0.3),
-                camera_param=("location", [0.0, 0.3, 0.0], "look_at", [0.0, 0, 0]),
-            )
-
-            state_image = np.vstack(
-                [state_image, np.hstack([state_image_side, state_image_top])]
+                maxwidth, int(maxwidth * aspect_ratio * 0.7),
+                camera_param=("location", [50.0, 10.0, -60.0], "look_at", [-3.5, 5.7, 10.0], "angle", 30)
             )
         elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
             state_image = self.renderer.render()

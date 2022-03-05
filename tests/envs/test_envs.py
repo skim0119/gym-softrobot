@@ -7,6 +7,11 @@ from gym.utils.env_checker import check_env
 
 from tests.envs.spec_list import spec_list
 
+from gym_softrobot import RENDERER_CONFIG
+from gym_softrobot.config import RendererType
+
+RENDERER_CONFIG = RendererType.MATPLOTLIB
+
 
 # This runs a smoketest on each official registered env. We may want
 # to try also running environments which are not officially registered

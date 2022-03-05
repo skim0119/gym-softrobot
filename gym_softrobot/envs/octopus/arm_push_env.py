@@ -9,6 +9,8 @@ import time
 
 import numpy as np
 
+from tqdm import tqdm
+
 from elastica import *
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
@@ -54,33 +56,35 @@ class ArmPushEnv(core.Env):
     def __init__(
         self,
         final_time: float = 2.5,
-        time_step: float = 7.0e-5,
+        time_step: float = 3.0e-5,
         recording_fps: int = 40,
         config_generate_video: bool = False,
-        config_early_termination: bool = False,
-    ):
-
+        config_early_termination: bool = False
+	):
         # Integrator type
-
         self.final_time = final_time
         self.time_step = time_step
         self.total_steps = int(self.final_time / self.time_step)
         self.recording_fps = recording_fps
         self.step_skip = int(1.0 / (recording_fps * time_step))
 
-        # Spaces
+        # Determinism
+        seed = self.seed()
+
+        # Action space
         self.n_elem = 40
-        n_action = self.n_elem - 1
-        self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
+        n_action = 1 #self.n_elem - 1
+        #self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
+        self.action_space = spaces.Discrete(2, seed=seed[0])
+
+        # Observation space
         self._observation_size = (
             (self.n_elem + 1 + n_action),
-        )  # 2 for target
+        )
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
         )
 
-        self.metadata = {}
-        self.reward_range = 100.0
         self._prev_action = np.zeros(
             list(self.action_space.shape), dtype=self.action_space.dtype
         )
@@ -93,8 +97,6 @@ class ArmPushEnv(core.Env):
         self.viewer = None
         self.renderer = None
 
-        # Determinism
-        self.seed()
 
     def seed(self, seed=None):
         # Deprecated in new gym
@@ -120,11 +122,6 @@ class ArmPushEnv(core.Env):
 
         self.time = np.float64(0.0)
 
-        # Set Target
-        self._target = (2 - 0.5) * self.np_random.random(2) + 0.5
-        # self._target /= np.linalg.norm(self._target) # I don't see why this is here
-        print(self._target)
-
         # Initial State
         state = self.get_state()
 
@@ -147,7 +144,7 @@ class ArmPushEnv(core.Env):
             n_elements=n_elem,
             start=np.zeros((3,)),
             direction=np.array([1.0, 0.0, 0.0]),
-            normal=np.array([0.0, 0.0, -1.0]),
+            normal=np.array([0.0, 1.0, -0.0]),
             base_length=L0,
             base_radius=radius_mean.copy(),
             density=700,
@@ -209,7 +206,7 @@ class ArmPushEnv(core.Env):
         # CallBack
         if self.config_generate_video:
             self.rod_parameters_dict = defaultdict(list)
-            self.simulator.collect_diagnostics(self.shearable_rod).using(
+            self.simulator.collect_diagnostics(shearable_rod).using(
                 RodCallBack,
                 step_skip=self.step_skip,
                 callback_params=self.rod_parameters_dict,
@@ -226,6 +223,7 @@ class ArmPushEnv(core.Env):
         # Build state
         rod = self.shearable_rod
         pos_state1 = rod.position_collection[0]  # x
+        #pos_state2 = rod.position_collection[1]  # y
         previous_action = self._prev_action.copy()
         state = np.hstack(
             [
@@ -237,12 +235,28 @@ class ArmPushEnv(core.Env):
 
     def set_action(self, action) -> None:
         scale = 1.0  # min(time / 0.02, 1)
-        for muscle_count, muscle_layer in enumerate(self.muscle_layers):
-            muscle_layer.set_activation(action[muscle_count] * scale)
+
+        # Continuous action
+        #for muscle_count, muscle_layer in enumerate(self.muscle_layers):
+        #    muscle_layer.set_activation(action[muscle_count] * scale)
+
+        # Discrete Action
+        if action == 0: # Fix last node and activate muscle
+            self.BC.index = -1
+            self.BC.turn_on()
+            self.muscle_layers[0].set_activation( 0.5 * scale)
+            self.muscle_layers[1].set_activation(-0.2 * scale)
+            self.muscle_layers[2].set_activation( 0.5 * scale)
+        elif action == 1: # Fix first node and release muscle
+            self.BC.index = 0
+            self.BC.turn_on()
+            self.muscle_layers[0].set_activation(0.0)
+            self.muscle_layers[1].set_activation(0.0)
+            self.muscle_layers[2].set_activation(0.0)
+        else:
+            raise NotImplementedError("Action must be 1 or 0")
 
     def step(self, action):
-        rest_kappa = action  # alias
-
         """ Set intrinsic strains (set actions) """
         self.set_action(action)
 
@@ -251,7 +265,7 @@ class ArmPushEnv(core.Env):
 
         """ Run the simulation for one step """
         stime = time.perf_counter()
-        for _ in range(self.step_skip):
+        for _ in tqdm(range(self.step_skip)):
             self.time = self.do_step(
                 self.StatefulStepper,
                 self.stages_and_updates,
@@ -265,7 +279,7 @@ class ArmPushEnv(core.Env):
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
-        control_panelty = 0.005 * np.square(rest_kappa.ravel()).mean()
+        control_panelty = 0.0 # No control panelty for this environment
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(
             np.concatenate(
@@ -293,6 +307,7 @@ class ArmPushEnv(core.Env):
         """ Time limit """
         timelimit = False
         if self.time > self.final_time:
+            cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
             survive_reward = np.linalg.norm(cm_pos, ord=2) * 10
             timelimit = True
             done = True
@@ -344,7 +359,6 @@ class ArmPushEnv(core.Env):
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
             self.renderer.add_rod(self.shearable_rod)
-            self.renderer.add_point(self._target.tolist() + [0], 0.02)
 
         # POVRAY
         if RENDERER_CONFIG == RendererType.POVRAY:

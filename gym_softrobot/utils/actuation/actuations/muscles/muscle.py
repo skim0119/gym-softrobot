@@ -23,7 +23,7 @@ class Muscle(ContinuousActuation):
         self.s = np.linspace(0, 1, self.n_elements+1)[1:-1]
 
     def set_activation(self, activation):
-        self.activation[:] = activation.copy()
+        self.activation[:] = activation
         return
     
     def get_activation(self):

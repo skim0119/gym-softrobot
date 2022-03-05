@@ -59,7 +59,7 @@ register(
 #register(
 #    id='SoftArmTracking-v1',
 #    entry_point='gym_softrobot.envs.soft_arm:SoftArmTrackingEnv',
-#    game_mode=2
+#    kwargs=dict(game_mode=2)
 #)
 
 

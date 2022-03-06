@@ -329,6 +329,9 @@ class ArmPushEnv(core.Env):
         """
         # systems = [self.shearable_rod]
         states = self.get_state()
+        if _isnan_check(states.ravel()):
+            done = True
+            states = np.nan_to_num(states)
 
         # Info
         info = {
@@ -336,7 +339,6 @@ class ArmPushEnv(core.Env):
             "rod": self.shearable_rod,
             "TimeLimit.truncated": timelimit,
         }
-
         return states, reward, done, info
 
     def render(self, mode="human", close=False):

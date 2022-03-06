@@ -276,6 +276,8 @@ class ArmPushEnv(core.Env):
         etime = time.perf_counter()
 
         """ Done is a boolean to reset the environment before episode is completed """
+        cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
+
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
@@ -284,8 +286,10 @@ class ArmPushEnv(core.Env):
         invalid_values_condition = _isnan_check(
             np.concatenate(
                 [
-                    self.shearable_rod.position_collection,
-                    self.shearable_rod.velocity_collection,
+                    self.shearable_rod.position_collection.ravel(),
+                    self.shearable_rod.velocity_collection.ravel(),
+                    self.shearable_rod.alpha_collection.ravel(),
+                    cm_pos.ravel()
                 ]
             )
         )
@@ -298,7 +302,6 @@ class ArmPushEnv(core.Env):
             done = True
             survive_reward = -20.0
         else:
-            cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
             moved_distance = np.linalg.norm(cm_pos, ord=2) - np.linalg.norm(
                 prev_cm_pos, ord=2
             )
@@ -307,7 +310,6 @@ class ArmPushEnv(core.Env):
         """ Time limit """
         timelimit = False
         if self.time > self.final_time:
-            cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
             survive_reward = np.linalg.norm(cm_pos, ord=2) * 10
             timelimit = True
             done = True

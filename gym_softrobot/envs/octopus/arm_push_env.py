@@ -265,7 +265,7 @@ class ArmPushEnv(core.Env):
 
         """ Run the simulation for one step """
         stime = time.perf_counter()
-        for _ in tqdm(range(self.step_skip)):
+        for _ in range(self.step_skip):
             self.time = self.do_step(
                 self.StatefulStepper,
                 self.stages_and_updates,

@@ -75,7 +75,7 @@ class ArmPushEnv(core.Env):
         self.n_elem = 40
         n_action = 1 #self.n_elem - 1
         #self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
-        self.action_space = spaces.Discrete(2, seed=seed[0])
+        self.action_space = spaces.Discrete(2)
 
         # Observation space
         self._observation_size = (

@@ -79,7 +79,7 @@ class ArmPushEnv(core.Env):
 
         # Observation space
         self._observation_size = (
-            (self.n_elem + 1 + n_action),
+            ((self.n_elem + 1)*2 + n_action),
         )
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
@@ -223,11 +223,13 @@ class ArmPushEnv(core.Env):
         # Build state
         rod = self.shearable_rod
         pos_state1 = rod.position_collection[0]  # x
+        vel_state1 = rod.velocity_collection[0]  # x
         #pos_state2 = rod.position_collection[1]  # y
         previous_action = self._prev_action.copy()
         state = np.hstack(
             [
                 pos_state1,
+                vel_state1,
                 previous_action,
             ]
         ).astype(np.float32)
@@ -281,7 +283,6 @@ class ArmPushEnv(core.Env):
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
-        control_panelty = 0.0 # No control panelty for this environment
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(
             np.concatenate(
@@ -305,18 +306,18 @@ class ArmPushEnv(core.Env):
             moved_distance = np.linalg.norm(cm_pos, ord=2) - np.linalg.norm(
                 prev_cm_pos, ord=2
             )
-            forward_reward = moved_distance * 10
+            forward_reward = moved_distance
 
         """ Time limit """
         timelimit = False
         if self.time > self.final_time:
-            survive_reward = np.linalg.norm(cm_pos, ord=2) * 10
+            # survive_reward = np.linalg.norm(cm_pos, ord=2) * 10
             timelimit = True
             done = True
 
-        reward = forward_reward - control_panelty + survive_reward
+        reward = forward_reward + survive_reward
         # reward *= 10 # Reward scaling
-        # print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}')
+        # print(f'{reward=:.3f}: {forward_reward=:.3f}, {survive_reward=:.3f}')
 
         """ Return state:
             (1) current simulation time

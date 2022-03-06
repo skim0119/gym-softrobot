@@ -329,8 +329,9 @@ class ArmPushEnv(core.Env):
         """
         # systems = [self.shearable_rod]
         states = self.get_state()
-        if _isnan_check(states.ravel()):
+        if np.any(np.isnan(states)):
             done = True
+            reward = -20.0
             states = np.nan_to_num(states)
 
         # Info

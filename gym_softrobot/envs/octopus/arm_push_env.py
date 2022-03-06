@@ -150,6 +150,7 @@ class ArmPushEnv(core.Env):
             density=700,
             nu=damp_coefficient * ((radius_mean / radius_base) ** 2) * 1e2,
             youngs_modulus=1e4,
+            shear_modulus=1e4/1.5
             #poisson_ratio=0.5,
             #nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
         )

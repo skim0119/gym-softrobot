@@ -1,0 +1,1 @@
+from gym_softrobot.envs.soft_pendulum.soft_pendulum import SoftPendulumEnv

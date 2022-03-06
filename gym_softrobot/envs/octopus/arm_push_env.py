@@ -79,7 +79,7 @@ class ArmPushEnv(core.Env):
 
         # Observation space
         self._observation_size = (
-            ((self.n_elem + 1)*2 + n_action),
+            ((self.n_elem + 1)*2 + 2), # one hot action 
         )
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
@@ -225,12 +225,12 @@ class ArmPushEnv(core.Env):
         pos_state1 = rod.position_collection[0]  # x
         vel_state1 = rod.velocity_collection[0]  # x
         #pos_state2 = rod.position_collection[1]  # y
-        previous_action = self._prev_action.copy()
+        previous_action = self._prev_action
         state = np.hstack(
             [
                 pos_state1,
                 vel_state1,
-                previous_action,
+                np.eye(2)[previous_action],
             ]
         ).astype(np.float32)
         return state
@@ -244,19 +244,22 @@ class ArmPushEnv(core.Env):
 
         # Discrete Action
         if action == 0: # Fix last node and activate muscle
-            self.BC.index = -1
+            self.BC.index = 0
             self.BC.turn_on()
             self.muscle_layers[0].set_activation(-0.0 * scale)
             self.muscle_layers[1].set_activation( 0.0 * scale)
             self.muscle_layers[2].set_activation( 0.5 * scale)
         elif action == 1: # Fix first node and release muscle
-            self.BC.index = 0
+            self.BC.index = -1
             self.BC.turn_on()
             self.muscle_layers[0].set_activation(0.0)
             self.muscle_layers[1].set_activation(0.0)
             self.muscle_layers[2].set_activation(0.0)
         else:
             raise NotImplementedError("Action must be 1 or 0")
+
+        # update previous action
+        self._prev_action = action
 
     def step(self, action):
         """ Set intrinsic strains (set actions) """

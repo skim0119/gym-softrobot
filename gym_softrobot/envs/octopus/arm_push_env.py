@@ -56,7 +56,7 @@ class ArmPushEnv(core.Env):
     def __init__(
         self,
         final_time: float = 2.5,
-        time_step: float = 8.0e-5,
+        time_step: float = 5.0e-5,
         recording_fps: int = 40,
         config_generate_video: bool = False,
         config_early_termination: bool = False
@@ -294,9 +294,9 @@ class ArmPushEnv(core.Env):
             done = self.check_early_termination()
             survive_reward = -10.0
         elif invalid_values_condition:
-            print(f" Nan detected in, exiting simulation now. {self.time=}")
+            #print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
-            survive_reward = -50.0
+            survive_reward = -20.0
         else:
             cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
             moved_distance = np.linalg.norm(cm_pos, ord=2) - np.linalg.norm(

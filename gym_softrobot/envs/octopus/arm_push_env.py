@@ -148,10 +148,10 @@ class ArmPushEnv(core.Env):
             base_length=L0,
             base_radius=radius_mean.copy(),
             density=700,
-            nu=damp_coefficient * ((radius_mean / radius_base) ** 2) * 1.0,
+            nu=damp_coefficient * ((radius_mean / radius_base) ** 2) * 1e2,
             youngs_modulus=1e4,
-            poisson_ratio=0.5,
-            nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
+            #poisson_ratio=0.5,
+            #nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
         )
         self.simulator.append(shearable_rod)
 
@@ -248,7 +248,7 @@ class ArmPushEnv(core.Env):
             self.BC.turn_on()
             self.muscle_layers[0].set_activation(-0.0 * scale)
             self.muscle_layers[1].set_activation( 0.0 * scale)
-            self.muscle_layers[2].set_activation( 1.0 * scale)
+            self.muscle_layers[2].set_activation( 0.5 * scale)
         elif action == 1: # Fix first node and release muscle
             self.BC.index = 0
             self.BC.turn_on()

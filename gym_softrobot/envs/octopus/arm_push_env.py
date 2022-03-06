@@ -79,7 +79,7 @@ class ArmPushEnv(core.Env):
 
         # Observation space
         self._observation_size = (
-            1, ((self.n_elem + 1)*2 + 2), # one hot action 
+            ((self.n_elem + 1)*2 + 2), # one hot action 
         )
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32

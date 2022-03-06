@@ -289,6 +289,7 @@ class ArmPushEnv(core.Env):
                 [
                     self.shearable_rod.position_collection.ravel(),
                     self.shearable_rod.velocity_collection.ravel(),
+                    self.shearable_rod.director_collection.ravel(),
                     self.shearable_rod.alpha_collection.ravel(),
                     cm_pos.ravel()
                 ]
@@ -316,6 +317,8 @@ class ArmPushEnv(core.Env):
             done = True
 
         reward = forward_reward + survive_reward
+        if np.isnan(reward):
+            reward = -20.0
         # reward *= 10 # Reward scaling
         # print(f'{reward=:.3f}: {forward_reward=:.3f}, {survive_reward=:.3f}')
 

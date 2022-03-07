@@ -58,6 +58,7 @@ class ArmPushEnv(core.Env):
         final_time: float = 2.5,
         time_step: float = 5.0e-5,
         recording_fps: int = 40,
+        mode:str="discrete",
         config_generate_video: bool = False,
         config_early_termination: bool = False
 	):
@@ -68,26 +69,50 @@ class ArmPushEnv(core.Env):
         self.recording_fps = recording_fps
         self.step_skip = int(1.0 / (recording_fps * time_step))
 
+        # Simulator Config
+        self.n_elem = 40
+
+        if mode == "discrete":
+            self.mode = 0
+        elif mode == "continuous":
+            self.mode = 1
+        else:
+            raise NotImplementedError(f"The mode {mode} is not available.")
+
         # Determinism
         seed = self.seed()
 
         # Action space
-        self.n_elem = 40
-        n_action = 1 #self.n_elem - 1
-        #self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
-        self.action_space = spaces.Discrete(2)
+        if self.mode == 0: # Discrete
+            n_action = 1 #self.n_elem - 1
+            #self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
+            self.action_space = spaces.Discrete(2)
 
-        # Observation space
-        self._observation_size = (
-            ((self.n_elem + 1)*2 + 2), # one hot action 
-        )
-        self.observation_space = spaces.Box(
-            -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
-        )
+            # Observation space
+            self._observation_size = (
+                ((self.n_elem + 1)*2 + 2), # one hot action 
+            )
+            self.observation_space = spaces.Box(
+                -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
+            )
 
-        self._prev_action = np.zeros(
-            list(self.action_space.shape), dtype=self.action_space.dtype
-        )
+            self._prev_action = np.zeros(
+                list(self.action_space.shape), dtype=self.action_space.dtype
+            )
+        elif self.mode == 1: # Continuous
+            n_action = 2
+            self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
+
+            # Observation space
+            self._observation_size = (
+                ((self.n_elem + 1)*2 + n_action), # one hot action 
+            )
+            self.observation_space = spaces.Box(
+                -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
+            )
+
+            self._prev_action = np.zeros(list(self.action_space.shape), dtype=self.action_space.dtype)
+
 
         # Configurations
         self.config_generate_video = config_generate_video
@@ -217,6 +242,7 @@ class ArmPushEnv(core.Env):
 
         controllable_constraint = dict(self.simulator._constraints)[controller_id]
         self.BC = controllable_constraint.get_controller
+        self.BC.turn_on()
 
         return shearable_rod
 
@@ -227,13 +253,22 @@ class ArmPushEnv(core.Env):
         vel_state1 = rod.velocity_collection[0]  # x
         #pos_state2 = rod.position_collection[1]  # y
         previous_action = self._prev_action
-        state = np.hstack(
-            [
-                pos_state1,
-                vel_state1,
-                np.eye(2)[previous_action],
-            ]
-        ).astype(np.float32)
+        if self.mode == 0:  # Discrete
+            state = np.hstack(
+                [
+                    pos_state1,
+                    vel_state1,
+                    np.eye(2)[previous_action]
+                ]
+            ).astype(np.float32)
+        elif self.mode == 1:  # Continuous
+            state = np.hstack(
+                [
+                    pos_state1,
+                    vel_state1,
+                    previous_action,
+                ]
+            ).astype(np.float32)
         return state
 
     def set_action(self, action) -> None:
@@ -243,21 +278,24 @@ class ArmPushEnv(core.Env):
         #for muscle_count, muscle_layer in enumerate(self.muscle_layers):
         #    muscle_layer.set_activation(action[muscle_count] * scale)
 
-        # Discrete Action
-        if action == 0: # Fix last node and activate muscle
-            self.BC.index = 0
-            self.BC.turn_on()
-            self.muscle_layers[0].set_activation(-0.0 * scale)
-            self.muscle_layers[1].set_activation( 0.0 * scale)
-            self.muscle_layers[2].set_activation( 0.5 * scale)
-        elif action == 1: # Fix first node and release muscle
-            self.BC.index = -1
-            self.BC.turn_on()
-            self.muscle_layers[0].set_activation(0.0)
-            self.muscle_layers[1].set_activation(0.0)
-            self.muscle_layers[2].set_activation(0.0)
-        else:
-            raise NotImplementedError("Action must be 1 or 0")
+        if self.mode == 0:  # Discrete Action
+            if action == 0: # Fix last node and activate muscle
+                self.BC.index = 0
+                self.muscle_layers[0].set_activation(-0.0 * scale)
+                self.muscle_layers[1].set_activation( 0.0 * scale)
+                self.muscle_layers[2].set_activation( 0.5 * scale)
+            elif action == 1: # Fix first node and release muscle
+                self.BC.index = -1
+                self.muscle_layers[0].set_activation(0.0)
+                self.muscle_layers[1].set_activation(0.0)
+                self.muscle_layers[2].set_activation(0.0)
+            else:
+                raise NotImplementedError("Action must be 1 or 0")
+        elif self.mode == 1:  # Continuous Action
+            location = action[0]
+            activation = action[1]
+            self.BC.index = int(np.clip(location * self.n_elem, 0, self.n_elem-1))
+            self.muscle_layers[2].set_activation(activation)
 
         # update previous action
         self._prev_action = action

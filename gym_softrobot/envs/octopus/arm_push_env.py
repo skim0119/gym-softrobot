@@ -21,10 +21,13 @@ from gym_softrobot.utils.custom_elastica.callback_func import (
     RodCallBack,
 )
 from gym_softrobot.envs.octopus.controllable_constraint import ControllableFixConstraint
+from gym_softrobot.envs.octopus.build import create_es_muscle_layers
 from gym_softrobot.utils.render.base_renderer import (
     BaseRenderer,
     BaseElasticaRendererSession,
 )
+from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
+from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
 
 from gym_softrobot.utils.actuation.actuations.muscles.longitudinal_muscle import (
     LongitudinalMuscle,
@@ -187,40 +190,12 @@ class ArmPushEnv(core.Env):
         ).id()
 
         """ Add muscle actuation """
-        self.muscle_layers = [
-            # LongitudinalMuscle(
-            #     muscle_radius_ratio=np.stack(
-            #         (np.zeros(radius_mean.shape),
-            #          2 / 3 * np.ones(radius_mean.shape)),
-            #         axis=0),
-            #     max_force=1 * (radius_mean / radius_base) ** 2,
-            # )
-            LongitudinalMuscle(
-                muscle_radius_ratio=np.stack(
-                    (np.zeros(radius_mean.shape), 6 / 9 * np.ones(radius_mean.shape)),
-                    axis=0,
-                ),
-                max_force=0.5 * (radius_mean / radius_base) ** 2,
-            ),
-            LongitudinalMuscle(
-                muscle_radius_ratio=np.stack(
-                    (np.zeros(radius_mean.shape), -6 / 9 * np.ones(radius_mean.shape)),
-                    axis=0,
-                ),
-                max_force=0.5 * (radius_mean / radius_base) ** 2,
-            ),
-            TransverseMuscle(
-                muscle_radius_ratio=np.stack(
-                    (np.zeros(radius_mean.shape), 4 / 9 * np.ones(radius_mean.shape)),
-                    axis=0,
-                ),
-                max_force=1.0 * (radius_mean / radius_base) ** 2,
-            ),
-        ]
+        self.muscle_layers = create_es_muscle_layers(radius_mean, radius_base)
 
         self.muscles_parameters = []
-        for _ in self.muscle_layers:
-            self.muscles_parameters.append(defaultdict(list))
+        if self.config_generate_video:
+            for _ in self.muscle_layers:
+                self.muscles_parameters.append(defaultdict(list))
 
         self.simulator.add_forcing_to(shearable_rod).using(
             ApplyMuscle,
@@ -537,3 +512,153 @@ class ArmPushEnv(core.Env):
     #             reach_time = self.rod_parameters_dict["time"][k]
 
     #     return reach_time, energy_cost
+
+class ArmPullWeightEnv(ArmPushEnv):
+    def _build(self):
+        """Set up arm params"""
+        n_elem = self.n_elem
+        L0 = 0.2
+        radius_base = 0.012  # radius of the arm at the base
+        radius_tip = 0.001  # radius of the arm at the tip
+        radius = np.linspace(radius_base, radius_tip, n_elem + 1)
+        radius_mean = (radius[:-1] + radius[1:]) / 2
+        density = 700
+        damp_coefficient = 0.05 * 2
+
+        shearable_rod = CosseratRod.straight_rod(
+            n_elements=n_elem,
+            start=np.zeros((3,)),
+            direction=np.array([1.0, 0.0, 0.0]),
+            normal=np.array([0.0, 1.0, -0.0]),
+            base_length=L0,
+            base_radius=radius_mean.copy(),
+            density=density,
+            nu=damp_coefficient * ((radius_mean / radius_base) ** 2) * 5e2,
+            youngs_modulus=1e4,
+            shear_modulus=1e4/1.5
+            #poisson_ratio=0.5,
+            #nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
+        )
+        self.simulator.append(shearable_rod)
+
+        """ Add head """
+        rigid_rod_length = radius_base * 2
+        rigid_rod_radius = 0.02
+        start = np.zeros((3,)); start[0] = -rigid_rod_radius*0.9; start[2] = -2*radius_base
+        direction = np.array([0.0, 0.0, 1.0])
+        normal = np.array([0.0, 1.0, 0.0])
+
+        rigid_rod = Cylinder(
+                start,
+                direction,
+                normal,
+                rigid_rod_length,
+                rigid_rod_radius,
+                density)
+        self.simulator.append(rigid_rod)
+        self.rigid_rod = rigid_rod
+
+        """ Constraint body """
+        self.simulator.constrain(rigid_rod).using(
+            # Upright rigid rod need restoration force/torque against the floor
+            BodyBoundaryCondition, constrained_position_idx=(0,), constrained_director_idx=(0,)
+        )
+
+        """ Set up boundary conditions """
+        _k = 1e6
+        _kt = 1e0
+        self.simulator.connect(
+            first_rod=rigid_rod, second_rod=shearable_rod, first_connect_idx=-1, second_connect_idx=0
+        ).using(FixedJoint2Rigid, k=_k, nu=1e-3, kt=_kt,angle=0,radius=rigid_rod_radius)
+
+        """ Set up controller """
+        controller_id = self.simulator.constrain(shearable_rod).using(
+            ControllableFixConstraint,
+            index=0,
+        ).id()
+
+        """ Add muscle actuation """
+        self.muscle_layers = create_es_muscle_layers(radius_mean, radius_base)
+
+        self.muscles_parameters = []
+
+        self.simulator.add_forcing_to(shearable_rod).using(
+            ApplyMuscle,
+            muscles=self.muscle_layers,
+            step_skip=self.step_skip,
+            callback_params_list=self.muscles_parameters,
+        )
+
+        # CallBack
+        if self.config_generate_video:
+            self.rod_parameters_dict = defaultdict(list)
+            self.simulator.collect_diagnostics(shearable_rod).using(
+                RodCallBack,
+                step_skip=self.step_skip,
+                callback_params=self.rod_parameters_dict,
+            )
+
+        self.simulator.finalize()
+
+        controllable_constraint = dict(self.simulator._constraints)[controller_id]
+        self.BC = controllable_constraint.get_controller
+        self.BC.turn_on()
+
+        return shearable_rod
+
+    def render(self, mode="human", close=False):
+        maxwidth = 800
+        aspect_ratio = 3 / 4
+
+        if self.viewer is None:
+            from gym_softrobot.utils.render import pyglet_rendering
+
+            self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
+
+        if self.renderer is None:
+            # Switch renderer depending on configuration
+            if RENDERER_CONFIG == RendererType.POVRAY:
+                from gym_softrobot.utils.render.povray_renderer import Session
+            elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
+                from gym_softrobot.utils.render.matplotlib_renderer import Session
+            else:
+                raise NotImplementedError("Rendering module is not imported properly")
+            assert issubclass(
+                Session, BaseRenderer
+            ), "Rendering module is not properly subclassed"
+            assert issubclass(
+                Session, BaseElasticaRendererSession
+            ), "Rendering module is not properly subclassed"
+            self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
+            self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
+            self.renderer.add_rod(self.shearable_rod)
+            self.renderer.add_rigid_body(self.rigid_rod)
+
+        # POVRAY
+        if RENDERER_CONFIG == RendererType.POVRAY:
+            state_image = self.renderer.render(
+                maxwidth, int(maxwidth * aspect_ratio * 0.7)
+            )
+            state_image_side = self.renderer.render(
+                maxwidth // 2,
+                int(maxwidth * aspect_ratio * 0.3),
+                camera_param=("location", [0.0, 0.0, -0.5], "look_at", [0.0, 0, 0]),
+            )
+            state_image_top = self.renderer.render(
+                maxwidth // 2,
+                int(maxwidth * aspect_ratio * 0.3),
+                camera_param=("location", [0.0, 0.3, 0.0], "look_at", [0.0, 0, 0]),
+            )
+
+            state_image = np.vstack(
+                [state_image, np.hstack([state_image_side, state_image_top])]
+            )
+        elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
+            # TODO Maybe add 2D rendering instead
+            state_image = self.renderer.render()
+        else:
+            raise NotImplementedError("Rendering module is not imported properly")
+
+        self.viewer.imshow(state_image)
+
+        return state_image

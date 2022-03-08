@@ -45,6 +45,12 @@ register(
     kwargs=dict(mode="continuous")
 )
 
+register(
+    id='OctoArmPullWeight-v0',
+    entry_point='gym_softrobot.envs.octopus:ArmPullWeightEnv',
+    kwargs=dict(mode="continuous")
+)
+
 """ Snake Environment """
 register(
     id='ContinuumSnake-v0',

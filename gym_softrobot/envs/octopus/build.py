@@ -14,6 +14,13 @@ from elastica.experimental.interaction import AnisotropicFrictionalPlaneRigidBod
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
 from gym_softrobot.utils.actuation.forces.drag_force import DragForce
+from gym_softrobot.utils.actuation.actuations.muscles.longitudinal_muscle import (
+    LongitudinalMuscle,
+)
+from gym_softrobot.utils.actuation.actuations.muscles.transverse_muscle import (
+    TransverseMuscle,
+)
+from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
 
 from scipy.spatial.transform import Rotation as Rot
 
@@ -248,3 +255,39 @@ def build_arm(
     )
 
     return rod
+
+def create_es_muscle_layers(
+        radius_mean,
+        radius_base,
+    ):
+    muscle_layers = [
+        # LongitudinalMuscle(
+        #     muscle_radius_ratio=np.stack(
+        #         (np.zeros(radius_mean.shape),
+        #          2 / 3 * np.ones(radius_mean.shape)),
+        #         axis=0),
+        #     max_force=1 * (radius_mean / radius_base) ** 2,
+        # )
+        LongitudinalMuscle(
+            muscle_radius_ratio=np.stack(
+                (np.zeros(radius_mean.shape), 6 / 9 * np.ones(radius_mean.shape)),
+                axis=0,
+            ),
+            max_force=0.5 * (radius_mean / radius_base) ** 2,
+        ),
+        LongitudinalMuscle(
+            muscle_radius_ratio=np.stack(
+                (np.zeros(radius_mean.shape), -6 / 9 * np.ones(radius_mean.shape)),
+                axis=0,
+            ),
+            max_force=0.5 * (radius_mean / radius_base) ** 2,
+        ),
+        TransverseMuscle(
+            muscle_radius_ratio=np.stack(
+                (np.zeros(radius_mean.shape), 4 / 9 * np.ones(radius_mean.shape)),
+                axis=0,
+            ),
+            max_force=1.0 * (radius_mean / radius_base) ** 2,
+        ),
+    ]
+    return muscle_layers

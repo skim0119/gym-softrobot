@@ -514,6 +514,10 @@ class ArmPushEnv(core.Env):
     #     return reach_time, energy_cost
 
 class ArmPullWeightEnv(ArmPushEnv):
+
+    def __init__(self, **kwargs):
+        super().__init__(time_step=2.5e-5, **kwargs)
+
     def _build(self):
         """Set up arm params"""
         n_elem = self.n_elem
@@ -543,7 +547,7 @@ class ArmPullWeightEnv(ArmPushEnv):
 
         """ Add head """
         rigid_rod_length = radius_base * 2
-        rigid_rod_radius = 0.02
+        rigid_rod_radius = 0.015
         start = np.zeros((3,)); start[0] = -rigid_rod_radius*0.9; start[2] = -2*radius_base
         direction = np.array([0.0, 0.0, 1.0])
         normal = np.array([0.0, 1.0, 0.0])
@@ -554,7 +558,8 @@ class ArmPullWeightEnv(ArmPushEnv):
                 normal,
                 rigid_rod_length,
                 rigid_rod_radius,
-                density)
+                density*0.5
+            )
         self.simulator.append(rigid_rod)
         self.rigid_rod = rigid_rod
 
@@ -569,7 +574,7 @@ class ArmPullWeightEnv(ArmPushEnv):
         _kt = 1e0
         self.simulator.connect(
             first_rod=rigid_rod, second_rod=shearable_rod, first_connect_idx=-1, second_connect_idx=0
-        ).using(FixedJoint2Rigid, k=_k, nu=1e-3, kt=_kt,angle=0,radius=rigid_rod_radius)
+        ).using(FixedJoint2Rigid, k=_k, nu=1e-2, kt=_kt,angle=0,radius=rigid_rod_radius)
 
         """ Set up controller """
         controller_id = self.simulator.constrain(shearable_rod).using(

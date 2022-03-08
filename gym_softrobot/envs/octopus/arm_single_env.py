@@ -116,13 +116,20 @@ class ArmSingleEnv(core.Env):
         {self.reward_range=}
         """)
 
-    def reset(self):
+    def reset(
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
+    ):
+        super().reset(seed=seed)
         self.simulator = BaseSimulator()
 
         self.shearable_rod = build_arm(
-                self.simulator,
-                self.n_elems,
-            )
+            self.simulator,
+            self.n_elems,
+        )
 
         # CallBack
         if self.config_generate_video:
@@ -158,7 +165,10 @@ class ArmSingleEnv(core.Env):
         self.prev_dist_to_target = np.linalg.norm(self.shearable_rod.compute_position_center_of_mass()[:2] - self._target, ord=2)
         #self.prev_cm_vel = self.shearable_rod.compute_velocity_center_of_mass()
 
-        return state
+        if return_info:
+            return state, {}
+        else:
+            return state
 
     def get_state(self):
         # Build state

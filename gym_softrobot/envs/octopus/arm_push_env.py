@@ -308,6 +308,9 @@ class ArmPushEnv(core.Env):
                     self.shearable_rod.velocity_collection.ravel(),
                     self.shearable_rod.director_collection.ravel(),
                     self.shearable_rod.alpha_collection.ravel(),
+                    self.shearable_rod.omega_collection.ravel(),
+                    self.rigid_rod.position_collection.ravel(),
+                    self.rigid_rod.velocity_collection.ravel(),
                     cm_pos.ravel()
                 ]
             )
@@ -357,6 +360,8 @@ class ArmPushEnv(core.Env):
             "rod": self.shearable_rod,
             "TimeLimit.truncated": timelimit,
         }
+
+        print(f'{self.shearable_rod.compute_shear_energy()=}')
         return states, reward, done, info
 
     def render(self, mode="human", close=False):
@@ -580,6 +585,7 @@ class ArmPullWeightEnv(ArmPushEnv):
         controller_id = self.simulator.constrain(shearable_rod).using(
             ControllableFixConstraint,
             index=0,
+            reduction_ratio=0.9
         ).id()
 
         """ Add muscle actuation """
@@ -607,6 +613,7 @@ class ArmPullWeightEnv(ArmPushEnv):
 
         controllable_constraint = dict(self.simulator._constraints)[controller_id]
         self.BC = controllable_constraint.get_controller
+        #self.BC.turn_on()
         self.BC.turn_on()
 
         return shearable_rod

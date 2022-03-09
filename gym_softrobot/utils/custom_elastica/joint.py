@@ -15,15 +15,6 @@ class FixedJoint2Rigid(FreeJoint):
     between two nodes and elements by applying restoring forces and torques.
     For implementation details, refer to Zhang et al. Nature
     Communications (2019).
-
-        Attributes
-        ----------
-        k: float
-            Stiffness coefficient of the joint.
-        nu: float
-            Damping coefficient of the joint.
-        kt: float
-            Rotational stiffness coefficient of the joint.
     """
 
     def __init__(self, k, nu, kt, angle, radius):

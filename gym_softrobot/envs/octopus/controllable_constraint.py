@@ -22,9 +22,10 @@ class ControllableFixConstraint(FreeRod):
 
     """ Modelled after sucker on octopus arm"""
 
-    def __init__(self, index, **kwargs):
+    def __init__(self, index, reduction_ratio=1.0, **kwargs):
         super().__init__(**kwargs)
         self.controller = self._Controller(index=index)
+        self.reduction_ratio = reduction_ratio
 
     @property
     def get_controller(self):
@@ -43,7 +44,8 @@ class ControllableFixConstraint(FreeRod):
             self.nb_compute_constrain_rates(
                 rod.velocity_collection,
                 rod.omega_collection,
-                self.controller.index
+                self.controller.index,
+                self.reduction_ratio
             )
 
     @staticmethod
@@ -56,6 +58,7 @@ class ControllableFixConstraint(FreeRod):
 
     @staticmethod
     @njit(cache=True)
-    def nb_compute_constrain_rates(velocity_collection, omega_collection, index):
-        velocity_collection[..., index] = 0.0
-        omega_collection[..., index] = 0.0
+    def nb_compute_constrain_rates(velocity_collection, omega_collection, index, reduction_ratio):
+        velocity_collection[..., index] *= (1.0 - reduction_ratio)
+        omega_collection[..., index] *= (1.0 - reduction_ratio)
+

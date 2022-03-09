@@ -309,8 +309,6 @@ class ArmPushEnv(core.Env):
                     self.shearable_rod.director_collection.ravel(),
                     self.shearable_rod.alpha_collection.ravel(),
                     self.shearable_rod.omega_collection.ravel(),
-                    self.rigid_rod.position_collection.ravel(),
-                    self.rigid_rod.velocity_collection.ravel(),
                     cm_pos.ravel()
                 ]
             )

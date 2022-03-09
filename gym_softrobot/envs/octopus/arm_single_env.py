@@ -27,6 +27,8 @@ from gym_softrobot.utils.render.base_renderer import BaseRenderer, BaseElasticaR
 class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
     pass
 
+def do_normalization(data,limit):
+    return (data-limit[0])/(limit[1]-limit[0])
 
 class ArmSingleEnv(core.Env):
     """
@@ -43,11 +45,12 @@ class ArmSingleEnv(core.Env):
     metadata = {'render.modes': ['rgb_array', 'human']}
 
     def __init__(self,
-            final_time=5.0,
+            final_time=10.0,
             time_step=7.0e-5,
-            recording_fps=5,
-            n_elems=10,
-            n_action=3,
+            recording_fps=20,
+            n_elems=50,
+            n_action=7,
+            control_penalty_coeff=0.001,
             config_generate_video=False,
             policy_mode='centralized'
         ):
@@ -59,6 +62,7 @@ class ArmSingleEnv(core.Env):
         self.total_steps = int(self.final_time/self.time_step)
         self.recording_fps = recording_fps
         self.step_skip = int(1.0 / (recording_fps * time_step))
+        self.control_penalty_coeff=control_penalty_coeff
 
         self.n_elems = n_elems
         self.n_seg = n_elems-1
@@ -70,11 +74,11 @@ class ArmSingleEnv(core.Env):
         action_low = np.ones(action_size) * (-22)
         action_high = np.ones(action_size) * (22)
         self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
-        self._observation_size = ((self.n_seg + (self.n_elems+1) * 4 + self.n_action + 2),) # 2 for target
+        self._observation_size = (25,)#((self.n_seg + (self.n_elems+1) * 4 + self.n_action + 2),) # 2 for target
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32)
 
         self.metadata= {}
-        self.reward_range=100.0
+        self.reward_range=10.0
         self._prev_action = np.zeros(list(self.action_space.shape), dtype=self.action_space.dtype)
 
         # Configurations
@@ -86,6 +90,11 @@ class ArmSingleEnv(core.Env):
 
         # Determinism
         self.seed()
+
+        self.kappa_range = [-49.33508476187419, 49.33545827754751]
+        self.sigma_range = [-0.041537734572300755, 0.1019431615063144]
+        self.kappa_rate_range = [-21.063520620377012, 24.664591289161944]
+        self.sigma_rate_range = [-0.08387293777925456, 0.06838264835333994]
 
     def seed(self, seed=None):
         # Deprecated in new gym
@@ -118,9 +127,9 @@ class ArmSingleEnv(core.Env):
         self.simulator = BaseSimulator()
 
         self.shearable_rod = build_arm(
-                self.simulator,
-                self.n_elems,
-            )
+            self.simulator,
+            self.n_elems,
+        )
 
         # CallBack
         if self.config_generate_video:
@@ -142,11 +151,14 @@ class ArmSingleEnv(core.Env):
         self.counter=0
 
         # Set Target
-        self._target = (2-0.5)*self.np_random.random(2) + 0.5
+        self._target = np.array([1.0,0.0])#(2-0.5)*self.np_random.random(2) + 0.5
         #self._target /= np.linalg.norm(self._target) # I don't see why this is here
-        print(self._target)
+        # print(self._target)
 
         # Initial State
+        rod = self.shearable_rod
+        self.prev_kappa_state = copy.deepcopy(rod.kappa[0])
+        self.prev_com_state= rod.compute_position_center_of_mass()[:2]
         state = self.get_state()
 
         # Preprocessing
@@ -162,22 +174,38 @@ class ArmSingleEnv(core.Env):
         # Build state
         rod = self.shearable_rod
         kappa_state = rod.kappa[0]
-        pos_state1 = rod.position_collection[0] # x
-        pos_state2 = rod.position_collection[1] # y
-        vel_state1 = rod.velocity_collection[0] # x
-        vel_state2 = rod.velocity_collection[1] # y
+        kappa_rate_state = kappa_state-self.prev_kappa_state
+        self.prev_kappa_state[...]=kappa_state
+
+        mean_kappa_state=np.mean(kappa_state.reshape((7, 7)), axis=1)
+        mean_kappa_rate_state=np.mean(kappa_rate_state.reshape((7, 7)), axis=1)
+
+        com_state = rod.compute_position_center_of_mass()[:2]
+        com_rate_state = com_state-self.prev_com_state
+        self.prev_com_state[...] = com_state
+        # pos_state1 = rod.position_collection[0] # x
+        # pos_state2 = rod.position_collection[1] # y
+        # vel_state1 = rod.velocity_collection[0] # x
+        # vel_state2 = rod.velocity_collection[1] # y
         previous_action = self._prev_action.copy()
         target = self._target
+        # state = np.hstack([
+        #     mean_kappa_state, mean_kappa_rate_state,com_rate_state,# com_state, #pos_state1, pos_state2, vel_state1, vel_state2,
+        #     previous_action, target]).astype(np.float32)
+        normalized_kappa_state=self.normalize_state(mean_kappa_state, mean_kappa_rate_state)
         state = np.hstack([
-            kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
+            normalized_kappa_state,com_rate_state,# com_state, #pos_state1, pos_state2, vel_state1, vel_state2,
             previous_action, target]).astype(np.float32)
         return state
-
+    def normalize_state(self,kappa,kappa_rate):
+        k=do_normalization(kappa,self.kappa_range)
+        kr=do_normalization(kappa_rate,self.kappa_rate_range)
+        return np.concatenate([k,kr])
     def set_action(self, action) -> None:
         self._prev_action[:] = action
-        action = np.concatenate([[0], action, [0]], axis=-1)
+        # action = np.concatenate([[0], action, [0]], axis=-1)
         action = interp1d(
-                np.linspace(0,1,self.n_action+2), # added zero on the boundary
+                np.linspace(0,1,self.n_action), # added zero on the boundary
                 action,
                 kind='cubic',
                 axis=-1,
@@ -207,26 +235,27 @@ class ArmSingleEnv(core.Env):
 
         """ Done is a boolean to reset the environment before episode is completed """
         done = False
-        survive_reward = 0.0
-        forward_reward = 0.0
-        control_panelty = 0.005 * np.square(rest_kappa.ravel()).mean()
+        self.survive_reward = 0.0
+        self.forward_reward = 0.0
+        self.control_panelty = self.control_penalty_coeff * np.square(rest_kappa.ravel()).mean()
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(np.concatenate(
             [self.shearable_rod.position_collection, self.shearable_rod.velocity_collection]
-            ))
+            )) or np.linalg.norm(self.shearable_rod.omega_collection)>250
 
         if invalid_values_condition:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
-            survive_reward = -50.0
+            self.survive_reward = -1.0#50.0
         else:
-            cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
-            dist_to_target = np.linalg.norm(cm_pos - self._target, ord=2)
-            forward_reward = (self.prev_dist_to_target - dist_to_target) * 10
+            self.cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
+            dist_to_target = np.linalg.norm(self.cm_pos - self._target, ord=2)
+            self.forward_velocity = self.prev_dist_to_target - dist_to_target
+            self.forward_reward = np.exp(-dist_to_target/0.35)-0.096 #np.exp((self.cm_pos[0]-0.18)/0.35)-1#np.exp(self.forward_velocity)-1#(self.prev_dist_to_target - dist_to_target) * 10
             self.prev_dist_to_target = dist_to_target
             """ Goal """
             if dist_to_target < 0.1:
-                survive_reward = 100.0
+                self.survive_reward = 5.0
                 done = True
 
         """ Time limit """
@@ -235,7 +264,7 @@ class ArmSingleEnv(core.Env):
             timelimit = True
             done=True
 
-        reward = forward_reward - control_panelty + survive_reward
+        reward = self.forward_reward - self.control_panelty + self.survive_reward
         #reward *= 10 # Reward scaling
         #print(f'{reward=:.3f}: {forward_reward=:.3f}, {control_panelty=:.3f}, {survive_reward=:.3f}')
             
@@ -282,7 +311,7 @@ class ArmSingleEnv(core.Env):
                 "Rendering module is not properly subclassed"
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
-            self.renderer.add_rod(self.shearable_rod) # TODO: maybe need add_rod instead
+            self.renderer.add_rods([self.shearable_rod]) # TODO: maybe need add_rod instead
             self.renderer.add_point(self._target.tolist()+[0], 0.02)
 
         # POVRAY

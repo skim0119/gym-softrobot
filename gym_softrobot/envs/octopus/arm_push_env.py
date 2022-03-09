@@ -562,7 +562,7 @@ class ArmPullWeightEnv(ArmPushEnv):
                 normal,
                 rigid_rod_length,
                 rigid_rod_radius,
-                density*0.5
+                density*0.2
             )
         self.simulator.append(rigid_rod)
         self.rigid_rod = rigid_rod
@@ -612,7 +612,6 @@ class ArmPullWeightEnv(ArmPushEnv):
 
         controllable_constraint = dict(self.simulator._constraints)[controller_id]
         self.BC = controllable_constraint.get_controller
-        #self.BC.turn_on()
         self.BC.turn_on()
 
         return shearable_rod

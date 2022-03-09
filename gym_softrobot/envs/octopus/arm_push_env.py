@@ -361,7 +361,6 @@ class ArmPushEnv(core.Env):
             "TimeLimit.truncated": timelimit,
         }
 
-        print(f'{self.shearable_rod.compute_shear_energy()=}')
         return states, reward, done, info
 
     def render(self, mode="human", close=False):

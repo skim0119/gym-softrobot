@@ -562,7 +562,7 @@ class ArmPullWeightEnv(ArmPushEnv):
                 normal,
                 rigid_rod_length,
                 rigid_rod_radius,
-                density*0.2
+                density*1.0
             )
         self.simulator.append(rigid_rod)
         self.rigid_rod = rigid_rod

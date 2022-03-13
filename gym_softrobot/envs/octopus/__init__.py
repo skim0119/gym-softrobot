@@ -4,4 +4,5 @@ from gym_softrobot.envs.octopus.arm_push_env import ArmPushEnv
 from gym_softrobot.envs.octopus.arm_push_env import ArmPullWeightEnv
 from gym_softrobot.envs.octopus.reach_env import ReachEnv
 from gym_softrobot.envs.octopus.swim_env import SwimEnv
+from gym_softrobot.envs.octopus.crawl_env import CrawlEnv
 from gym_softrobot.envs.octopus.hunt_env import HuntEnv

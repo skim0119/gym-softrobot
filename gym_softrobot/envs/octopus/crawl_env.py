@@ -25,7 +25,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
     pass
 
 
-class Flat3DEnv(core.Env):
+class CrawlEnv(core.Env):
     """
     Description:
     Source:
@@ -37,14 +37,13 @@ class Flat3DEnv(core.Env):
     Solved Requirements:
     """
 
-    metadata = {'render.modes': ['rgb_array', 'human']}
+    metadata = {'render.modes': ['rgb_array']}
 
     def __init__(self,
-            final_time=5.0,
+            final_time=10.0,
             time_step=5.0e-5,
-            recording_fps=5,
+            recording_fps=25,
             n_elems=10,
-            n_arm=8,
             n_action=3,
             config_generate_video=False,
             config_save_head_data=False,
@@ -59,7 +58,7 @@ class Flat3DEnv(core.Env):
         self.recording_fps = recording_fps
         self.step_skip = int(1.0 / (recording_fps * time_step))
 
-        self.n_arm = n_arm
+        self.n_arm = 8
         self.n_elems = n_elems
         self.n_seg = n_elems-1
         self.policy_mode = policy_mode

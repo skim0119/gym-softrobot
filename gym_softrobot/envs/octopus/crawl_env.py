@@ -219,7 +219,7 @@ class CrawlEnv(core.Env):
                 self.time,
                 self.time_step,
             )
-            """ # Debug
+             # Debug
             invalid_values_condition = _isnan_check(np.concatenate(
                 [rod.position_collection for rod in self.shearable_rods] + 
                 [rod.velocity_collection for rod in self.shearable_rods]
@@ -230,8 +230,6 @@ class CrawlEnv(core.Env):
                 break
             else:
                 self.render()
-                pass
-            """
         etime = time.perf_counter()
         states = self.get_state()
 
@@ -315,8 +313,8 @@ class CrawlEnv(core.Env):
                 "Rendering module is not properly subclassed"
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods(self.shearable_rods)
-            self.renderer.add_rigid_body(self.rigid_rod)
-            self.renderer.add_point(self._target.tolist()+[0], 0.002)
+            #self.renderer.add_rigid_body(self.rigid_rod)
+            #self.renderer.add_point(self._target.tolist()+[0], 0.002)
 
         # POVRAY
         if RENDERER_CONFIG == RendererType.POVRAY:

@@ -98,6 +98,7 @@ class ElasticaRod(Geom):
     def get_position_radius(self):
         pos = self.rod.position_collection
         rad = self.rod.radius
+        rad /= 3
         if not pos.shape[-1] == rad.shape[0]:
             # radius defined at element, while position defined at node.
             # typical elastica has n_node = n_elem + 1 (unless the rod is circular)
@@ -135,8 +136,8 @@ class ElasticaCylinder(Geom):
         pos1, pos2, rad = self.get_position_radius()
         end_caps = np.vstack((pos1, pos2))
         size = convert_marker_size(rad/2, ax)
-        self.scatter = ax.scatter(end_caps[:,0], end_caps[:,1], end_caps[:,2], s=size, c=ElasticaCylinder.rgb_color)
-        #self.line, = ax.plot(end_caps[:,0], end_caps[:,1], end_caps[:,2], linewidth=size**0.5, c=ElasticaCylinder.rgb_color)
+        #self.scatter = ax.scatter(end_caps[:,0], end_caps[:,1], end_caps[:,2], s=size, c=ElasticaCylinder.rgb_color)
+        self.line, = ax.plot(end_caps[:,0], end_caps[:,1], end_caps[:,2], linewidth=size**0.5, c=ElasticaCylinder.rgb_color)
 
     def get_position_radius(self):
         rad = self.body.radius[0]

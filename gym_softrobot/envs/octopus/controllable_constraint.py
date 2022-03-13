@@ -54,7 +54,7 @@ class ControllableFixConstraint(FreeRod):
         position_collection, director_collection, index
     ):
         position_collection[2, index] = 0
-        director_collection[2, :, index] = np.array([1,0,0])
+        director_collection[1, :, index] = np.array([0.0,0.0,1.0])
 
     @staticmethod
     @njit(cache=True)

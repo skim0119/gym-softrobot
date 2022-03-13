@@ -278,6 +278,8 @@ class CrawlEnv(core.Env):
 
         # Info
         info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
+        if np.isnan(reward):
+            reward = -50
 
         self.counter += 1
 

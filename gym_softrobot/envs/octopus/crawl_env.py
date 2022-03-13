@@ -68,14 +68,10 @@ class CrawlEnv(core.Env):
         # TODO: for non-HER, use decentral training shapes
         self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm* n_action,), dtype=np.float32)
 
-        shared_space = 15 # without target location
+        shared_space = 17
         self.grid_size = 1
         self._observation_size = (n_arm* (self.n_seg + (self.n_elems+1) * 4 + n_action + n_arm + shared_space),)
-        self.observation_space = spaces.Dict({
-            "observation":spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
-            "achieved_goal":spaces.Box(-self.grid_size, self.grid_size, shape=(2,), dtype=np.float32),
-            "desired_goal":spaces.Box(-self.grid_size, self.grid_size, shape=(2,), dtype=np.float32),
-        })
+        self.observation_space = spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32)
 
         self.metadata= {}
         self.reward_range=50.0
@@ -168,7 +164,7 @@ class CrawlEnv(core.Env):
         vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
         previous_action = self._prev_action.reshape([8,2])
         shared_state = np.concatenate([
-            #self._target, # 2
+            self._target, # 2
             self.rigid_rod.position_collection[:,0], # 3
             self.rigid_rod.velocity_collection[:,0], # 3
             self.rigid_rod.director_collection[:,:,0].ravel(), # 9: orientation
@@ -177,12 +173,7 @@ class CrawlEnv(core.Env):
             kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
             previous_action, np.eye(self.n_arm),
             np.repeat(shared_state[None,...], 8, axis=0)]).astype(np.float32)
-
-        state = OrderedDict()
-        state["observation"] = np.nan_to_num(observation_state.ravel())
-        state["achieved_goal"] = np.nan_to_num(self.rigid_rod.position_collection[:2, 0].astype(np.float32))
-        state["desired_goal"] = self._target
-        return state
+        return  np.nan_to_num(observation_state.ravel())
 
     def set_action(self, action) -> None:
         # Action: (8, n_action)
@@ -257,7 +248,10 @@ class CrawlEnv(core.Env):
             #forward_reward = (np.linalg.norm(self._target - xposafter) - 
             #    np.linalg.norm(self._target - xposbefore)) * 1e3
 
-            forward_reward = self.compute_reward(states["achieved_goal"], states["desired_goal"], None)
+            forward_reward = self.compute_reward(
+                    self.rigid_rod.position_collection[:2,0],
+                    self._target,
+                    None)
 
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')

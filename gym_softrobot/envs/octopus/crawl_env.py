@@ -70,10 +70,6 @@ class CrawlEnv(core.Env):
 
         shared_space = 15 # without target location
         self.grid_size = 1
-<<<<<<< HEAD
-        # TODO: for non-HER, use decentral training
-=======
->>>>>>> 0f4af37a340ffb08b1dabd5029bd600ee34f5fd8
         self._observation_size = (n_arm* (self.n_seg + (self.n_elems+1) * 4 + n_action + n_arm + shared_space),)
         self.observation_space = spaces.Dict({
             "observation":spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),

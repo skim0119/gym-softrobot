@@ -166,7 +166,7 @@ class CrawlEnv(core.Env):
         pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods]) # y
         vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods]) # x
         vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
-        previous_action = self._prev_action.copy()
+        previous_action = self._prev_action.reshape([8,2])
         shared_state = np.concatenate([
             #self._target, # 2
             self.rigid_rod.position_collection[:,0], # 3

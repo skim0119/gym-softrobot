@@ -34,17 +34,17 @@ from scipy.spatial.transform import Rotation as Rot
 # default parameters
 ARM_MATERIAL = {
     # Arm properties
-    "density": 700.0,
+    "density": 1000.0,
     "youngs_modulus": 1e4,
     "shear_modulus": 1e4 / (1.0+0.5), # 0.5 Poisson Ratio
-    "nu" = 0.1
-    "nu_scale": 5e2,
+    "nu": 0.10,
+    "nu_scale": 1e-1,
 }
 DEFAULT_SCALE_LENGTH = {
     # Arm length scale
     "base_length": 0.25,
-    "base_radius": 0.12,
-    "arm_taper_angle": 4 * np.pi / 180, # https://www.liebertpub.com/doi/10.1089/soro.2019.0082
+    "base_radius": 0.013,
+    "tip_radius" : 0.0042, # https://www.liebertpub.com/doi/10.1089/soro.2019.0082
     "head_radius": 0.04,
 }
 HEAD_PROPERTIES = {
@@ -56,29 +56,35 @@ HEAD_PROPERTIES = {
     "body_arm_nu": 1e-2,
 }
 
-def build_arm(n_elem:int=40, start, direction, normal) -> CosseratRod:
+def build_arm(n_elem:int, start:np.ndarray, direction:np.ndarray, normal:np.ndarray) -> CosseratRod:
     """ Set up properties """
     arm_material = deepcopy(ARM_MATERIAL)
+    arm_material["n_elements"] = n_elem
     arm_material["start"] = start
     arm_material["direction"] = direction
     arm_material["normal"] = normal
-    arm_material["base_length"] = DEFUALT_SCALE_LENGTH["baes_length"]
+    arm_material["base_length"] = DEFAULT_SCALE_LENGTH["base_length"]
     arm_material["base_radius"] = np.linspace(
-            DEFAULT_SCALE_LENGTH["baes_radius"], 
-            DEFAULT_SCALE_LENGTH["baes_radius"] - DEFAULT_SCALE_LENGTH["baes_radius"] * np.tan(DEFAULT_SCALE_LENGTH["arm_taper_angle"]),
+            DEFAULT_SCALE_LENGTH["base_radius"], 
+            DEFAULT_SCALE_LENGTH["tip_radius"],
             n_elem)
-    arm_material["nu"] *= ((arm_material["base_radius"]/DEFAULT_SCALE_LENGTH["baes_radius"])**2)*arm_material["nu_scale"]
+    arm_material["nu"] *= ((arm_material["base_radius"]/DEFAULT_SCALE_LENGTH["base_radius"])**2.0)*arm_material["nu_scale"]
 
     rod = CosseratRod.straight_rod(**arm_material)
     return rod
 
 def build_octopus(simulator, n_elem:int=40):
-    """ Import default parameters (overridable) """
-    param = _OCTOPUS_PROPERTIES.copy()  # Always copy parameter for safety
-    if isinstance(override_params, dict):
-        param.update(override_params)
-    """ Import default parameters (non-overridable) """
-    arm_scale_param = _DEFAULT_SCALE_LENGTH.copy()
+    """
+    build_octopus
+
+    Parameters
+    ----------
+    simulator : PyElastica Simulator
+    n_elem : int
+    """
+
+    """ Configuration"""
+    n_arm = 8
 
     """ Set up an arm """
     L0 = DEFAULT_SCALE_LENGTH['base_length']
@@ -100,7 +106,7 @@ def build_octopus(simulator, n_elem:int=40):
         simulator.append(rod)
 
     """ Add head """
-    start = np.zeros((3,)); start[2] = -r0
+    start = np.zeros((3,)); start[2] = -r0*2
     direction = np.array([0.0, 0.0, 1.0])
     normal = np.array([0.0, 1.0, 0.0])
     density = HEAD_PROPERTIES['head_density']
@@ -152,6 +158,20 @@ def build_octopus(simulator, n_elem:int=40):
     )
     """
 
+    """ Add muscle actuation """
+    tm_activations = []
+    for i in range(n_arm):
+        muscle_layers = create_es_muscle_layers(
+            shearable_rods[i].radius,
+            DEFAULT_SCALE_LENGTH["base_radius"]
+        )
+        simulator.add_forcing_to(shearable_rods[i]).using(
+            ApplyMuscle,
+            muscles=muscle_layers,
+            step_skip=10000, # Not relavent
+            callback_params_list=[],
+        )
+        tm_activations.append(muscle_layers[2]) # 2 for TM
 
-    return shearable_rods, rigid_rod
+    return shearable_rods, rigid_rod, tm_activations
 

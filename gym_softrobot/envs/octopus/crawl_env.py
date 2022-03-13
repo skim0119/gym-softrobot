@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Any, Union, Dict
 
 import gym
 from gym import core
@@ -16,9 +16,12 @@ from elastica import *
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
 
-from gym_softrobot.envs.octopus.build import build_octopus
-from gym_softrobot.utils.custom_elastica.callback_func import RodCallBack, RigidCylinderCallBack
-from gym_softrobot.utils.render.post_processing import plot_video
+from gym_softrobot.envs.octopus.build_muscle_octopus import build_octopus
+
+from gym_softrobot.config import RendererType
+from gym_softrobot import RENDERER_CONFIG
+from gym_softrobot.utils.render.base_renderer import BaseRenderer, BaseElasticaRendererSession
+from gym_softrobot.envs.octopus.controllable_constraint import ControllableFixConstraint
 
 
 class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
@@ -28,6 +31,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
 class CrawlEnv(core.Env):
     """
     Description:
+        Decentralized
     Source:
     Observation:
     Actions:
@@ -43,67 +47,41 @@ class CrawlEnv(core.Env):
             final_time=10.0,
             time_step=5.0e-5,
             recording_fps=25,
-            n_elems=10,
-            n_action=3,
-            config_generate_video=False,
-            config_save_head_data=False,
-            policy_mode='centralized'
+            n_elems=20,
         ):
 
         # Integrator type
-
         self.final_time = final_time
         self.time_step = time_step
         self.total_steps = int(self.final_time/self.time_step)
         self.recording_fps = recording_fps
         self.step_skip = int(1.0 / (recording_fps * time_step))
 
-        self.n_arm = 8
+        n_arm = 8
+        self.n_arm = n_arm 
         self.n_elems = n_elems
         self.n_seg = n_elems-1
-        self.policy_mode = policy_mode
 
         # Spaces
-        self.n_action = n_action * 3 # number of interpolation point (3 for 3 curvatures)
-        shared_space = 17
-        if policy_mode == 'centralized':
-            action_size = (n_arm*self.n_action,)
-            action_low = np.ones(self.n_action) * (-22); action_low[self.n_action//3:] = -5
-            action_high = np.ones(self.n_action) * (22); action_high[self.n_action//3:] =  5
-            action_low = np.repeat(action_low, n_arm)
-            action_high = np.repeat(action_high, n_arm)
-            self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
-            self._observation_size = (n_arm, (self.n_seg + (self.n_elems+1) * 4 + self.n_action))
-            self.observation_space = spaces.Dict({
-                "individual": spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
-                "shared": spaces.Box(-np.inf, np.inf, shape=(shared_space,), dtype=np.float32)
-            })
-        elif policy_mode == 'decentralized':
-            action_size = (self.n_action,)
-            action_low = np.ones(action_size) * (-22); action_low[self.n_action//3:] = -5
-            action_high = np.ones(action_size) * (22); action_high[self.n_action//3:] =  5
-            self.action_space = spaces.Box(action_low, action_high, shape=action_size, dtype=np.float32)
-            self._observation_size = ((self.n_seg + (self.n_elems+1) * 4 + self.n_action + n_arm),)
-            self.observation_space = spaces.Dict({
-                "individual": spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
-                "shared": spaces.Box(-np.inf, np.inf, shape=(shared_space,), dtype=np.float32)
-            })
-        else:
-            raise NotImplementedError
+        n_action = 2
+        self.n_action = n_action
+        self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm, n_action), dtype=np.float32)
+
+        shared_space = 15 # without target location
+        self.grid_size = 1
+        self._observation_size = (n_arm, (self.n_seg + (self.n_elems+1) * 4 + n_action + n_arm + shared_space))
+        self.observation_space = spaces.Dict({
+            "observation":spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
+            "achieved_goal":spaces.Box(-self.grid_size, self.grid_size, shape=(2,), dtype=np.float32),
+            "desired_goal":spaces.Box(-self.grid_size, self.grid_size, shape=(2,), dtype=np.float32),
+        })
+
         self.metadata= {}
         self.reward_range=50.0
-        if policy_mode == 'centralized':
-            self._prev_action = np.zeros(list(self.action_space.shape),
-                    dtype=self.action_space.dtype)
-        elif policy_mode == 'decentralized':
-            self._prev_action = np.zeros([n_arm]+list(self.action_space.shape),
-                    dtype=self.action_space.dtype)
-        else:
-            raise NotImplementedError
+        self._prev_action = np.zeros(list(self.action_space.shape),
+                dtype=self.action_space.dtype)
 
         # Configurations
-        self.config_generate_video = config_generate_video
-        self.config_save_head_data = config_save_head_data
 
         # Rendering-related
         self.viewer = None
@@ -112,25 +90,13 @@ class CrawlEnv(core.Env):
         # Determinism
         self.seed()
 
+    def get_env_info(self):
+        return dict(n_actions=self.n_action, n_agents=8)
+
     def seed(self, seed=None):
         # Deprecated in new gym
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
-
-    def summary(self,):
-        print(f"""
-        {self.final_time=}
-        {self.time_step=}
-        {self.total_steps=}
-        {self.step_skip=}
-        simulation time per action: {1.0/self.step_skip=}
-        max number of action per episode: {self.total_steps/self.step_skip}
-
-        {self.n_elems=}
-        {self.action_space=}
-        {self.observation_space=}
-        {self.reward_range=}
-        """)
 
     def reset(
         self,
@@ -142,32 +108,32 @@ class CrawlEnv(core.Env):
         super().reset(seed=seed)
         self.simulator = BaseSimulator()
 
-        self.shearable_rods, self.rigid_rod = build_octopus(
+        self.shearable_rods, self.rigid_rod, self.tm_muscle_activations = build_octopus(
                 self.simulator,
-                self.n_arm,
                 self.n_elems,
             )
 
-        # CallBack
-        if self.config_generate_video:
-            self.rod_parameters_dict_list=[]
-            for arm in self.shearable_rods:
-                rod_parameters_dict = defaultdict(list)
-                self.simulator.collect_diagnostics(arm).using(
-                    RodCallBack,
-                    step_skip=self.step_skip,
-                    callback_params=rod_parameters_dict
-                )
-                self.rod_parameters_dict_list.append(rod_parameters_dict)
-        if self.config_save_head_data:
-            self.head_dict = defaultdict(list)
-            self.simulator.collect_diagnostics(self.rigid_rod).using(
-                RigidCylinderCallBack, step_skip=self.step_skip, callback_params=self.head_dict
-            )
+        """ Controller Setup """
+        constraint_ids = []
+        for i in range(self.n_arm):
+            constraint_id = self.simulator.constrain(self.shearable_rods[i]).using(
+                ControllableFixConstraint,
+                index=0,
+            ).id()
+            constraint_ids.append(constraint_id)
+
+        self.simulator.finalize()
+
+        """ Sucker Controller Hook """
+        self.sucker_controller = []
+        for constraint_id in constraint_ids:
+            controllable_constraint = dict(self.simulator._constraints)[constraint_id]
+            controller = controllable_constraint.get_controller
+            controller.turn_on()
+            self.sucker_controller.append(controller)
 
         """ Finalize the simulator and create time stepper """
         self.StatefulStepper = PositionVerlet()
-        self.simulator.finalize()
         self.do_step, self.stages_and_updates = extend_stepper_interface(
             self.StatefulStepper, self.simulator
         )
@@ -177,14 +143,12 @@ class CrawlEnv(core.Env):
         #     (2) systems for controller design
         # """
         # systems = [self.shearable_rod]
-        self.rest_sigma=np.zeros_like(self.shearable_rods[0].sigma)
         self.time= np.float64(0.0)
         self.counter=0
         # self.bias=self.shearable_rod.compute_position_center_of_mass()[0].copy()
 
         # Set Target
-        self._target = (2-1)*self.np_random.random(2) + 1
-        #self._target /= np.linalg.norm(self._target) # I don't see why this is here
+        self._target = self.np_random.uniform(-self.grid_size, self.grid_size, size=2).astype(np.float32)
 
         # Initial State
         state = self.get_state()
@@ -195,59 +159,43 @@ class CrawlEnv(core.Env):
             return state
 
     def get_state(self):
-        states = {}
         # Build state
         kappa_state = np.vstack([rod.kappa[0] for rod in self.shearable_rods])
         pos_state1 = np.vstack([rod.position_collection[0] for rod in self.shearable_rods]) # x
         pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods]) # y
         vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods]) # x
         vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
-        if self.policy_mode == 'decentralized':
-            previous_action = self._prev_action[:, :]
-            individual_state = np.hstack([
-                kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
-                previous_action, np.eye(self.n_arm)]).astype(np.float32)
-        elif self.policy_mode == 'centralized':
-            previous_action = self._prev_action.reshape([self.n_arm, self.n_action])
-            individual_state = np.hstack([
-                kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
-                previous_action]).astype(np.float32)
-        else:
-            raise NotImplementedError
+        previous_action = self._prev_action[:, :]
         shared_state = np.concatenate([
-            self._target, # 2
+            #self._target, # 2
             self.rigid_rod.position_collection[:,0], # 3
             self.rigid_rod.velocity_collection[:,0], # 3
-            self.rigid_rod.director_collection[:,:,0].ravel(), # 9
+            self.rigid_rod.director_collection[:,:,0].ravel(), # 9: orientation
             ], dtype=np.float32)
-        states["individual"] = individual_state
-        states["shared"] = shared_state
-        return states
+        observation_state = np.hstack([
+            kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
+            previous_action, np.eye(self.n_arm),
+            np.repeat(shared_state[None,...], 8, axis=0)]).astype(np.float32)
 
-    def set_action(self, action):
-        reshaped_kappa = action.reshape((self.n_arm, self.n_action))
-        if self.policy_mode == "decentralized":
-            self._prev_action[:] = reshaped_kappa
-        elif self.policy_mode == "centralized":
-            self._prev_action[:] = reshaped_kappa.reshape([self.n_arm * self.n_action])
-        else:
-            raise NotImplementedError
-        reshaped_kappa = reshaped_kappa.reshape((self.n_arm, 3, self.n_action // 3))
-        reshaped_kappa = np.concatenate([
-                np.zeros((self.n_arm, 3, 1)),
-                reshaped_kappa,
-                np.zeros((self.n_arm, 3, 1)),
-            ], axis=-1)
-        reshaped_kappa = interp1d(
-                np.linspace(0,1,self.n_action//3+2), # added zero on the boundary
-                reshaped_kappa,
-                kind='cubic',
-                axis=-1,
-            )(np.linspace(0,1,self.n_seg))
-        for arm_i in range(self.n_arm):
-            self.shearable_rods[arm_i].rest_kappa[:, :] = reshaped_kappa[arm_i]
-            #self.shearable_rods[arm_i].rest_sigma[1, :] = self.rest_sigma[1,:] #rest_sigma.copy()
-            #self.shearable_rods[arm_i].rest_sigma[2, :] = self.rest_sigma[2,:] #rest_sigma.copy()
+        return dict(
+                observation=observation_state,
+                achieved_goal=self.rigid_rod.position_collection[:2, 0],
+                desired_goal=self._target
+            )
+
+    def set_action(self, action) -> None:
+        # Action: (8, n_action)
+        scale = 1.0  # min(time / 0.02, 1)
+
+        # Continuous action
+        for i in range(self.n_arm):
+            location = action[i,0]
+            activation = action[i,1]
+            self.sucker_controller[i].index = int(np.clip(location * self.n_elems, 0, self.n_elems-1))
+            self.tm_muscle_activations[i].set_activation(activation)
+
+        # update previous action
+        self._prev_action = action
 
     def step(self, action):
         rest_kappa = action # alias
@@ -268,7 +216,21 @@ class CrawlEnv(core.Env):
                 self.time,
                 self.time_step,
             )
+            """ # Debug
+            invalid_values_condition = _isnan_check(np.concatenate(
+                [rod.position_collection for rod in self.shearable_rods] + 
+                [rod.velocity_collection for rod in self.shearable_rods]
+                ))
+            if invalid_values_condition == True:
+                print(f" Nan detected in, exiting simulation now. {self.time=}")
+                self.render()
+                break
+            else:
+                self.render()
+                pass
+            """
         etime = time.perf_counter()
+        states = self.get_state()
 
         """ Done is a boolean to reset the environment before episode is completed """
         done = False
@@ -288,9 +250,11 @@ class CrawlEnv(core.Env):
             done = True
             survive_reward = -50.0
         else:
-            xposafter = self.rigid_rod.position_collection[0:2,0]
-            forward_reward = (np.linalg.norm(self._target - xposafter) - 
-                np.linalg.norm(self._target - xposbefore)) * 1e3
+            #xposafter = self.rigid_rod.position_collection[0:2,0]
+            #forward_reward = (np.linalg.norm(self._target - xposafter) - 
+            #    np.linalg.norm(self._target - xposbefore)) * 1e3
+
+            forward_reward = self.compute_reward(states["achieved_goal"], states["desired_goal"], None)
 
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
@@ -308,7 +272,6 @@ class CrawlEnv(core.Env):
             (3) a flag denotes whether the simulation runs correlectly
         """
         # systems = [self.shearable_rod]
-        states = self.get_state()
 
         # Info
         info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
@@ -317,30 +280,63 @@ class CrawlEnv(core.Env):
 
         return states, reward, done, info
 
-    def save_data(self, filename_video, fps):
-        
-        if self.config_save_head_data:
-            print("Saving data to pickle files ...", end='\r')
-            np.savez(algo+"_head",**self.head_dict)
-            print("Saving data to pickle files ... Done!")
+    def compute_reward(
+        self,
+        achieved_goal: Union[int ,np.ndarray],
+        desired_goal: Union[int, np.ndarray],
+        _info: Optional[Dict[str, Any]]=None,
+    ) -> np.float32:
+        dist = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
+        return -(dist).astype(np.float32)
 
-        if self.config_generate_video:
-            filename_video = f"save/{filename_video}"
-            plot_video(self.rod_parameters_dict_list, filename_video, margin=0.2, fps=fps)
 
-    def render(self, mode='human', close=False):
+    def render(self, mode='human', close=False) -> Optional[np.ndarray]:
         maxwidth = 800
+        aspect_ratio = (3/4)
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
-            from gym_softrobot.utils.render.povray_renderer import Session
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
-            self.renderer = Session(width=maxwidth, height=maxwidth*3//4)
+
+        if self.renderer is None:
+            # Switch renderer depending on configuration
+            if RENDERER_CONFIG == RendererType.POVRAY:
+                from gym_softrobot.utils.render.povray_renderer import Session
+            elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
+                from gym_softrobot.utils.render.matplotlib_renderer import Session
+            else:
+                raise NotImplementedError("Rendering module is not imported properly")
+            assert issubclass(Session, BaseRenderer), \
+                "Rendering module is not properly subclassed"
+            assert issubclass(Session, BaseElasticaRendererSession), \
+                "Rendering module is not properly subclassed"
+            self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods(self.shearable_rods)
             self.renderer.add_rigid_body(self.rigid_rod)
-            self.renderer.add_point(self._target.tolist()+[0], 0.05)
+            self.renderer.add_point(self._target.tolist()+[0], 0.002)
 
-        state_image = self.renderer.render()
+        # POVRAY
+        if RENDERER_CONFIG == RendererType.POVRAY:
+            state_image = self.renderer.render(maxwidth, int(maxwidth*aspect_ratio*0.7))
+            state_image_side = self.renderer.render(
+                    maxwidth//2,
+                    int(maxwidth*aspect_ratio*0.3),
+                    camera_param=('location',[0.0, 0.0, -0.5],'look_at',[0.0,0,0])
+                )
+            state_image_top = self.renderer.render(
+                    maxwidth//2,
+                    int(maxwidth*aspect_ratio*0.3),
+                    camera_param=('location',[0.0, 0.3, 0.0],'look_at',[0.0,0,0])
+                )
+
+            state_image = np.vstack([
+                state_image,
+                np.hstack([state_image_side, state_image_top])
+            ])
+        elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
+            state_image = self.renderer.render()
+        else:
+            raise NotImplementedError("Rendering module is not imported properly")
 
         self.viewer.imshow(state_image)
 

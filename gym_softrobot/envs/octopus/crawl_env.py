@@ -249,7 +249,7 @@ class CrawlEnv(core.Env):
             ))
 
         if invalid_values_condition == True:
-            print(f" Nan detected in, exiting simulation now. {self.time=}")
+            #print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
             survive_reward = -50.0
         else:

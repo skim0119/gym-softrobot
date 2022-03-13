@@ -3,10 +3,10 @@ import numpy as np
 from numba import njit
 from elastica._rotations import _rotate
 
-from elastica.boundary_conditions import FreeRod
+from elastica.boundary_conditions import ConstraintBase
 
 
-class BodyBoundaryCondition(FreeRod):
+class BodyBoundaryCondition(ConstraintBase):
     """
     This boundary condition class fixes body orientation
 
@@ -18,8 +18,8 @@ class BodyBoundaryCondition(FreeRod):
             3D (dim, dim, 1) array containing data with 'float' type.
     """
 
-    def __init__(self, fixed_position, fixed_director):
-        FreeRod.__init__(self)
+    def __init__(self, fixed_position, fixed_director, **kwargs):
+        super().__init__(**kwargs)
         self.fixed_position = fixed_position
         self.fixed_director = fixed_director
 

@@ -219,6 +219,7 @@ class CrawlEnv(core.Env):
                 self.time,
                 self.time_step,
             )
+            """
              # Debug
             invalid_values_condition = _isnan_check(np.concatenate(
                 [rod.position_collection for rod in self.shearable_rods] + 
@@ -230,6 +231,7 @@ class CrawlEnv(core.Env):
                 break
             else:
                 self.render()
+            """
         etime = time.perf_counter()
         states = self.get_state()
 

@@ -179,8 +179,8 @@ class CrawlEnv(core.Env):
             np.repeat(shared_state[None,...], 8, axis=0)]).astype(np.float32)
 
         state = OrderedDict()
-        state["observation"] = observation_state.ravel()
-        state["achieved_goal"] = self.rigid_rod.position_collection[:2, 0].astype(np.float32)
+        state["observation"] = np.nan_to_num(observation_state.ravel())
+        state["achieved_goal"] = np.nan_to_num(self.rigid_rod.position_collection[:2, 0].astype(np.float32))
         state["desired_goal"] = self._target
         return state
 

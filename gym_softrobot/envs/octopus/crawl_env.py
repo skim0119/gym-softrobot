@@ -65,11 +65,15 @@ class CrawlEnv(core.Env):
         # Spaces
         n_action = 2
         self.n_action = n_action
-        self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm, n_action), dtype=np.float32)
+        # TODO: for non-HER, use decentral training shapes
+        self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm* n_action,), dtype=np.float32)
 
         shared_space = 15 # without target location
         self.grid_size = 1
+<<<<<<< HEAD
         # TODO: for non-HER, use decentral training
+=======
+>>>>>>> 0f4af37a340ffb08b1dabd5029bd600ee34f5fd8
         self._observation_size = (n_arm* (self.n_seg + (self.n_elems+1) * 4 + n_action + n_arm + shared_space),)
         self.observation_space = spaces.Dict({
             "observation":spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
@@ -187,6 +191,8 @@ class CrawlEnv(core.Env):
     def set_action(self, action) -> None:
         # Action: (8, n_action)
         scale = 1.0  # min(time / 0.02, 1)
+
+        action = np.reshape(action, [8,2])
 
         # Continuous action
         for i in range(self.n_arm):

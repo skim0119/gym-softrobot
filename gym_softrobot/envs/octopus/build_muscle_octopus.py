@@ -37,7 +37,7 @@ ARM_MATERIAL = {
     "youngs_modulus": 1e4,
     "shear_modulus": 1e4 / (1.0+0.5), # 0.5 Poisson Ratio
     "nu": 0.10,
-    "nu_scale": 1e-1,
+    "nu_scale": 1e-2,
 }
 DEFAULT_SCALE_LENGTH = {
     # Arm length scale

@@ -27,7 +27,6 @@ from gym_softrobot.utils.actuation.actuations.muscles.transverse_muscle import (
 from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
 
 from gym_softrobot.envs.octopus.build import create_es_muscle_layers
-from gym_softrobot.envs.octopus.controllable_constraint import ControllableFixConstraint
 
 from scipy.spatial.transform import Rotation as Rot
 

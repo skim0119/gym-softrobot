@@ -5,7 +5,7 @@ from gym import core
 from gym import error, spaces, utils
 from gym.utils import seeding
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import time
 import copy
 
@@ -69,7 +69,8 @@ class CrawlEnv(core.Env):
 
         shared_space = 15 # without target location
         self.grid_size = 1
-        self._observation_size = (n_arm, (self.n_seg + (self.n_elems+1) * 4 + n_action + n_arm + shared_space))
+        # TODO: for non-HER, use decentral training
+        self._observation_size = (n_arm* (self.n_seg + (self.n_elems+1) * 4 + n_action + n_arm + shared_space),)
         self.observation_space = spaces.Dict({
             "observation":spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32),
             "achieved_goal":spaces.Box(-self.grid_size, self.grid_size, shape=(2,), dtype=np.float32),
@@ -177,11 +178,11 @@ class CrawlEnv(core.Env):
             previous_action, np.eye(self.n_arm),
             np.repeat(shared_state[None,...], 8, axis=0)]).astype(np.float32)
 
-        return dict(
-                observation=observation_state,
-                achieved_goal=self.rigid_rod.position_collection[:2, 0],
-                desired_goal=self._target
-            )
+        state = OrderedDict()
+        state["observation"] = observation_state.ravel()
+        state["achieved_goal"] = self.rigid_rod.position_collection[:2, 0].astype(np.float32)
+        state["desired_goal"] = self._target
+        return state
 
     def set_action(self, action) -> None:
         # Action: (8, n_action)

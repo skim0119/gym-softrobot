@@ -36,7 +36,7 @@ ARM_MATERIAL = {
     "density": 1000.0,
     "youngs_modulus": 1e4,
     "shear_modulus": 1e4 / (1.0+0.5), # 0.5 Poisson Ratio
-    "nu": 0.10,
+    "nu": 0.20,
     "nu_scale": 1e-2,
 }
 DEFAULT_SCALE_LENGTH = {
@@ -48,10 +48,10 @@ DEFAULT_SCALE_LENGTH = {
 }
 HEAD_PROPERTIES = {
     # Head length scale
-    "head_density": 700.0,
+    "head_density": 50.0,
     # Head properties
     "body_arm_k": 1e6,
-    "body_arm_kt": 1e0,
+    "body_arm_kt": 1e1,
     "body_arm_nu": 1e-2,
 }
 
@@ -92,7 +92,8 @@ def build_octopus(simulator, n_elem:int=40):
 
     # Levi (2015) - Figure 3B 
     shearable_rods=[]  # arms
-    angles = [22.5+45*arm_i for arm_i in range(n_arm)]
+    angles_offset = 0 # 45.0 / 2
+    angles = [angles_offset+45*arm_i for arm_i in range(n_arm)]
     for angle in angles:
         # Rotate director
         rot = Rot.from_euler('z', angle, degrees=True)

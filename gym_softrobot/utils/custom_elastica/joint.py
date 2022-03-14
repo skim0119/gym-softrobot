@@ -40,7 +40,7 @@ class FixedJoint2Rigid(FreeJoint):
     def apply_forces(self, rod_one, index_one, rod_two, index_two):
         self.rigid_rod_pos = rod_one.position_collection[..., index_one].copy()
         self.rigid_rod_pos[2] = 0.0
-        self.rigid_rod_connection_dir = self._apply_forces(
+        self.rigid_rod_connection_dir, contact_force = self._apply_forces(
                 index_one, index_two,
                 self.rigid_rod_pos,
                 rod_two.position_collection,
@@ -62,7 +62,7 @@ class FixedJoint2Rigid(FreeJoint):
             rod_two_external_forces,
             k, nu, kt, angle, radius):
         # return super().apply_forces(rod_one, index_one, rod_two, index_two)
-        rigid_rod_connection_dir=-z_rotation(rod_one_binormal,angle)
+        rigid_rod_connection_dir = -z_rotation(rod_one_binormal, angle)
         #rigid_rod_connection_dir=-z_rotation(rod_one.binormal.T,angle)
 
         rigid_rod_connection_pt=rigid_rod_connection_dir*radius
@@ -99,7 +99,7 @@ class FixedJoint2Rigid(FreeJoint):
         rod_one_external_forces[..., index_one] += contact_force
         rod_two_external_forces[..., index_two] -= contact_force
 
-        return rigid_rod_connection_dir
+        return rigid_rod_connection_dir, contact_force
 
     def apply_torques(self, rod_one, index_one, rod_two, index_two):
         #self._apply_hard_director_boundary(

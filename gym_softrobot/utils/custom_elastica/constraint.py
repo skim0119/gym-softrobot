@@ -80,9 +80,9 @@ class BodyBoundaryCondition(ConstraintBase):
         """
         # Translational
         velocity[2, :] = 0.0
-        acceleration[2, :] = 0.0
+        #acceleration[2, :] = 0.0
         # Rotational
-        omega[:2, 0] = 0.0
-        alpha[:2, 0] = 0.0
+        omega[:2, :] = 0.0
+        #alpha[:2, :] = 0.0
 
 

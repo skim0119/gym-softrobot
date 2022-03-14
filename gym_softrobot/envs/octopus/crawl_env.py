@@ -63,7 +63,7 @@ class CrawlEnv(core.Env):
         self.n_seg = n_elems-1
 
         # Spaces
-        n_action = 2
+        n_action = 3
         self.n_action = n_action
         # TODO: for non-HER, use decentral training shapes
         self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm* n_action,), dtype=np.float32)
@@ -74,7 +74,7 @@ class CrawlEnv(core.Env):
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32)
 
         self.metadata= {}
-        self.reward_range=50.0
+        self.reward_range = 50.0
         self._prev_action = np.zeros(list(self.action_space.shape),
                 dtype=self.action_space.dtype)
 
@@ -162,7 +162,7 @@ class CrawlEnv(core.Env):
         pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods]) # y
         vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods]) # x
         vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
-        previous_action = self._prev_action.reshape([8,2])
+        previous_action = self._prev_action.reshape([self.n_arm,self.n_action])
         shared_state = np.concatenate([
             self._target, # 2
             self.rigid_rod.position_collection[:,0], # 3
@@ -172,30 +172,30 @@ class CrawlEnv(core.Env):
         observation_state = np.hstack([
             kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
             previous_action, np.eye(self.n_arm),
-            np.repeat(shared_state[None,...], 8, axis=0)]).astype(np.float32)
+            np.repeat(shared_state[None,...], self.n_arm, axis=0)]).astype(np.float32)
         return  np.nan_to_num(observation_state.ravel())
 
     def set_action(self, action) -> None:
         # Action: (8, n_action)
         scale = 1.0  # min(time / 0.02, 1)
 
-        action = np.reshape(action, [8,2])
+        action = np.reshape(action, [self.n_arm, self.n_action])
 
         # Continuous action
         for i in range(self.n_arm):
             location = action[i,0]
             activation = action[i,1]
+            r_ratio = action[i,2]
             self.sucker_controller[i].index = int(np.clip(location * self.n_elems, 0, self.n_elems-1))
             self.tm_muscle_activations[i].set_activation(activation)
+            self.sucker_controller[i].reduction_ratio = r_ratio
 
         # update previous action
         self._prev_action = action
 
     def step(self, action):
-        rest_kappa = action # alias
-
         """ Set intrinsic strains (set actions) """
-        self.set_action(rest_kappa)
+        self.set_action(action)
 
         """ Post-simulation """
         xposbefore = self.rigid_rod.position_collection[0:2,0].copy() 
@@ -210,8 +210,8 @@ class CrawlEnv(core.Env):
                 self.time,
                 self.time_step,
             )
+            # Debug
             """
-             # Debug
             invalid_values_condition = _isnan_check(np.concatenate(
                 [rod.position_collection for rod in self.shearable_rods] + 
                 [rod.velocity_collection for rod in self.shearable_rods]
@@ -230,7 +230,7 @@ class CrawlEnv(core.Env):
         done = False
         survive_reward = 0.0
         forward_reward = 0.0
-        control_cost = 0.0 # 0.5 * np.square(rest_kappa.ravel()).mean()
+        control_cost = 0.0 # 0.5 * np.square(action.ravel()).mean()
         bending_energy = 0.0 #sum([rod.compute_bending_energy() for rod in self.shearable_rods])
         shear_energy = 0.0 # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
@@ -285,8 +285,9 @@ class CrawlEnv(core.Env):
         desired_goal: Union[int, np.ndarray],
         _info: Optional[Dict[str, Any]]=None,
     ) -> np.float32:
+        eps = 0.01
         dist = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
-        return -(dist).astype(np.float32)
+        return -(dist>eps).astype(np.float32)
 
 
     def render(self, mode='human', close=False) -> Optional[np.ndarray]:
@@ -311,7 +312,7 @@ class CrawlEnv(core.Env):
                 "Rendering module is not properly subclassed"
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods(self.shearable_rods)
-            #self.renderer.add_rigid_body(self.rigid_rod)
+            self.renderer.add_rigid_body(self.rigid_rod)
             #self.renderer.add_point(self._target.tolist()+[0], 0.002)
 
         # POVRAY

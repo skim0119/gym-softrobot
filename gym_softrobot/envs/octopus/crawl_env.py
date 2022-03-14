@@ -244,14 +244,14 @@ class CrawlEnv(core.Env):
             done = True
             survive_reward = -50.0
         else:
-            #xposafter = self.rigid_rod.position_collection[0:2,0]
-            #forward_reward = (np.linalg.norm(self._target - xposafter) - 
-            #    np.linalg.norm(self._target - xposbefore)) * 1e3
+            xposafter = self.rigid_rod.position_collection[0:2,0]
+            forward_reward = (np.linalg.norm(self._target - xposafter) - 
+                np.linalg.norm(self._target - xposbefore)) * 1e3
 
-            forward_reward = self.compute_reward(
-                    self.rigid_rod.position_collection[:2,0],
-                    self._target,
-                    None)
+            #forward_reward = self.compute_reward(
+            #        self.rigid_rod.position_collection[:2,0],
+            #        self._target,
+            #        None)
 
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')

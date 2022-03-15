@@ -249,8 +249,8 @@ class CrawlEnv(core.Env):
             survive_reward = -50.0
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
-            forward_reward = (np.linalg.norm(self._target - xposafter) - 
-                np.linalg.norm(self._target - xposbefore))
+            forward_reward = (np.linalg.norm(self._target - xposbefore) - 
+                np.linalg.norm(self._target - xposafter)) * 1e2
 
             #forward_reward = self.compute_reward(
             #        self.rigid_rod.position_collection[:2,0],
@@ -264,7 +264,7 @@ class CrawlEnv(core.Env):
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
         #reward *= 10 # Reward scaling
-        #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
+        print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
             
 
         """ Return state:
@@ -278,7 +278,7 @@ class CrawlEnv(core.Env):
         info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
         if np.isnan(reward):
             reward = -50
-        reward = max(self.reward_range, reward)
+        reward = min(self.reward_range, reward)
 
         self.counter += 1
 

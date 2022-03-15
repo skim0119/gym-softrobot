@@ -65,6 +65,10 @@ The goal of this environment is to control 8 arms of the octopus attached to the
 - `OctoSwim-v0` [Working in Process]
 - `OctoHunt-v0` [Working in Process]
 
+### Soft Arm [Muscle control]
+
+- 'SoftArmTrackingEnv-v0'
+
 ### Snake
 
 - `ContinuumSnake-v0` [Alpha]

@@ -67,7 +67,11 @@ The goal of this environment is to control 8 arms of the octopus attached to the
 
 ### Soft Arm [Muscle control]
 
-- 'SoftArmTrackingEnv-v0'
+- `SoftArmTrackingEnv-v0`
+
+### Soft Pendulum [Transfer learning, Soft Arm Control]
+
+- `SoftPendulum-v0`
 
 ### Snake
 

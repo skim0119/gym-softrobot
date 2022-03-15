@@ -81,7 +81,7 @@ class ApplyActuation(NoForces):
         self.every = step_skip
         self.callback_params = callback_params
 
-    def apply_torques(self, system, time: np.float = 0.0):
+    def apply_torques(self, system, time: float = 0.0):
         
         self.actuation(system)
         inplace_addition(system.external_forces, self.actuation.external_forces)

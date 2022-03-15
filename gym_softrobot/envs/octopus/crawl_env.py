@@ -264,7 +264,7 @@ class CrawlEnv(core.Env):
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
         #reward *= 10 # Reward scaling
-        print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
+        #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
             
 
         """ Return state:

@@ -250,7 +250,7 @@ class CrawlEnv(core.Env):
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             forward_reward = (np.linalg.norm(self._target - xposafter) - 
-                np.linalg.norm(self._target - xposbefore)) * 1e3
+                np.linalg.norm(self._target - xposbefore))
 
             #forward_reward = self.compute_reward(
             #        self.rigid_rod.position_collection[:2,0],

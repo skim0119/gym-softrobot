@@ -51,7 +51,7 @@ HEAD_PROPERTIES = {
     "head_density": 50.0,
     # Head properties
     "body_arm_k": 1e6,
-    "body_arm_kt": 1e1,
+    "body_arm_kt": 2e2,
     "body_arm_nu": 1e-2,
 }
 
@@ -92,7 +92,7 @@ def build_octopus(simulator, n_elem:int=40):
 
     # Levi (2015) - Figure 3B 
     shearable_rods=[]  # arms
-    angles_offset = 0 # 45.0 / 2
+    angles_offset = 45.0 / 2
     angles = [angles_offset+45*arm_i for arm_i in range(n_arm)]
     for angle in angles:
         # Rotate director

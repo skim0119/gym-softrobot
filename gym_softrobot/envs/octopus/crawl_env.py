@@ -74,7 +74,7 @@ class CrawlEnv(core.Env):
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32)
 
         self.metadata= {}
-        self.reward_range = 50.0
+        self.reward_range = 100.0
         self._prev_action = np.zeros(list(self.action_space.shape),
                 dtype=self.action_space.dtype)
 
@@ -145,7 +145,8 @@ class CrawlEnv(core.Env):
         # self.bias=self.shearable_rod.compute_position_center_of_mass()[0].copy()
 
         # Set Target
-        self._target = self.np_random.uniform(-self.grid_size, self.grid_size, size=2).astype(np.float32)
+        #self._target = self.np_random.uniform(-self.grid_size, self.grid_size, size=2).astype(np.float32)
+        self._target = np.array([1,0], dtype=np.float32)
 
         # Initial State
         state = self.get_state()
@@ -183,6 +184,9 @@ class CrawlEnv(core.Env):
 
         # Continuous action
         for i in range(self.n_arm):
+            if i > 0 and i < 7:
+                self.sucker_controller[i].reduction_ratio = 0
+                continue
             location = action[i,0]
             activation = action[i,1]
             r_ratio = action[i,2]
@@ -274,6 +278,7 @@ class CrawlEnv(core.Env):
         info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
         if np.isnan(reward):
             reward = -50
+        reward = max(self.reward_range, reward)
 
         self.counter += 1
 

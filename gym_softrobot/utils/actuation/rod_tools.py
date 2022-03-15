@@ -333,7 +333,7 @@ class CalculateStrainRate(NoForces):
         self.prev_kappa = np.zeros(self.kappa_rate.shape)
         self.prev_time = -np.inf
 
-    def apply_torques(self, system, time: np.float = 0.0):
+    def apply_torques(self, system, time: float = 0.0):
         # dt = time - self.prev_time
         # self.sigma_rate[:, :] = (system.sigma - self.prev_sigma) / dt
         # self.kappa_rate[:, :] = (system.kappa - self.prev_kappa) / dt

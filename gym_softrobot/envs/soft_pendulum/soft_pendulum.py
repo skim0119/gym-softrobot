@@ -46,17 +46,15 @@ class SoftPendulumEnv(core.Env):
     Solved Requirements:
     """
 
-    metadata = {"render.modes": ["rgb_array", "human"]}
+    metadata = {"render.modes": ["rgb_array"]}
 
     def __init__(
         self,
         final_time=5.0,
         time_step=1.0e-4,
-        recording_fps=5,
+        recording_fps=25,
         n_elems=50,
-        n_action=1,
         config_generate_video=False,
-        policy_mode="centralized",
     ):
 
         # Integrator type
@@ -69,10 +67,9 @@ class SoftPendulumEnv(core.Env):
 
         self.n_elems = n_elems
         self.n_seg = n_elems - 1
-        self.policy_mode = policy_mode
 
         # Spaces
-        self.n_action = n_action  # number of interpolation point (3 curvatures)
+        self.n_action = 1
         action_size = (self.n_action,)
         action_low = np.ones(action_size) * (-22)
         action_high = np.ones(action_size) * (22)
@@ -80,7 +77,7 @@ class SoftPendulumEnv(core.Env):
             action_low, action_high, shape=action_size, dtype=np.float32
         )
         self._observation_size = (
-            (self.n_seg + (self.n_elems + 1) * 4 + self.n_action + 2),
+            (4),
         )  # 2 for target
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
@@ -107,25 +104,6 @@ class SoftPendulumEnv(core.Env):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-    def summary(
-        self,
-    ):
-        print(
-            f"""
-        {self.final_time=}
-        {self.time_step=}
-        {self.total_steps=}
-        {self.step_skip=}
-        simulation time per action: {1.0/self.step_skip=}
-        max number of action per episode: {self.total_steps/self.step_skip}
-
-        {self.n_elems=}
-        {self.action_space=}
-        {self.observation_space=}
-        {self.reward_range=}
-        """
-        )
-
     def reset(
         self,
         *,
@@ -142,6 +120,7 @@ class SoftPendulumEnv(core.Env):
             self.simulator,
             self.n_elems,
             self.point_force,
+            self.np_random,
         )
 
         # CallBack
@@ -165,9 +144,6 @@ class SoftPendulumEnv(core.Env):
 
         # Initial State
         state = self.get_state()
-
-        # Preprocessing
-        # pass
 
         if return_info:
             return state, {}

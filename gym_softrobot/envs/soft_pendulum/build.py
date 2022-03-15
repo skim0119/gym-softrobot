@@ -7,15 +7,17 @@ from typing import Optional, Tuple
 import numpy as np
 
 from elastica import *
+from elastica.boundary_conditions import ConstraintBase
 from elastica.timestepper import extend_stepper_interface
 
 
 _PENDULUM_PROPERTIES = {  # default parameters
     # Arm properties
     "youngs_modulus": 1e6,
+    "shear_modulus": 1e6/(1+0.5),
+    #"poisson_ratio": 0.5,
     "density": 1000.0,
     "nu": 50,
-    "poisson_ratio": 0.5,
 }
 _DEFAULT_SCALE_LENGTH = {
     "base_length": 1.0,
@@ -24,7 +26,7 @@ _DEFAULT_SCALE_LENGTH = {
 
 
 def build_soft_pendulum(
-    simulator, n_elem, point_force, override_params: Optional[dict] = None
+    simulator, n_elem, point_force, np_random, override_params: Optional[dict] = None
 ):
     """Import default parameters (overridable)"""
     param = _PENDULUM_PROPERTIES.copy()  # Always copy parameter for safety
@@ -37,7 +39,7 @@ def build_soft_pendulum(
 
     start = np.zeros((3,))
     theta = np.deg2rad(
-        90 + (np.random.random() - 0.5) * 10
+        90 + (np_random.random() - 0.5) * 10
     )  # Change this if you want to start with different initial condition.
     direction = np.array([1.0 * np.cos(theta), 1.0 * np.sin(theta), 0.0])
     normal = np.array([1.0 * np.sin(theta), -1.0 * np.cos(theta), 0.0])
@@ -54,8 +56,9 @@ def build_soft_pendulum(
     simulator.append(shearable_rod)
 
     # Add boundary conditions
-    class PendulumBoundaryConditions(FreeRod):
-        def __init__(self, fixed_position, fixed_directors):
+    class PendulumBoundaryConditions(ConstraintBase):
+        def __init__(self, fixed_position, fixed_directors, **kwargs):
+            super().__init__(**kwargs)
             self.fixed_position = fixed_position
             self.fixed_directors = fixed_directors
 

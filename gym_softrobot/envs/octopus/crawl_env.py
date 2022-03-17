@@ -256,7 +256,7 @@ class CrawlEnv(core.Env):
             #        self.rigid_rod.position_collection[:2,0],
             #        self._target,
             #        None)
-            if xposafter < 0.2:
+            if np.linalg.norm(self._target - xposafter) < 0.2:
                 survive_reward = 50
                 done = True
 

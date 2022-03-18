@@ -246,7 +246,7 @@ class CrawlEnv(core.Env):
         if invalid_values_condition == True:
             #print(f" Nan detected in, exiting simulation now. {self.time=}")
             done = True
-            survive_reward = -20.0
+            survive_reward = -5.0
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             forward_reward = (np.linalg.norm(self._target - xposbefore) - 
@@ -257,13 +257,13 @@ class CrawlEnv(core.Env):
             #        self._target,
             #        None)
             if np.linalg.norm(self._target - xposafter) < 0.2:
-                survive_reward = 50
+                survive_reward = 5
                 done = True
 
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
         if not done and self.time>self.final_time:
-            forward_reward -= np.linalg.norm(self._target - xposafter) * 1e1
+            forward_reward -= np.linalg.norm(self._target - xposafter)
             done=True
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
@@ -281,7 +281,8 @@ class CrawlEnv(core.Env):
         # Info
         info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
         if np.isnan(reward):
-            reward = -20
+            reward = -5
+            done = True
         reward = min(self.reward_range, reward)
 
         self.counter += 1

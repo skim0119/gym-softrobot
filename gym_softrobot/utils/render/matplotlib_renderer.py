@@ -43,7 +43,7 @@ def convert_marker_size(radius, ax):
     ylim = ax.get_ylim()
     max_axis_length = max(abs(xlim[1]-xlim[0]), abs(ylim[1]-ylim[0]))
     scaling_factor = 3.0e3 * (2*0.1) / max_axis_length
-    return np.pi * (scaling_factor * radius) ** 2
+    return np.sqrt(np.pi * (scaling_factor * radius))
     #ppi = 72 # standard point size in matplotlib is 72 points per inch (ppi), no matter the dpi
     #point_whole_ax = 5 * 0.8 * ppi
     #point_radius= 2 * radius / 1.0 * point_whole_ax

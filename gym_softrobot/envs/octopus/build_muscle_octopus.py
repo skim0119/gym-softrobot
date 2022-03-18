@@ -51,8 +51,8 @@ HEAD_PROPERTIES = {
     "head_density": 50.0,
     # Head properties
     "body_arm_k": 1e6,
-    "body_arm_kt": 2e2,
-    "body_arm_nu": 1e-2,
+    "body_arm_kt": 1e2,
+    "body_arm_nu": 1e-3,
 }
 
 def build_arm(n_elem:int, start:np.ndarray, direction:np.ndarray, normal:np.ndarray) -> CosseratRod:

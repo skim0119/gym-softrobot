@@ -250,7 +250,7 @@ class CrawlEnv(core.Env):
         else:
             xposafter = self.rigid_rod.position_collection[0:2,0]
             forward_reward = (np.linalg.norm(self._target - xposbefore) - 
-                np.linalg.norm(self._target - xposafter)) * 1e3
+                np.linalg.norm(self._target - xposafter)) * 1e2
 
             #forward_reward = self.compute_reward(
             #        self.rigid_rod.position_collection[:2,0],
@@ -263,7 +263,7 @@ class CrawlEnv(core.Env):
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
         if not done and self.time>self.final_time:
-            forward_reward -= np.linalg.norm(self._target - xposafter) * 1e3
+            forward_reward -= np.linalg.norm(self._target - xposafter) * 1e1
             done=True
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
@@ -322,7 +322,7 @@ class CrawlEnv(core.Env):
             self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
             self.renderer.add_rods(self.shearable_rods)
             self.renderer.add_rigid_body(self.rigid_rod)
-            #self.renderer.add_point(self._target.tolist()+[0], 0.002)
+            #self.renderer.add_point(self._target.tolist()+[0], 0.20)
 
         # POVRAY
         if RENDERER_CONFIG == RendererType.POVRAY:

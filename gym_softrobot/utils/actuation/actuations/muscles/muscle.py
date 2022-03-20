@@ -84,7 +84,7 @@ class ApplyMuscle(ApplyActuation):
         self.callback_params_list = callback_params_list
 
 
-    def apply_torques(self, system, time: np.float = 0.0):
+    def apply_torques(self, system, time: float = 0.0):
         for muscle in self.muscles:
             muscle(system)
             inplace_addition(system.external_forces, muscle.external_forces)

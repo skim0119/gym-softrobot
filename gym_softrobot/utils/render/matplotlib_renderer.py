@@ -43,7 +43,7 @@ def convert_marker_size(radius, ax):
     ylim = ax.get_ylim()
     max_axis_length = max(abs(xlim[1]-xlim[0]), abs(ylim[1]-ylim[0]))
     scaling_factor = 3.0e3 * (2*0.1) / max_axis_length
-    return np.pi * (scaling_factor * radius) ** 2
+    return np.sqrt(np.pi * (scaling_factor * radius))
     #ppi = 72 # standard point size in matplotlib is 72 points per inch (ppi), no matter the dpi
     #point_whole_ax = 5 * 0.8 * ppi
     #point_radius= 2 * radius / 1.0 * point_whole_ax
@@ -96,8 +96,9 @@ class ElasticaRod(Geom):
         self.scatter = ax.scatter(pos[0,:], pos[1,:], pos[2,:], s=convert_marker_size(rad, ax), c=ElasticaRod.rgb_color)
 
     def get_position_radius(self):
-        pos = self.rod.position_collection
-        rad = self.rod.radius
+        pos = self.rod.position_collection.copy()
+        rad = self.rod.radius.copy()
+        rad /= 2
         if not pos.shape[-1] == rad.shape[0]:
             # radius defined at element, while position defined at node.
             # typical elastica has n_node = n_elem + 1 (unless the rod is circular)
@@ -134,9 +135,9 @@ class ElasticaCylinder(Geom):
         # Initialize scatter plot
         pos1, pos2, rad = self.get_position_radius()
         end_caps = np.vstack((pos1, pos2))
-        size = convert_marker_size(rad, ax)
+        size = convert_marker_size(rad/2, ax)
         self.scatter = ax.scatter(end_caps[:,0], end_caps[:,1], end_caps[:,2], s=size, c=ElasticaCylinder.rgb_color)
-        self.line, = ax.plot(end_caps[:,0], end_caps[:,1], end_caps[:,2], linewidth=size**0.5, c=ElasticaCylinder.rgb_color)
+        #self.line, = ax.plot(end_caps[:,0], end_caps[:,1], end_caps[:,2], linewidth=size**0.5, c=ElasticaCylinder.rgb_color)
 
     def get_position_radius(self):
         rad = self.body.radius[0]
@@ -153,12 +154,13 @@ class ElasticaCylinder(Geom):
         self.scatter._offsets3d = end_caps[:,0], end_caps[:,1], end_caps[:,2]
 
         # Update line plot positions
-        self.line.set_data(end_caps[:,0], end_caps[:,1])
-        self.line.set_3d_properties(end_caps[:,2])
+        #self.line.set_data(end_caps[:,0], end_caps[:,1])
+        #self.line.set_3d_properties(end_caps[:,2])
 
         # Updater radius (rigid body)
         
-        return [self.scatter, self.line]
+        #return [self.scatter, self.line]
+        return [self.scatter]
 
 
 class ElasticaSphere(Geom):

@@ -10,6 +10,7 @@ class ControllableFixConstraint(FreeRod):
     class _Controller:
         index: int
         flag: bool = True
+        reduction_ratio: float = 1.0
 
         def __bool__(self):
             return self.flag
@@ -24,20 +25,20 @@ class ControllableFixConstraint(FreeRod):
 
     def __init__(self, index, reduction_ratio=1.0, **kwargs):
         super().__init__(**kwargs)
-        self.controller = self._Controller(index=index)
-        self.reduction_ratio = reduction_ratio
+        self.controller = self._Controller(index=index, reduction_ratio=reduction_ratio)
 
     @property
     def get_controller(self):
         return self.controller
 
     def constrain_values(self, rod, time):
-        if self.controller.flag:
-            self.nb_compute_constrain_values(
-                rod.position_collection,
-                rod.director_collection,
-                self.controller.index
-            )
+        return
+        #if self.controller.flag:
+        #    self.nb_compute_constrain_values(
+        #        rod.position_collection,
+        #        rod.director_collection,
+        #        self.controller.index
+        #    )
 
     def constrain_rates(self, rod, time):
         if self.controller.flag:
@@ -45,16 +46,16 @@ class ControllableFixConstraint(FreeRod):
                 rod.velocity_collection,
                 rod.omega_collection,
                 self.controller.index,
-                self.reduction_ratio
+                self.controller.reduction_ratio
             )
 
-    @staticmethod
-    @njit(cache=True)
-    def nb_compute_constrain_values(
-        position_collection, director_collection, index
-    ):
-        position_collection[2, index] = 0
-        director_collection[2, :, index] = np.array([1,0,0])
+    #@staticmethod
+    #@njit(cache=True)
+    #def nb_compute_constrain_values(
+    #    position_collection, director_collection, index
+    #):
+    #    position_collection[2, index] = 0
+    #    director_collection[1, :, index] = np.array([0.0,0.0,1.0])
 
     @staticmethod
     @njit(cache=True)

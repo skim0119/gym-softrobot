@@ -14,7 +14,12 @@ register(
     kwargs=dict(n_arm=1, n_action=8),
 )
 
-# register(
+register(
+    id='OctoCrawl-v0',
+    entry_point='gym_softrobot.envs.octopus:CrawlEnv',
+)
+
+#register(
 #    id='OctoReach-v0',
 #    entry_point='gym_softrobot.envs.octopus:ReachEnv',
 # )

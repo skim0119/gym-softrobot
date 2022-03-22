@@ -184,9 +184,10 @@ class CrawlEnv(core.Env):
 
         # Continuous action
         for i in range(self.n_arm):
-            if i > 0 and i < 7:
-                self.sucker_controller[i].reduction_ratio = 0
-                continue
+            # Uncomment here fore 2-arm control
+            #if i > 0 and i < 7:
+            #    self.sucker_controller[i].reduction_ratio = 0
+            #    continue
             location = action[i,0]
             activation = action[i,1]
             r_ratio = action[i,2]

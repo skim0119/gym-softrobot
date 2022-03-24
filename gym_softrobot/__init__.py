@@ -19,10 +19,10 @@ register(
     entry_point='gym_softrobot.envs.octopus:CrawlEnv',
 )
 
-#register(
-#    id='OctoReach-v0',
-#    entry_point='gym_softrobot.envs.octopus:ReachEnv',
-# )
+register(
+   id='OctoReach-v0',
+   entry_point='gym_softrobot.envs.octopus:ReachEnv',
+)
 
 # register(
 #    id='OctoSwim-v0',

@@ -1,0 +1,10 @@
+# File: docs/requirements.txt
+
+sphinx
+sphinx-book-theme
+readthedocs-sphinx-search
+sphinx-autodoc-typehints
+myst-parser
+numpydoc
+docutils
+-r ../requirements.txt

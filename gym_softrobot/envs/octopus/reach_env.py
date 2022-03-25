@@ -211,19 +211,6 @@ class ReachEnv(core.Env):
                 self.time,
                 self.time_step,
             )
-            # Debug
-            """
-            invalid_values_condition = _isnan_check(np.concatenate(
-                [rod.position_collection for rod in self.shearable_rods] + 
-                [rod.velocity_collection for rod in self.shearable_rods]
-                ))
-            if invalid_values_condition == True:
-                print(f" Nan detected in, exiting simulation now. {self.time=}")
-                self.render()
-                break
-            else:
-                self.render()
-            """
         etime = time.perf_counter()
         states = self.get_state()
 

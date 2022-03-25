@@ -17,6 +17,7 @@ def main():
     observation = env.reset()
     for step in range(10):
         env.render() # rendering
+        input('')
         action = env.action_space.sample() 
         observation, reward, done, info = env.step(action)
         print(f"{step=:2}| {reward=}, {done=}")

@@ -40,6 +40,11 @@ register(
 )
 
 register(
+    id="OctoArmTwo-v0",
+    entry_point="gym_softrobot.envs.octopus:ArmTwoEnv",
+)
+
+register(
     id="OctoArmPush-v0",
     entry_point="gym_softrobot.envs.octopus:ArmPushEnv",
 )

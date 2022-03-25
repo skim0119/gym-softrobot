@@ -152,7 +152,7 @@ class ReachEnv(core.Env):
 
         # Set Target
         # self._target = self.np_random.uniform(-self.grid_size, self.grid_size, size=2).astype(np.float32)
-        self._target = np.random.rand(3) * sum(self.shearable_rods[0].rest_lengths)
+        self._target = self.np_random.random(3) * sum(self.shearable_rods[0].rest_lengths)
 
         # Initial State
         state = self.get_state()

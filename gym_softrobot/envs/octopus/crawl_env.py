@@ -78,6 +78,7 @@ class CrawlEnv(core.Env):
                 dtype=self.action_space.dtype)
 
         # Configurations
+        self.config_random_final_time = config_random_final_time
 
         # Rendering-related
         self.viewer = None

@@ -87,6 +87,7 @@ class CrawlEnv(core.Env):
         self.seed()
 
     def get_env_info(self):
+        # Need for decentralized control
         return dict(n_actions=self.n_action, n_agents=8)
 
     def seed(self, seed=None):

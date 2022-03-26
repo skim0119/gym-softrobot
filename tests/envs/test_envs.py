@@ -77,3 +77,13 @@ def test_reset_info(spec):
     assert isinstance(info, dict)
     env.close()
 
+# FIXME: Current version of SB3 1.4.0 uses older gym version, which is causing some issue with 
+# newer gym version 0.23.1. This block is commented out until those conflicts are solved.
+#@pytest.mark.parametrize("spec", spec_list)
+#def test_sb3_check_env(spec):
+#    from stable_baselines3.common.env_checker import check_env
+#    # Run SB3's check_env function for compatiblity check
+#    with pytest.warns(None) as warnings:
+#        env = spec.make()
+#    # It will check your custom environment and output additional warnings if needed
+#    check_env(env)

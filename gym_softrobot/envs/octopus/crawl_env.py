@@ -44,7 +44,7 @@ class CrawlEnv(core.Env):
     metadata = {'render.modes': ['rgb_array']}
 
     def __init__(self,
-            final_time=20.0,  # Final total time
+            final_time=10.0,  # Final total time
             time_step=5.0e-5,
             recording_fps=25,
             n_elems=20,
@@ -246,7 +246,7 @@ class CrawlEnv(core.Env):
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
         if not done and self.time>self.final_time:
-            forward_reward -= np.linalg.norm(self._target - xposafter) * 1e1
+            forward_reward -= np.linalg.norm(self._target - xposafter) * 1.0
             done=True
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
@@ -256,7 +256,7 @@ class CrawlEnv(core.Env):
         # Info
         info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
         if np.isnan(reward):
-            reward = -5
+            reward -= 5
             done = True
         reward = min(self.reward_range, reward)
 

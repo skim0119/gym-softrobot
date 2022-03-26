@@ -16,7 +16,7 @@ from elastica import *
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
 
-from gym_softrobot.envs.octopus.build_muscle_octopus import build_octopus
+from gym_softrobot.envs.octopus.build_muscle_octopus import build_octopus_muscles
 
 from gym_softrobot.config import RendererType
 from gym_softrobot import RENDERER_CONFIG
@@ -44,16 +44,16 @@ class CrawlEnv(core.Env):
     metadata = {'render.modes': ['rgb_array']}
 
     def __init__(self,
-            final_time=5.0,
+            final_time=20.0,  # Final total time
             time_step=5.0e-5,
             recording_fps=25,
             n_elems=20,
+            config_random_final_time=False,
         ):
 
         # Integrator type
         self.final_time = final_time
         self.time_step = time_step
-        self.total_steps = int(self.final_time/self.time_step)
         self.recording_fps = recording_fps
         self.step_skip = int(1.0 / (recording_fps * time_step))
 
@@ -65,7 +65,6 @@ class CrawlEnv(core.Env):
         # Spaces
         n_action = 3
         self.n_action = n_action
-        # TODO: for non-HER, use decentral training shapes
         self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm* n_action,), dtype=np.float32)
 
         shared_space = 17
@@ -103,9 +102,11 @@ class CrawlEnv(core.Env):
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
+        if self.config_random_final_time:
+            self.final_time = self.np_random.uniform(3.0, 10.0)
         self.simulator = BaseSimulator()
 
-        self.shearable_rods, self.rigid_rod, self.tm_muscle_activations = build_octopus(
+        self.shearable_rods, self.rigid_rod, self.tm_muscle_activations = build_octopus_muscles(
                 self.simulator,
                 self.n_elems,
             )
@@ -184,15 +185,11 @@ class CrawlEnv(core.Env):
 
         # Continuous action
         for i in range(self.n_arm):
-            # Uncomment here fore 2-arm control
-            #if i > 0 and i < 7:
-            #    self.sucker_controller[i].reduction_ratio = 0
-            #    continue
             location = action[i,0]
             activation = action[i,1]
             r_ratio = action[i,2]
             self.sucker_controller[i].index = int(np.clip(location * self.n_elems, 0, self.n_elems-1))
-            self.tm_muscle_activations[i].set_activation(activation)
+            self.tm_muscle_activations[i][2].set_activation(activation) # 2 for TM
             self.sucker_controller[i].reduction_ratio = r_ratio
 
         # update previous action
@@ -215,19 +212,6 @@ class CrawlEnv(core.Env):
                 self.time,
                 self.time_step,
             )
-            # Debug
-            """
-            invalid_values_condition = _isnan_check(np.concatenate(
-                [rod.position_collection for rod in self.shearable_rods] + 
-                [rod.velocity_collection for rod in self.shearable_rods]
-                ))
-            if invalid_values_condition == True:
-                print(f" Nan detected in, exiting simulation now. {self.time=}")
-                self.render()
-                break
-            else:
-                self.render()
-            """
         etime = time.perf_counter()
         states = self.get_state()
 
@@ -253,10 +237,6 @@ class CrawlEnv(core.Env):
             forward_reward = (np.linalg.norm(self._target - xposbefore) - 
                 np.linalg.norm(self._target - xposafter)) * 1e2
 
-            #forward_reward = self.compute_reward(
-            #        self.rigid_rod.position_collection[:2,0],
-            #        self._target,
-            #        None)
             if np.linalg.norm(self._target - xposafter) < 0.2:
                 survive_reward = 5
                 done = True
@@ -264,21 +244,13 @@ class CrawlEnv(core.Env):
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
         if not done and self.time>self.final_time:
-            forward_reward -= np.linalg.norm(self._target - xposafter)
+            forward_reward -= np.linalg.norm(self._target - xposafter) * 1e1
             done=True
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
         #reward *= 10 # Reward scaling
         #print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
             
-
-        """ Return state:
-            (1) current simulation time
-            (2) current systems
-            (3) a flag denotes whether the simulation runs correlectly
-        """
-        # systems = [self.shearable_rod]
-
         # Info
         info = {'time':self.time, 'rods':self.shearable_rods, 'body':self.rigid_rod}
         if np.isnan(reward):
@@ -289,16 +261,6 @@ class CrawlEnv(core.Env):
         self.counter += 1
 
         return states, reward, done, info
-
-    def compute_reward(
-        self,
-        achieved_goal: Union[int ,np.ndarray],
-        desired_goal: Union[int, np.ndarray],
-        _info: Optional[Dict[str, Any]]=None,
-    ) -> np.float32:
-        eps = 0.01
-        dist = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
-        return -(dist>eps).astype(np.float32)
 
 
     def render(self, mode='human', close=False) -> Optional[np.ndarray]:

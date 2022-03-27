@@ -246,7 +246,7 @@ class CrawlEnv(core.Env):
         # print(self.rigid_rods.position_collection)
         #print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
         if not done and self.time>self.final_time:
-            forward_reward -= np.linalg.norm(self._target - xposafter) * 1.0
+            #forward_reward -= np.linalg.norm(self._target - xposafter) * 1.0
             done=True
 
         reward = forward_reward - control_cost + survive_reward - bending_energy

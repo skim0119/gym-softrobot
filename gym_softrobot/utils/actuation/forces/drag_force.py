@@ -47,7 +47,7 @@ class DragForce(NoForces):
         )
         
         inplace_addition(system.external_forces, self.drag_force)
-        self.callback()
+        # self.callback()
 
     def callback(self,):
         if self.step % self.every == 0:

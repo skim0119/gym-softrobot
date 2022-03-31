@@ -1,9 +1,9 @@
-<div align="center">
-<h1> Environment Documentation </h1>
-</div>
+# Environment Documentation
 
 Our environment contains set of controllable slender-bodies to achieve set of tasks.
 The theory and details of the physics simulation is documented in [CosseratRods.org](https://cosseratrods.org).
+
+## Interface
 
 ### State
 
@@ -47,7 +47,6 @@ The reward is defined as the composition of the following quantities:
 - __Miscellaneous__:
     - Target reaching/grabbing reward
     - Remaining distance to the target
-
 
 ## Registered Environments
 

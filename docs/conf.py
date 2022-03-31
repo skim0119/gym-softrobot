@@ -15,7 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath('../'))
 
-from br2.version import VERSION
+from gym_softrobot.version import VERSION
 
 # -- Project information -----------------------------------------------------
 

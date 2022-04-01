@@ -14,6 +14,9 @@ Gym-Softrobot Environment Suite
    :caption: Environment
 
    envs/design
+   envs/octopus
+   envs/soft_arm
+   envs/misc
 
 
 Indices and tables

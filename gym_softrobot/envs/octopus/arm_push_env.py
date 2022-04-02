@@ -29,13 +29,7 @@ from gym_softrobot.utils.render.base_renderer import (
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
 
-from gym_softrobot.utils.actuation.actuations.muscles.longitudinal_muscle import (
-    LongitudinalMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.transverse_muscle import (
-    TransverseMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
+from comm.actuations.muscles.muscle import ApplyMuscles
 
 
 class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
@@ -198,7 +192,7 @@ class ArmPushEnv(core.Env):
                 self.muscles_parameters.append(defaultdict(list))
 
         self.simulator.add_forcing_to(shearable_rod).using(
-            ApplyMuscle,
+            ApplyMuscles,
             muscles=self.muscle_layers,
             step_skip=self.step_skip,
             callback_params_list=self.muscles_parameters,
@@ -591,7 +585,7 @@ class ArmPullWeightEnv(ArmPushEnv):
         self.muscles_parameters = []
 
         self.simulator.add_forcing_to(shearable_rod).using(
-            ApplyMuscle,
+            ApplyMuscles,
             muscles=self.muscle_layers,
             step_skip=self.step_skip,
             callback_params_list=self.muscles_parameters,

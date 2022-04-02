@@ -13,14 +13,10 @@ from elastica.experimental.interaction import AnisotropicFrictionalPlaneRigidBod
 
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
-from gym_softrobot.utils.actuation.forces.drag_force import DragForce
-from gym_softrobot.utils.actuation.actuations.muscles.longitudinal_muscle import (
-    LongitudinalMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.transverse_muscle import (
-    TransverseMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
+from comm.forces.drag_force import DragForce
+from comm.actuations.muscles.longitudinal_muscle import LongitudinalMuscle
+from comm.actuations.muscles.transverse_muscle import TransverseMuscle
+#from comm.actuations.muscles.muscle import ApplyMuscles
 
 from scipy.spatial.transform import Rotation as Rot
 

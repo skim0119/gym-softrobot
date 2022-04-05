@@ -1,7 +1,7 @@
 __all__ = ["ConvertToPyMarlEnv"]
 
 import typing
-from typing import List, Iterable, Union
+from typing import List, Iterable, Union, Optional
 import numpy as np
 
 import gym

@@ -41,7 +41,7 @@ class CrawlEnv(core.Env):
     Solved Requirements:
     """
 
-    metadata = {'render.modes': ['rgb_array']}
+    metadata = {'render.modes': ['rgb_array'], 'multiagent': ['PyMARL']}
 
     def __init__(self,
             final_time=10.0,  # Final total time
@@ -59,6 +59,7 @@ class CrawlEnv(core.Env):
 
         n_arm = 8
         self.n_arm = n_arm 
+        self.n_agent = n_arm  # for MARL
         self.n_elems = n_elems
         self.n_seg = n_elems-1
 
@@ -67,9 +68,9 @@ class CrawlEnv(core.Env):
         self.n_action = n_action
         self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm* n_action,), dtype=np.float32)
 
-        shared_space = 17
+        self.shared_space = 17
         self.grid_size = 1
-        self._observation_size = (n_arm* (self.n_seg + (self.n_elems+1) * 4 + n_action + n_arm + shared_space),)
+        self._observation_size = (n_arm* (self.n_seg + (self.n_elems+1) * 4 + n_action + n_arm + self.shared_space),)
         self.observation_space = spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32)
 
         self.metadata= {}
@@ -86,6 +87,10 @@ class CrawlEnv(core.Env):
 
         # Determinism
         self.seed()
+
+    @property
+    def agent_id(self):
+        return ["LF1", "LF2", "LB2", "LB1", "RB1", "RB2", "RF2", "RF1"]
 
     def get_env_info(self):
         # Need for decentralized control
@@ -167,17 +172,21 @@ class CrawlEnv(core.Env):
         vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods]) # x
         vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods]) # y
         previous_action = self._prev_action.reshape([self.n_arm,self.n_action])
+        shared_state = self.get_shared_state()
+        observation_state = np.hstack([
+            kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
+            previous_action, np.eye(self.n_arm),
+            np.repeat(shared_state[None,...], self.n_arm, axis=0)]).astype(np.float32)
+        return np.nan_to_num(observation_state.ravel())
+
+    def get_shared_state(self):
         shared_state = np.concatenate([
             self._target, # 2
             self.rigid_rod.position_collection[:,0], # 3
             self.rigid_rod.velocity_collection[:,0], # 3
             self.rigid_rod.director_collection[:,:,0].ravel(), # 9: orientation
             ], dtype=np.float32)
-        observation_state = np.hstack([
-            kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
-            previous_action, np.eye(self.n_arm),
-            np.repeat(shared_state[None,...], self.n_arm, axis=0)]).astype(np.float32)
-        return  np.nan_to_num(observation_state.ravel())
+        return shared_state
 
     def set_action(self, action) -> None:
         # Action: (8, n_action)

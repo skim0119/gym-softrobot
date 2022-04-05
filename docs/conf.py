@@ -76,8 +76,8 @@ master_doc = 'index'
 # a list of builtin themes.
 #
 html_theme = 'sphinx_book_theme'
-html_title = "BR2-simulator"
-html_logo = "_static/assets/logo_v1.png"
+html_title = "Gym-SoftRobot"
+#html_logo = "_static/assets/logo_v1.png"
 html_theme_options = {
     "path_to_docs": "docs",
     "repository_url": "https://github.com/skim0119/gym-softrobot",
@@ -85,7 +85,7 @@ html_theme_options = {
     "use_issues_button": True,
     "use_repository_button": True,
     "use_edit_page_button": True,
-    "logo_only": True
+    #"logo_only": True
 }
 html_css_files = ['custom.css']
 

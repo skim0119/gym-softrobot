@@ -1,4 +1,4 @@
-# Octopus Environments
+# Octopus
 
 ## Single Arm Control
 

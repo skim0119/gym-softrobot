@@ -1,4 +1,4 @@
-# Environment Documentation
+# Environment Setup
 
 Our environment contains set of controllable slender-bodies to achieve set of tasks.
 The theory and details of the physics simulation is documented in [CosseratRods.org](https://cosseratrods.org).

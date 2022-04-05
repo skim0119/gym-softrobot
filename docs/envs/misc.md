@@ -1,4 +1,4 @@
-# Miscellaneous Environments
+# Miscellaneous Env
 
 ## Soft Pendulum [Transfer learning, Soft Arm Control]
 

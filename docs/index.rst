@@ -18,6 +18,12 @@ Gym-Softrobot Environment Suite
    envs/soft_arm
    envs/misc
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Other
+
+   envs/wrappers
+
 
 Indices and tables
 ==================

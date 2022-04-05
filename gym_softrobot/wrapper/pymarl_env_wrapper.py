@@ -8,13 +8,18 @@ import gym
 
 
 class ConvertToPyMarlEnv:
-    """
+    """ Convert environment to PyMarl multi-agent environments.
     Template from: oxwhirl/pymar/src/envs/multiagentenv.py
+
+    Available benchmark algorithms: 
+
+    - `oxwhirl/PyMarl <https://github.com/oxwhirl/pymarl>`_
+    - `uoe-agents/EPyMarl <https://github.com/uoe-agents/epymarl>`_
 
     The wrapper to convert gym_softrobot environment (that is MA-compatible)
     to 'multiagentenv' that is compatible to PyMARL.
     The purpose is to run benchmark study with standard CTDE algorithms, such
-    as QMIX, COMA, etc.
+    as QMIX, COMA, etc. Here is the example snippet::
 
         env = ConvertToPyMarlEnv(ma_env=gym.make("OctoCrawl-v0"))
     """

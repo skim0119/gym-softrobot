@@ -41,7 +41,7 @@ class CrawlEnv(core.Env):
     Solved Requirements:
     """
 
-    metadata = {'render.modes': ['rgb_array']}
+    metadata = {'render.modes': ['rgb_array'], 'multiagent': ['PyMARL']}
 
     def __init__(self,
             final_time=10.0,  # Final total time
@@ -59,6 +59,7 @@ class CrawlEnv(core.Env):
 
         n_arm = 8
         self.n_arm = n_arm 
+        self.n_agent = n_arm  # for MARL
         self.n_elems = n_elems
         self.n_seg = n_elems-1
 
@@ -177,7 +178,7 @@ class CrawlEnv(core.Env):
             kappa_state, pos_state1, pos_state2, vel_state1, vel_state2,
             previous_action, np.eye(self.n_arm),
             np.repeat(shared_state[None,...], self.n_arm, axis=0)]).astype(np.float32)
-        return  np.nan_to_num(observation_state.ravel())
+        return np.nan_to_num(observation_state.ravel())
 
     def set_action(self, action) -> None:
         # Action: (8, n_action)

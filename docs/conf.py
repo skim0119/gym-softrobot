@@ -20,7 +20,7 @@ from gym_softrobot.version import VERSION
 # -- Project information -----------------------------------------------------
 
 project = 'gym-softrobot'
-copyright = '2022, Seung Hyun Kim, Chi-Hsien Shih'
+copyright = '2022, Seung Hyun Kim, Chia-Hsien Shih'
 author = 'Seung Hyun Kim, Chia-Hsien Shih'
 
 # The full version, including alpha/beta/rc tags

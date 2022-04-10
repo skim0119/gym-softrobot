@@ -13,6 +13,7 @@
 The environment is designed to leverage wide-range of reinforcement learning methods into soft-robotics control.
 Our inspiration is from slender-body living creatures, such as octopus or snake.
 The code is based on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for highly-deformable slender structure.
+Some of the environments also include biological muscle actuation, implemented in [COMM](https://github.com/hanson-hschang/COMM) project.
 We intend this package to be easy-to-install and fully compatible to [OpenAI Gym](https://github.com/openai/gym) and other available RL algorithms.
 
 > The package is under development, in Alpha phase. Detail roadmap for Q2-2022 will be available.
@@ -35,6 +36,7 @@ Requirements:
 - Python 3.8+
 - OpenAI Gym 0.21.0
 - PyElastica 0.2+
+- COMM 0.0.1
 - Matplotlib (optional for display rendering and plotting)	
 - POVray (optional for 3D rendering)
 	

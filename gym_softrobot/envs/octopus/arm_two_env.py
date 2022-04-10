@@ -209,15 +209,15 @@ class ArmTwoEnv(core.Env):
             LM1_activation = np.max((LM_activation, [0.0] * 3), axis=0)
             LM2_activation = abs(np.min((LM_activation, [0.0] * 3), axis=0))
             apply_LM1 = interp1d(self.control_location, [0] + list(LM1_activation) + [0], kind='cubic')(
-                range(self.n_elems - 1))
+                range(self.n_elems))
             apply_LM2 = interp1d(self.control_location, [0] + list(LM2_activation) + [0], kind='cubic')(
-                range(self.n_elems - 1))
+                range(self.n_elems))
             apply_TM = interp1d(self.control_location, [0] + list(TM_activation) + [0], kind='cubic')(
-                range(self.n_elems - 1))
+                range(self.n_elems))
 
-            self.muscle_activations[i][0].set_activation(apply_LM1)
-            self.muscle_activations[i][1].set_activation(apply_LM2)
-            self.muscle_activations[i][2].set_activation(apply_TM)
+            self.muscle_activations[i][0].apply_activation(apply_LM1)
+            self.muscle_activations[i][1].apply_activation(apply_LM2)
+            self.muscle_activations[i][2].apply_activation(apply_TM)
 
         # update previous action
         self._prev_action = action

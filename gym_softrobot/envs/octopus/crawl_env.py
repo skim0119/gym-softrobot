@@ -200,7 +200,7 @@ class CrawlEnv(core.Env):
             activation = action[i,1]
             r_ratio = action[i,2]
             self.sucker_controller[i].index = int(np.clip(location * self.n_elems, 0, self.n_elems-1))
-            self.tm_muscle_activations[i][2].set_activation(activation) # 2 for TM
+            self.tm_muscle_activations[i][2].apply_activation(activation) # 2 for TM
             self.sucker_controller[i].reduction_ratio = r_ratio
 
         # update previous action

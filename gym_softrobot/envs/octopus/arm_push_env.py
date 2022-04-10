@@ -29,13 +29,7 @@ from gym_softrobot.utils.render.base_renderer import (
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
 
-from gym_softrobot.utils.actuation.actuations.muscles.longitudinal_muscle import (
-    LongitudinalMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.transverse_muscle import (
-    TransverseMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
+from comm.actuations.muscles.muscle import ApplyMuscles
 
 
 class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
@@ -198,7 +192,7 @@ class ArmPushEnv(core.Env):
                 self.muscles_parameters.append(defaultdict(list))
 
         self.simulator.add_forcing_to(shearable_rod).using(
-            ApplyMuscle,
+            ApplyMuscles,
             muscles=self.muscle_layers,
             step_skip=self.step_skip,
             callback_params_list=self.muscles_parameters,
@@ -251,26 +245,26 @@ class ArmPushEnv(core.Env):
 
         # Continuous action
         #for muscle_count, muscle_layer in enumerate(self.muscle_layers):
-        #    muscle_layer.set_activation(action[muscle_count] * scale)
+        #    muscle_layer.apply_activation(action[muscle_count] * scale)
 
         if self.mode == 0:  # Discrete Action
             if action == 0: # Fix last node and activate muscle
                 self.BC.index = 0
-                self.muscle_layers[0].set_activation(-0.0 * scale)
-                self.muscle_layers[1].set_activation( 0.0 * scale)
-                self.muscle_layers[2].set_activation( 0.5 * scale)
+                self.muscle_layers[0].apply_activation(-0.0 * scale)
+                self.muscle_layers[1].apply_activation( 0.0 * scale)
+                self.muscle_layers[2].apply_activation( 0.5 * scale)
             elif action == 1: # Fix first node and release muscle
                 self.BC.index = -1
-                self.muscle_layers[0].set_activation(0.0)
-                self.muscle_layers[1].set_activation(0.0)
-                self.muscle_layers[2].set_activation(0.0)
+                self.muscle_layers[0].apply_activation(0.0)
+                self.muscle_layers[1].apply_activation(0.0)
+                self.muscle_layers[2].apply_activation(0.0)
             else:
                 raise NotImplementedError("Action must be 1 or 0")
         elif self.mode == 1:  # Continuous Action
             location = action[0]
             activation = action[1]
             self.BC.index = int(np.clip(location * self.n_elem, 0, self.n_elem-1))
-            self.muscle_layers[2].set_activation(activation)
+            self.muscle_layers[2].apply_activation(activation)
 
         # update previous action
         self._prev_action = action
@@ -591,7 +585,7 @@ class ArmPullWeightEnv(ArmPushEnv):
         self.muscles_parameters = []
 
         self.simulator.add_forcing_to(shearable_rod).using(
-            ApplyMuscle,
+            ApplyMuscles,
             muscles=self.muscle_layers,
             step_skip=self.step_skip,
             callback_params_list=self.muscles_parameters,

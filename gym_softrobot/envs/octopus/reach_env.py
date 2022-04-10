@@ -65,7 +65,7 @@ class ReachEnv(core.Env):
         self.n_seg = n_elems - 1
 
         # Spaces
-        n_action = self.n_seg*self.n_muscle
+        n_action = self.n_elems*self.n_muscle
         self.n_action = n_action
         # TODO: for non-HER, use decentral training shapes
         self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm * n_action,), dtype=np.float32)
@@ -191,7 +191,7 @@ class ReachEnv(core.Env):
         # Continuous action
         for i in range(self.n_arm):
             for j in range(self.n_muscle):
-                self.muscle_activations[i][j].apply_activation(action[i, self.n_seg * j:self.n_seg * (j + 1)])
+                self.muscle_activations[i][j].apply_activation(action[i, self.n_elems*j:self.n_elems*(j+1)])
 
         # update previous action
         self._prev_action = action
@@ -199,7 +199,6 @@ class ReachEnv(core.Env):
     def step(self, action):
         """ Set intrinsic strains (set actions) """
         self.set_action(action)
-
 
         """ Run the simulation for one step """
         stime = time.perf_counter()

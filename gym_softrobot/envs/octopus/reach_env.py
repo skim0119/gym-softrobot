@@ -191,7 +191,7 @@ class ReachEnv(core.Env):
         # Continuous action
         for i in range(self.n_arm):
             for j in range(self.n_muscle):
-                self.muscle_activations[i][j].set_activation(action[i, self.n_seg * j:self.n_seg * (j + 1)])
+                self.muscle_activations[i][j].apply_activation(action[i, self.n_seg * j:self.n_seg * (j + 1)])
 
         # update previous action
         self._prev_action = action

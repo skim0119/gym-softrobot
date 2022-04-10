@@ -215,9 +215,9 @@ class ArmTwoEnv(core.Env):
             apply_TM = interp1d(self.control_location, [0] + list(TM_activation) + [0], kind='cubic')(
                 range(self.n_elems - 1))
 
-            self.muscle_activations[i][0].set_activation(apply_LM1)
-            self.muscle_activations[i][1].set_activation(apply_LM2)
-            self.muscle_activations[i][2].set_activation(apply_TM)
+            self.muscle_activations[i][0].apply_activation(apply_LM1)
+            self.muscle_activations[i][1].apply_activation(apply_LM2)
+            self.muscle_activations[i][2].apply_activation(apply_TM)
 
         # update previous action
         self._prev_action = action

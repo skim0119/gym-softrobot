@@ -265,25 +265,30 @@ def create_es_muscle_layers(
         #     max_force=1 * (radius_mean / radius_base) ** 2,
         # )
         LongitudinalMuscle(
-            muscle_radius_ratio=np.stack(
-                (np.zeros(radius_mean.shape), 6 / 9 * np.ones(radius_mean.shape)),
-                axis=0,
-            ),
-            max_force=0.5 * (radius_mean / radius_base) ** 2,
+            #muscle_radius_ratio=np.stack((np.zeros(radius_mean.shape), 6 / 9 * np.ones(radius_mean.shape)), axis=0),
+            #max_force=0.5 * (radius_mean / radius_base) ** 2,
+            muscle_init_angle=np.pi/2,
+            ratio_muscle_position=np.stack((np.zeros_like(radius_mean),
+                                            -6 / 9 * np.ones_like(radius_mean),
+                                            np.zeros_like(radius_mean)), axis=0),
+            rest_muscle_area=(radius_mean / radius_base) ** 2,
+            max_muscle_stress=0.5,
         ),
         LongitudinalMuscle(
-            muscle_radius_ratio=np.stack(
-                (np.zeros(radius_mean.shape), -6 / 9 * np.ones(radius_mean.shape)),
-                axis=0,
-            ),
-            max_force=0.5 * (radius_mean / radius_base) ** 2,
+            #muscle_radius_ratio=np.stack( (np.zeros(radius_mean.shape), -6 / 9 * np.ones(radius_mean.shape)), axis=0),
+            #max_force=0.5 * (radius_mean / radius_base) ** 2,
+            muscle_init_angle=-np.pi/2,
+            ratio_muscle_position=np.stack((np.zeros_like(radius_mean),
+                                            -6 / 9 * np.ones_like(radius_mean),
+                                            np.zeros_like(radius_mean)), axis=0),
+            rest_muscle_area=(radius_mean / radius_base) ** 2,
+            max_muscle_stress=0.5,
         ),
         TransverseMuscle(
-            muscle_radius_ratio=np.stack(
-                (np.zeros(radius_mean.shape), 4 / 9 * np.ones(radius_mean.shape)),
-                axis=0,
-            ),
-            max_force=1.0 * (radius_mean / radius_base) ** 2,
+            #muscle_radius_ratio=np.stack( (np.zeros(radius_mean.shape), 4 / 9 * np.ones(radius_mean.shape)), axis=0,),
+            #max_force=1.0 * (radius_mean / radius_base) ** 2,
+            rest_muscle_area=(radius_mean / radius_base) ** 2,
+            max_muscle_stress=1.0
         ),
     ]
     return muscle_layers

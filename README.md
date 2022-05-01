@@ -35,6 +35,7 @@ Requirements:
 - Python 3.8+
 - OpenAI Gym 0.21.0
 - PyElastica 0.2+
+- COMM
 - Matplotlib (optional for display rendering and plotting)	
 - POVray (optional for 3D rendering)
 	

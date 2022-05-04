@@ -1,5 +1,10 @@
 __doc__="""
 Module contains elastica interface to create octopus model.
+
+We tried to select the mechanical parameters within the plausible range in soft-matter studies
+and simplified model. We encourage users to try out different parameters for properties, but 
+the behavior of physical simulator (PyElastica) might be very different.
+
 """
 
 from typing import Optional, Tuple

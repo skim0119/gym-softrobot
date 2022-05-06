@@ -5,6 +5,7 @@ from elastica._rotations import _rotate
 
 from elastica.boundary_conditions import FreeRod
 
+
 class ControllableFixConstraint(FreeRod):
     @dataclass
     class _Controller:
@@ -33,7 +34,7 @@ class ControllableFixConstraint(FreeRod):
 
     def constrain_values(self, rod, time):
         return
-        #if self.controller.flag:
+        # if self.controller.flag:
         #    self.nb_compute_constrain_values(
         #        rod.position_collection,
         #        rod.director_collection,
@@ -46,20 +47,21 @@ class ControllableFixConstraint(FreeRod):
                 rod.velocity_collection,
                 rod.omega_collection,
                 self.controller.index,
-                self.controller.reduction_ratio
+                self.controller.reduction_ratio,
             )
 
-    #@staticmethod
-    #@njit(cache=True)
-    #def nb_compute_constrain_values(
+    # @staticmethod
+    # @njit(cache=True)
+    # def nb_compute_constrain_values(
     #    position_collection, director_collection, index
-    #):
+    # ):
     #    position_collection[2, index] = 0
     #    director_collection[1, :, index] = np.array([0.0,0.0,1.0])
 
     @staticmethod
     @njit(cache=True)
-    def nb_compute_constrain_rates(velocity_collection, omega_collection, index, reduction_ratio):
-        velocity_collection[..., index] *= (1.0 - reduction_ratio)
-        omega_collection[..., index] *= (1.0 - reduction_ratio)
-
+    def nb_compute_constrain_rates(
+        velocity_collection, omega_collection, index, reduction_ratio
+    ):
+        velocity_collection[..., index] *= 1.0 - reduction_ratio
+        omega_collection[..., index] *= 1.0 - reduction_ratio

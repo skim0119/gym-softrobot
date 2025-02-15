@@ -1,6 +1,6 @@
 [project]
 name = "gym-softrobot"
-version = "0.1.0"  # Replace with the correct version from your versioning system
+version = "0.1.1"
 description = "Soft-robotics control environment package for Gymnasium"
 readme = "README.md"
 keywords = []

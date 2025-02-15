@@ -1,0 +1,100 @@
+[project]
+name = "gym-softrobot"
+version = "0.1.0"  # Replace with the correct version from your versioning system
+description = "Soft-robotics control environment package for Gymnasium"
+readme = "README.md"
+keywords = []
+authors = [
+    {name = "skim0119", email = "skim0119@gmail.com"}
+]
+license = {text = "MIT"}
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Education",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "gymnasium>=1.0.0",
+    "pyelastica>=0.3.2",
+    "matplotlib",
+    "tqdm",
+    "pyglet",
+    "vapory"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["gym_softrobot"]
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "coverage",
+    "pre-commit",
+    "pytest",
+    "pytest-mock",
+    "pytest-cov",
+    "mypy",
+]
+docs = [
+    "sphinx",
+    "sphinx-book-theme",
+    "readthedocs-sphinx-search",
+    "sphinx-autodoc-typehints",
+    "myst-parser",
+    "numpydoc",
+    "docutils",
+]
+
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+lint.ignore = [
+    "E712",  # Allow using if x == False, as it's not always equivalent to if x.
+    "E402",  # Allow import statements to be non top-level.
+    "F841",  # Allow unused variables, as they are often used for Brian2
+]
+lint.fixable = [
+    "F401",  # Remove unused imports.
+    "NPY001",  # Fix numpy types, which are removed in 1.24.
+]
+
+[tool.coverage.report]
+# Regexes for lines to exclude from consideration
+exclude_lines = [
+    # Enable pragma
+    "pragma: no cover",
+    # Don't complain if non-runnable code isn't run:
+    "if 0:",
+    'if __name__ == "__main__":',
+    "pass",
+    "def __repr__",
+    "if TYPE_CHECKING:",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    '''class '.*\bProtocol\)':''',
+    'class \w+\(Protocol\):',
+    "@(abc\\.)?abstractmethod",
+]
+fail_under = 40
+show_missing = true
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "*/.local/*",
+	"setup.py",
+]

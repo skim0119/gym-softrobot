@@ -15,13 +15,15 @@ Our inspiration is from slender-body living creatures, such as octopus or snake.
 The code is based on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for highly-deformable slender structure.
 We intend this package to be easy-to-install and fully compatible to [OpenAI Gym](https://github.com/openai/gym) and other available RL algorithms.
 
-> The package is under development, in Alpha phase. Detail roadmap for Q2-2022 will be available.
-
 ## Installation
 
 ```bash
 pip install gym-softrobot
 ```
+
+> Some recent version of python might not be compatible with LLVM version. Please let us know usign the git-issue.
+> At the current stabe, we best recommend python 3.10.
+
 
 To test the installation, we provide few debugging scripts.
 The environment can be tested using the following command.
@@ -32,13 +34,13 @@ python -m gym_softrobot.debug.registry # Print gym-softrobot environment
 ```
 
 Requirements:
-- Python 3.8+
-- OpenAI Gym 0.21.0
-- PyElastica 0.2+
-- COMM
-- Matplotlib (optional for display rendering and plotting)	
+- Python 3.10+
+- Gymnasium 1.0.0
+- PyElastica 0.3.2+
+- COOMM
+- Matplotlib (optional for display rendering and plotting)
 - POVray (optional for 3D rendering)
-	
+
 ### Rendering
 
 We support two different backends for the rendering: [POVray](https://wiki.povray.org/content/HowTo:Install_POV) and [Matplotlib](https://matplotlib.org/).
@@ -49,7 +51,7 @@ from gym_softrobot.config import RendererType
 gym_softrobot.RENDERER_CONFIG = RendererType.MATPLOTLIB  # Default: POVRAY
 ```
 
-#### POVray 
+#### POVray
 
 To make a good-looking 3D videos and figures, we use [POVray](https://wiki.povray.org/content/HowTo:Install_POV) python wrapper [Vapory](https://github.com/Zulko/vapory).
 POVray is not a requirement to run the environment, but it is necessary to use `env.render()` function as typical gym environment.
@@ -93,7 +95,12 @@ The description of each environment is available in [documentation](docs/design.
 ## Contribution
 
 We are currently developing the package internally.
-We plan to deploy the package to open-development in Q2-2022.
+We mainly use `uv` to manage the project setting. If you plan to commit your code, please use the following commands to setup the pre-commit hooks.
+
+```bash
+uv sync --all-groups
+uv run pre-commit install
+```
 
 ## Author
 

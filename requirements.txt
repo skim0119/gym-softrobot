@@ -1,6 +1,0 @@
-gym>=0.21.0
-pyelastica>=0.2.2.post1
-matplotlib>=3.3.2
-tqdm>=4.62.0
-vapory
-pyglet==1.5.11

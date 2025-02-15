@@ -2,7 +2,7 @@
 
 <h1> Soft-Robot Control Environment (gym-softrobot) </h1>
   <a href="https://github.com/skim0119/gym-softrobot/blob/main/LICENSE">
-    <img src="https://img.shields.io/apm/l/atomic-design-ui.svg?style=flat"></a>
+    <img src="https://img.shields.io/badge/MIT-License-Green"></a>
   <a href="https://github.com/skim0119/gym-softrobot"><img src="https://img.shields.io/github/release/skim0119/gym-softrobot.svg?style=flat"></a>
     <img src="https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg?style=flat">
   <a href='https://gym-softrobot.readthedocs.io/en/latest/?badge=latest'>
@@ -33,7 +33,7 @@ python -m gym_softrobot.debug.registry # Print gym-softrobot environment
 
 Requirements:
 - Python 3.8+
-- OpenAI Gym 0.21.0
+- OpenAI Gym 0.21.0 1.0.0
 - PyElastica 0.2+
 - COMM
 - Matplotlib (optional for display rendering and plotting)	

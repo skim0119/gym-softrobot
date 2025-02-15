@@ -2,7 +2,7 @@
 
 <h1> Soft-Robot Control Environment (gym-softrobot) </h1>
   <a href="https://github.com/skim0119/gym-softrobot/blob/main/LICENSE">
-    <img src="https://img.shields.io/apm/l/atomic-design-ui.svg?style=flat"></a>
+    <img src="https://img.shields.io/badge/MIT-License-Green"></a>
   <a href="https://github.com/skim0119/gym-softrobot"><img src="https://img.shields.io/github/release/skim0119/gym-softrobot.svg?style=flat"></a>
     <img src="https://github.com/skim0119/gym-softrobot/actions/workflows/main.yml/badge.svg?style=flat">
   <a href='https://gym-softrobot.readthedocs.io/en/latest/?badge=latest'>

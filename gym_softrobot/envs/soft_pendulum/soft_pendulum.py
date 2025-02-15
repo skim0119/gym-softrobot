@@ -1,16 +1,13 @@
 from typing import Optional
 
-import gym
 from gym import core
-from gym import error, spaces, utils
+from gym import spaces
 from gym.utils import seeding
 
 from collections import defaultdict
 import time
-import copy
 
 import numpy as np
-from scipy.interpolate import interp1d
 
 from elastica import *
 from elastica.timestepper import extend_stepper_interface
@@ -21,7 +18,6 @@ from gym_softrobot.config import RendererType
 from gym_softrobot.envs.soft_pendulum.build import build_soft_pendulum
 from gym_softrobot.utils.custom_elastica.callback_func import (
     RodCallBack,
-    RigidCylinderCallBack,
 )
 from gym_softrobot.utils.render.post_processing import plot_video
 from gym_softrobot.utils.render.base_renderer import (
@@ -30,7 +26,14 @@ from gym_softrobot.utils.render.base_renderer import (
 )
 
 
-class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
+class BaseSimulator(
+    BaseSystemCollection,
+    Constraints,
+    Connections,
+    Forcing,
+    Damping,
+    CallBacks,
+):
     pass
 
 
@@ -56,7 +59,6 @@ class SoftPendulumEnv(core.Env):
         n_elems=50,
         config_generate_video=False,
     ):
-
         # Integrator type
 
         self.final_time = final_time
@@ -76,9 +78,7 @@ class SoftPendulumEnv(core.Env):
         self.action_space = spaces.Box(
             action_low, action_high, shape=action_size, dtype=np.float32
         )
-        self._observation_size = (
-            (4),
-        )  # 2 for target
+        self._observation_size = ((4),)  # 2 for target
         self.observation_space = spaces.Box(
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
         )
@@ -121,6 +121,7 @@ class SoftPendulumEnv(core.Env):
             self.n_elems,
             self.point_force,
             self.np_random,
+            self.time_step,
         )
 
         # CallBack
@@ -178,7 +179,6 @@ class SoftPendulumEnv(core.Env):
         # self.shearable_rod.rest_kappa[0, :] = action # Planar curvature
 
     def step(self, action):
-
         self.set_action(action)
 
         """ Post-simulation """
@@ -197,7 +197,8 @@ class SoftPendulumEnv(core.Env):
         # print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
 
         """ Done is a boolean to reset the environment before episode is completed """
-        done = False
+        terminated = False
+        truncated = False
         survive_reward = 0.0
         forward_reward = 0.0
         # FIXME: How to set control penalty
@@ -214,14 +215,15 @@ class SoftPendulumEnv(core.Env):
 
         if invalid_values_condition:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
-            done = True
+            terminated = True
+            truncated = True
             survive_reward = -50.0
         else:
             distance_to_origin = np.abs(self.shearable_rod.position_collection[0, 0])
             tangents_mean = np.mean(self.shearable_rod.tangents, axis=1)
             theta = np.arctan(tangents_mean[0] / tangents_mean[1])  # Target angle is 0
             distance_to_target_angle = ((theta + np.pi) % (2 * np.pi)) - np.pi
-            forward_reward = distance_to_origin * 10 + distance_to_target_angle ** 2
+            forward_reward = distance_to_origin * 10 + distance_to_target_angle**2
             # cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
             # dist_to_target = np.linalg.norm(cm_pos - self._target, ord=2)
             # forward_reward = (self.prev_dist_to_target - dist_to_target) * 10
@@ -230,13 +232,14 @@ class SoftPendulumEnv(core.Env):
             # FIXME: How to set survival reward
             # if distance_to_origin < 0.01  and distance_to_target_angle < 0.01:
             #     survive_reward = 100.0
-            #     done = True
+            #     terminated  = True
 
         """ Time limit """
         timelimit = False
         if self.time > self.final_time:
             timelimit = True
-            done = True
+            terminated = True
+            truncated = True
 
         reward = forward_reward - control_penalty + survive_reward
         # reward *= 10 # Reward scaling
@@ -259,7 +262,7 @@ class SoftPendulumEnv(core.Env):
 
         self.counter += 1
 
-        return states, reward, done, info
+        return states, reward, terminated, truncated, info
 
     def save_data(self, filename_video, fps):
         if self.config_generate_video:
@@ -283,12 +286,12 @@ class SoftPendulumEnv(core.Env):
                 from gym_softrobot.utils.render.matplotlib_renderer import Session
             else:
                 raise NotImplementedError("Rendering module is not imported properly")
-            assert issubclass(
-                Session, BaseRenderer
-            ), "Rendering module is not properly subclassed"
-            assert issubclass(
-                Session, BaseElasticaRendererSession
-            ), "Rendering module is not properly subclassed"
+            assert issubclass(Session, BaseRenderer), (
+                "Rendering module is not properly subclassed"
+            )
+            assert issubclass(Session, BaseElasticaRendererSession), (
+                "Rendering module is not properly subclassed"
+            )
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
             self.renderer.add_rod(

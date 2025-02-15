@@ -2,20 +2,17 @@ __doc__ = """
 Module contains elastica interface to create soft pendulum.
 """
 
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
 from elastica import *
 from elastica.boundary_conditions import ConstraintBase
-from elastica.timestepper import extend_stepper_interface
 
 
 _PENDULUM_PROPERTIES = {  # default parameters
     # Arm properties
     "youngs_modulus": 1e6,
-    "shear_modulus": 1e6/(1+0.5),
-    #"poisson_ratio": 0.5,
     "density": 1000.0,
     "nu": 50,
 }
@@ -26,7 +23,12 @@ _DEFAULT_SCALE_LENGTH = {
 
 
 def build_soft_pendulum(
-    simulator, n_elem, point_force, np_random, override_params: Optional[dict] = None
+    simulator,
+    n_elem,
+    point_force,
+    np_random,
+    time_step,
+    override_params: Optional[dict] = None,
 ):
     """Import default parameters (overridable)"""
     param = _PENDULUM_PROPERTIES.copy()  # Always copy parameter for safety
@@ -96,6 +98,14 @@ def build_soft_pendulum(
 
     simulator.add_forcing_to(shearable_rod).using(
         PendulumPointForces, point_force=point_force
+    )
+
+    # add damping
+    damping_constant = 2e-3
+    simulator.dampen(shearable_rod).using(
+        AnalyticalLinearDamper,
+        damping_constant=damping_constant,
+        time_step=time_step,
     )
 
     return shearable_rod

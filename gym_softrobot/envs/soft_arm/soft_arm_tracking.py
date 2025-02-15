@@ -1,29 +1,19 @@
 from collections import defaultdict
-import time
 import copy
 
 import numpy as np
-from scipy.interpolate import interp1d
 
 from typing import Optional
 import gym
 from gym import core
-from gym import error, spaces, utils
 from gym.utils import seeding
 
 from elastica._calculus import _isnan_check
 from elastica.timestepper import extend_stepper_interface
 from elastica import *
-from elastica.external_forces import GravityForces
 
 from gym_softrobot import RENDERER_CONFIG
 from gym_softrobot.config import RendererType
-from gym_softrobot.envs.octopus.build import build_arm
-from gym_softrobot.utils.custom_elastica.callback_func import (
-    RodCallBack,
-    RigidCylinderCallBack,
-)
-from gym_softrobot.utils.render.post_processing import plot_video
 from gym_softrobot.utils.render.base_renderer import (
     BaseRenderer,
     BaseElasticaRendererSession,
@@ -100,7 +90,7 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
 class SoftArmTrackingEnv(core.Env):
     metadata = {"render.modes": ["rgb_array", "human"]}
 
-    def __init__(self, game_mode:int=1):
+    def __init__(self, game_mode: int = 1):
         self.n_elem = 40
         self.sim_dt = 2.0e-4
         self.RL_update_interval = 0.01  # This is 100 updates per second
@@ -109,7 +99,6 @@ class SoftArmTrackingEnv(core.Env):
         ).astype(int)
         self.youngs_modulus = 2e6
         poisson_ratio = 0.45
-        self.shear_modulus = 0.5 * self.youngs_modulus / (poisson_ratio + 1.0)
 
         self.torque_scale = 10
 
@@ -248,29 +237,32 @@ class SoftArmTrackingEnv(core.Env):
         state = self.get_state()
 
         """ Done is a boolean to reset the environment before episode is completed """
-        done = False
+        terminated = False
+        truncated = False
 
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = _isnan_check(state)
         if invalid_values_condition == True:
             reward = -100
             state = np.nan_to_num(self.get_state())
-            done = True
+            terminated = True
+            truncated = True
             print("Episode blew up. Maybe try a smaller dt?")
 
         if self.tick * self.sim_dt >= self.max_episode_final_time:
-            done = True
+            terminated = True
+            truncated = True
             print("Episode has reached max time")
 
         self._target = self.wsol[self.tick]
-        return state, reward, done, {"ctime": self.time_tracker}
+        return state, reward, terminated, truncated, {"ctime": self.time_tracker}
 
     def reset(
         self,
         *,
         seed: Optional[int] = None,
         return_info: bool = False,
-        options: Optional[dict] = None
+        options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
         self.simulator = BaseSimulator()
@@ -298,9 +290,8 @@ class SoftArmTrackingEnv(core.Env):
             self.base_length,
             base_radius=radius_along_rod,
             density=1000 * 1e-6,
-            nu=damping,
+            # nu=damping,
             youngs_modulus=self.youngs_modulus,
-            shear_modulus=self.shear_modulus,
         )
 
         self.shearable_rod.dissipation_constant_for_torques *= (
@@ -368,8 +359,8 @@ class SoftArmTrackingEnv(core.Env):
             )
 
         """
-        heuristic scaling of torque - not this works for a 25:1 slenderness ratio. Bending stiffness scales ~r^4 so if thicker or thinner, 
-        the torque value might need to be adjusted. This scaling is more designed for changing the youngs modulus 
+        heuristic scaling of torque - not this works for a 25:1 slenderness ratio. Bending stiffness scales ~r^4 so if thicker or thinner,
+        the torque value might need to be adjusted. This scaling is more designed for changing the youngs modulus
         """
         self.alpha = self.torque_scale * self.radius * self.youngs_modulus
         # Add muscle torques acting on the arm for actuation
@@ -408,7 +399,6 @@ class SoftArmTrackingEnv(core.Env):
         ###--------------GENERATE TARGET TRAJECTORY--------------###
         self.tick = 0
 
-
         if self.mode == 2:
             # TODO: change this to a object that will update thee target position as you go
             target_trajectory = generate_trajectory(
@@ -439,7 +429,6 @@ class SoftArmTrackingEnv(core.Env):
         self.sphere.velocity_collection[..., 0] = self.velocity_sphere[0]
 
         if self.COLLECT_DATA_FOR_POSTPROCESSING:
-
             # Call back function to collect target sphere data from simulation
             class RigidSphereCallBack(CallBackBaseClass):
                 """
@@ -501,6 +490,7 @@ class SoftArmTrackingEnv(core.Env):
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
+
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
 
         if self.renderer is None:
@@ -511,21 +501,29 @@ class SoftArmTrackingEnv(core.Env):
                 from gym_softrobot.utils.render.matplotlib_renderer import Session
             else:
                 raise NotImplementedError("Rendering module is not imported properly")
-            assert issubclass(
-                Session, BaseRenderer
-            ), "Rendering module is not properly subclassed"
-            assert issubclass(
-                Session, BaseElasticaRendererSession
-            ), "Rendering module is not properly subclassed"
-            self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
-            self.renderer.add_rod(self.shearable_rod)  
+            assert issubclass(Session, BaseRenderer), (
+                "Rendering module is not properly subclassed"
+            )
+            assert issubclass(Session, BaseElasticaRendererSession), (
+                "Rendering module is not properly subclassed"
+            )
+            self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
+            self.renderer.add_rod(self.shearable_rod)
             self.renderer.add_point(self._target.tolist(), self.sphere_radius)
 
         # POVRAY
         if RENDERER_CONFIG == RendererType.POVRAY:
             state_image = self.renderer.render(
-                maxwidth, int(maxwidth * aspect_ratio * 0.7),
-                camera_param=("location", [50.0, 10.0, -60.0], "look_at", [-3.5, 5.7, 10.0], "angle", 30)
+                maxwidth,
+                int(maxwidth * aspect_ratio * 0.7),
+                camera_param=(
+                    "location",
+                    [50.0, 10.0, -60.0],
+                    "look_at",
+                    [-3.5, 5.7, 10.0],
+                    "angle",
+                    30,
+                ),
             )
         elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
             state_image = self.renderer.render()

@@ -1,15 +1,13 @@
 from typing import Optional
 
-import gym
-from gym import core, spaces
-from gym.utils import seeding
+from gymnasium import spaces, Env
+from gymnasium.utils import seeding
 
 from collections import defaultdict
 import time
 
 import numpy as np
 
-from tqdm import tqdm
 
 from elastica import *
 from elastica.timestepper import extend_stepper_interface
@@ -29,12 +27,6 @@ from gym_softrobot.utils.render.base_renderer import (
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
 
-from gym_softrobot.utils.actuation.actuations.muscles.longitudinal_muscle import (
-    LongitudinalMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.transverse_muscle import (
-    TransverseMuscle,
-)
 from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
 
 
@@ -42,7 +34,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
     pass
 
 
-class ArmPushEnv(core.Env):
+class ArmPushEnv(Env):
     """
     Description:
     Source:
@@ -61,10 +53,10 @@ class ArmPushEnv(core.Env):
         final_time: float = 2.5,
         time_step: float = 5.0e-5,
         recording_fps: int = 40,
-        mode:str="discrete",
+        mode: str = "discrete",
         config_generate_video: bool = False,
-        config_early_termination: bool = False
-	):
+        config_early_termination: bool = False,
+    ):
         # Integrator type
         self.final_time = final_time
         self.time_step = time_step
@@ -86,14 +78,29 @@ class ArmPushEnv(core.Env):
         seed = self.seed()
 
         # Action space
-        if self.mode == 0: # Discrete
-            n_action = 1 #self.n_elem - 1
-            #self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
+        if self.mode == 0:  # Discrete
+            n_action = 1  # self.n_elem - 1
+            # self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
             self.action_space = spaces.Discrete(2)
 
             # Observation space
+            self._observation_size = (((self.n_elem + 1) * 2 + 2),)  # one hot action
+            self.observation_space = spaces.Box(
+                -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
+            )
+
+            self._prev_action = np.zeros(
+                list(self.action_space.shape), dtype=self.action_space.dtype
+            )
+        elif self.mode == 1:  # Continuous
+            n_action = 2
+            self.action_space = spaces.Box(
+                0.0, 1.0, shape=(n_action,), dtype=np.float32
+            )
+
+            # Observation space
             self._observation_size = (
-                ((self.n_elem + 1)*2 + 2), # one hot action 
+                ((self.n_elem + 1) * 2 + n_action),  # one hot action
             )
             self.observation_space = spaces.Box(
                 -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
@@ -102,20 +109,6 @@ class ArmPushEnv(core.Env):
             self._prev_action = np.zeros(
                 list(self.action_space.shape), dtype=self.action_space.dtype
             )
-        elif self.mode == 1: # Continuous
-            n_action = 2
-            self.action_space = spaces.Box(0.0, 1.0, shape=(n_action,), dtype=np.float32)
-
-            # Observation space
-            self._observation_size = (
-                ((self.n_elem + 1)*2 + n_action), # one hot action 
-            )
-            self.observation_space = spaces.Box(
-                -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
-            )
-
-            self._prev_action = np.zeros(list(self.action_space.shape), dtype=self.action_space.dtype)
-
 
         # Configurations
         self.config_generate_video = config_generate_video
@@ -124,7 +117,6 @@ class ArmPushEnv(core.Env):
         # Rendering-related
         self.viewer = None
         self.renderer = None
-
 
     def seed(self, seed=None):
         # Deprecated in new gym
@@ -178,16 +170,20 @@ class ArmPushEnv(core.Env):
             density=700,
             nu=damp_coefficient * ((radius_mean / radius_base) ** 2) * 1e2,
             youngs_modulus=1e4,
-            shear_modulus=1e4/1.5
-            #poisson_ratio=0.5,
-            #nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
+            shear_modulus=1e4 / 1.5,
+            # poisson_ratio=0.5,
+            # nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
         )
         self.simulator.append(shearable_rod)
 
-        controller_id = self.simulator.constrain(shearable_rod).using(
-            ControllableFixConstraint,
-            index=0,
-        ).id()
+        controller_id = (
+            self.simulator.constrain(shearable_rod)
+            .using(
+                ControllableFixConstraint,
+                index=0,
+            )
+            .id()
+        )
 
         """ Add muscle actuation """
         self.muscle_layers = create_es_muscle_layers(radius_mean, radius_base)
@@ -226,15 +222,11 @@ class ArmPushEnv(core.Env):
         rod = self.shearable_rod
         pos_state1 = rod.position_collection[0]  # x
         vel_state1 = rod.velocity_collection[0]  # x
-        #pos_state2 = rod.position_collection[1]  # y
+        # pos_state2 = rod.position_collection[1]  # y
         previous_action = self._prev_action
         if self.mode == 0:  # Discrete
             state = np.hstack(
-                [
-                    pos_state1,
-                    vel_state1,
-                    np.eye(2)[previous_action]
-                ]
+                [pos_state1, vel_state1, np.eye(2)[previous_action]]
             ).astype(np.float32)
         elif self.mode == 1:  # Continuous
             state = np.hstack(
@@ -250,16 +242,16 @@ class ArmPushEnv(core.Env):
         scale = 1.0  # min(time / 0.02, 1)
 
         # Continuous action
-        #for muscle_count, muscle_layer in enumerate(self.muscle_layers):
+        # for muscle_count, muscle_layer in enumerate(self.muscle_layers):
         #    muscle_layer.set_activation(action[muscle_count] * scale)
 
         if self.mode == 0:  # Discrete Action
-            if action == 0: # Fix last node and activate muscle
+            if action == 0:  # Fix last node and activate muscle
                 self.BC.index = 0
                 self.muscle_layers[0].set_activation(-0.0 * scale)
-                self.muscle_layers[1].set_activation( 0.0 * scale)
-                self.muscle_layers[2].set_activation( 0.5 * scale)
-            elif action == 1: # Fix first node and release muscle
+                self.muscle_layers[1].set_activation(0.0 * scale)
+                self.muscle_layers[2].set_activation(0.5 * scale)
+            elif action == 1:  # Fix first node and release muscle
                 self.BC.index = -1
                 self.muscle_layers[0].set_activation(0.0)
                 self.muscle_layers[1].set_activation(0.0)
@@ -269,14 +261,14 @@ class ArmPushEnv(core.Env):
         elif self.mode == 1:  # Continuous Action
             location = action[0]
             activation = action[1]
-            self.BC.index = int(np.clip(location * self.n_elem, 0, self.n_elem-1))
+            self.BC.index = int(np.clip(location * self.n_elem, 0, self.n_elem - 1))
             self.muscle_layers[2].set_activation(activation)
 
         # update previous action
         self._prev_action = action
 
     def step(self, action):
-        """ Set intrinsic strains (set actions) """
+        """Set intrinsic strains (set actions)"""
         self.set_action(action)
 
         """ Post-simulation """
@@ -297,7 +289,8 @@ class ArmPushEnv(core.Env):
         """ Done is a boolean to reset the environment before episode is completed """
         cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
 
-        done = False
+        terminated = False
+        truncated = False
         survive_reward = 0.0
         forward_reward = 0.0
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
@@ -309,17 +302,19 @@ class ArmPushEnv(core.Env):
                     self.shearable_rod.director_collection.ravel(),
                     self.shearable_rod.alpha_collection.ravel(),
                     self.shearable_rod.omega_collection.ravel(),
-                    cm_pos.ravel()
+                    cm_pos.ravel(),
                 ]
             )
         )
 
         if self.config_early_termination:
-            done = self.check_early_termination()
+            terminated = self.check_early_termination()
+            truncated = terminated
             survive_reward = -10.0
         elif invalid_values_condition:
-            #print(f" Nan detected in, exiting simulation now. {self.time=}")
-            done = True
+            # print(f" Nan detected in, exiting simulation now. {self.time=}")
+            terminated = True
+            truncated = True
             survive_reward = -20.0
         else:
             moved_distance = np.linalg.norm(cm_pos, ord=2) - np.linalg.norm(
@@ -332,10 +327,12 @@ class ArmPushEnv(core.Env):
         if self.time > self.final_time:
             # survive_reward = np.linalg.norm(cm_pos, ord=2) * 10
             timelimit = True
-            done = True
+            terminated = True
 
         reward = forward_reward + survive_reward
         if np.isnan(reward):
+            terminated = True
+            truncated = True
             reward = -20.0
         # reward *= 10 # Reward scaling
         # print(f'{reward=:.3f}: {forward_reward=:.3f}, {survive_reward=:.3f}')
@@ -348,7 +345,7 @@ class ArmPushEnv(core.Env):
         # systems = [self.shearable_rod]
         states = self.get_state()
         if np.any(np.isnan(states)):
-            done = True
+            terminated = True
             reward = -20.0
             states = np.nan_to_num(states)
 
@@ -359,7 +356,7 @@ class ArmPushEnv(core.Env):
             "TimeLimit.truncated": timelimit,
         }
 
-        return states, reward, done, info
+        return states, reward, terminated, truncated, info
 
     def render(self, mode="human", close=False):
         maxwidth = 800
@@ -378,12 +375,12 @@ class ArmPushEnv(core.Env):
                 from gym_softrobot.utils.render.matplotlib_renderer import Session
             else:
                 raise NotImplementedError("Rendering module is not imported properly")
-            assert issubclass(
-                Session, BaseRenderer
-            ), "Rendering module is not properly subclassed"
-            assert issubclass(
-                Session, BaseElasticaRendererSession
-            ), "Rendering module is not properly subclassed"
+            assert issubclass(Session, BaseRenderer), (
+                "Rendering module is not properly subclassed"
+            )
+            assert issubclass(Session, BaseElasticaRendererSession), (
+                "Rendering module is not properly subclassed"
+            )
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
             self.renderer.add_rod(self.shearable_rod)
@@ -515,8 +512,8 @@ class ArmPushEnv(core.Env):
 
     #     return reach_time, energy_cost
 
-class ArmPullWeightEnv(ArmPushEnv):
 
+class ArmPullWeightEnv(ArmPushEnv):
     def __init__(self, **kwargs):
         super().__init__(time_step=2.5e-5, **kwargs)
 
@@ -541,49 +538,53 @@ class ArmPullWeightEnv(ArmPushEnv):
             density=density,
             nu=damp_coefficient * ((radius_mean / radius_base) ** 2) * 5e2,
             youngs_modulus=1e4,
-            shear_modulus=1e4/1.5
-            #poisson_ratio=0.5,
-            #nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
+            shear_modulus=1e4 / 1.5,
+            # poisson_ratio=0.5,
+            # nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
         )
         self.simulator.append(shearable_rod)
 
         """ Add head """
         rigid_rod_length = radius_base * 2
         rigid_rod_radius = 0.015
-        start = np.zeros((3,)); start[0] = -rigid_rod_radius*0.9; start[2] = -2*radius_base
+        start = np.zeros((3,))
+        start[0] = -rigid_rod_radius * 0.9
+        start[2] = -2 * radius_base
         direction = np.array([0.0, 0.0, 1.0])
         normal = np.array([0.0, 1.0, 0.0])
 
         rigid_rod = Cylinder(
-                start,
-                direction,
-                normal,
-                rigid_rod_length,
-                rigid_rod_radius,
-                density*1.0
-            )
+            start, direction, normal, rigid_rod_length, rigid_rod_radius, density * 1.0
+        )
         self.simulator.append(rigid_rod)
         self.rigid_rod = rigid_rod
 
         """ Constraint body """
         self.simulator.constrain(rigid_rod).using(
             # Upright rigid rod need restoration force/torque against the floor
-            BodyBoundaryCondition, constrained_position_idx=(0,), constrained_director_idx=(0,)
+            BodyBoundaryCondition,
+            constrained_position_idx=(0,),
+            constrained_director_idx=(0,),
         )
 
         """ Set up boundary conditions """
         _k = 1e6
         _kt = 1e0
         self.simulator.connect(
-            first_rod=rigid_rod, second_rod=shearable_rod, first_connect_idx=-1, second_connect_idx=0
-        ).using(FixedJoint2Rigid, k=_k, nu=1e-2, kt=_kt,angle=0,radius=rigid_rod_radius)
+            first_rod=rigid_rod,
+            second_rod=shearable_rod,
+            first_connect_idx=-1,
+            second_connect_idx=0,
+        ).using(
+            FixedJoint2Rigid, k=_k, nu=1e-2, kt=_kt, angle=0, radius=rigid_rod_radius
+        )
 
         """ Set up controller """
-        controller_id = self.simulator.constrain(shearable_rod).using(
-            ControllableFixConstraint,
-            index=0,
-            reduction_ratio=0.9
-        ).id()
+        controller_id = (
+            self.simulator.constrain(shearable_rod)
+            .using(ControllableFixConstraint, index=0, reduction_ratio=0.9)
+            .id()
+        )
 
         """ Add muscle actuation """
         self.muscle_layers = create_es_muscle_layers(radius_mean, radius_base)
@@ -631,12 +632,12 @@ class ArmPullWeightEnv(ArmPushEnv):
                 from gym_softrobot.utils.render.matplotlib_renderer import Session
             else:
                 raise NotImplementedError("Rendering module is not imported properly")
-            assert issubclass(
-                Session, BaseRenderer
-            ), "Rendering module is not properly subclassed"
-            assert issubclass(
-                Session, BaseElasticaRendererSession
-            ), "Rendering module is not properly subclassed"
+            assert issubclass(Session, BaseRenderer), (
+                "Rendering module is not properly subclassed"
+            )
+            assert issubclass(Session, BaseElasticaRendererSession), (
+                "Rendering module is not properly subclassed"
+            )
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
             self.renderer.add_rod(self.shearable_rod)

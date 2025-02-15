@@ -1,6 +1,6 @@
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 
-from gym_softrobot.config import *
+from gym_softrobot.config import RendererType
 
 """ Octopus Environment """
 register(
@@ -15,24 +15,14 @@ register(
 )
 
 register(
-    id='OctoCrawl-v0',
-    entry_point='gym_softrobot.envs.octopus:CrawlEnv',
+    id="OctoCrawl-v0",
+    entry_point="gym_softrobot.envs.octopus:CrawlEnv",
 )
 
 register(
-   id='OctoReach-v0',
-   entry_point='gym_softrobot.envs.octopus:ReachEnv',
+    id="OctoReach-v0",
+    entry_point="gym_softrobot.envs.octopus:ReachEnv",
 )
-
-# register(
-#    id='OctoSwim-v0',
-#    entry_point='gym_softrobot.envs.octopus:SwimEnv',
-# )
-
-# register(
-#    id='OctoHunt-v0',
-#    entry_point='gym_softrobot.envs.octopus:HuntEnv',
-# )
 
 register(
     id="OctoArmSingle-v0",
@@ -50,15 +40,15 @@ register(
 )
 
 register(
-    id='OctoArmPush-v1',
-    entry_point='gym_softrobot.envs.octopus:ArmPushEnv',
-    kwargs=dict(mode="continuous")
+    id="OctoArmPush-v1",
+    entry_point="gym_softrobot.envs.octopus:ArmPushEnv",
+    kwargs=dict(mode="continuous"),
 )
 
 register(
-    id='OctoArmPullWeight-v0',
-    entry_point='gym_softrobot.envs.octopus:ArmPullWeightEnv',
-    kwargs=dict(mode="continuous")
+    id="OctoArmPullWeight-v0",
+    entry_point="gym_softrobot.envs.octopus:ArmPullWeightEnv",
+    kwargs=dict(mode="continuous"),
 )
 
 """ Snake Environment """
@@ -68,10 +58,6 @@ register(
 )
 
 """ Simple Control Environment """
-# register(
-#    id='InertialPull-v0',
-#    entry_point='gym_softrobot.envs.simple_control:InertialPullEnv',
-# )
 
 # """ Soft Arm Environment """
 register(

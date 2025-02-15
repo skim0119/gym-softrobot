@@ -2,30 +2,25 @@ __doc__ = """
 Module contains elastica interface to create octopus model.
 
 We tried to select the mechanical parameters within the plausible range in soft-matter studies
-and simplified model. We encourage users to try out different parameters for properties, but 
+and simplified model. We encourage users to try out different parameters for properties, but
 the behavior of physical simulator (PyElastica) might be very different.
 
 """
 
-from typing import Optional, Tuple
-import json
+from typing import Optional
 
 import numpy as np
 
 from elastica import *
-from elastica.timestepper import extend_stepper_interface
-from elastica.experimental.interaction import AnisotropicFrictionalPlaneRigidBody
 
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
-from gym_softrobot.utils.actuation.forces.drag_force import DragForce
 from gym_softrobot.utils.actuation.actuations.muscles.longitudinal_muscle import (
     LongitudinalMuscle,
 )
 from gym_softrobot.utils.actuation.actuations.muscles.transverse_muscle import (
     TransverseMuscle,
 )
-from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
 
 from scipy.spatial.transform import Rotation as Rot
 
@@ -33,8 +28,8 @@ _OCTOPUS_PROPERTIES = {  # default parameters
     # Arm properties
     "youngs_modulus": 1e6,
     "density": 1000.0,
-    "nu": 1e-2,
-    "poisson_ratio": 0.5,
+    # "nu": 1e-2,  # Deprecated
+    # "poisson_ratio": 0.5,  # Deprecated
     # Head properties
     "body_arm_k": 1e6,
     "body_arm_kt": 1e0,
@@ -44,6 +39,7 @@ _OCTOPUS_PROPERTIES = {  # default parameters
     "friction_multiplier": 1.00,
     "friction_symmetry": False,
 }
+
 _DEFAULT_SCALE_LENGTH = {
     "base_length": 0.35,
     "base_radius": 0.35 * 0.02,
@@ -51,7 +47,11 @@ _DEFAULT_SCALE_LENGTH = {
 
 
 def build_octopus(
-    simulator, n_arm: int = 8, n_elem: int = 11, override_params: Optional[dict] = None
+    simulator,
+    n_arm: int = 8,
+    n_elem: int = 11,
+    time_step: float = 7e-5,
+    override_params: Optional[dict] = None,
 ):
     """Import default parameters (overridable)"""
     param = _OCTOPUS_PROPERTIES.copy()  # Always copy parameter for safety
@@ -94,7 +94,7 @@ def build_octopus(
     direction = np.array([0.0, 0.0, 1.0])
     normal = np.array([0.0, 1.0, 0.0])
     binormal = np.cross(direction, normal)
-    base_area = np.pi * rigid_rod_radius ** 2
+    base_area = np.pi * rigid_rod_radius**2
     density = param["head_density"]
 
     rigid_rod = Cylinder(
@@ -135,11 +135,18 @@ def build_octopus(
         simulator.add_forcing_to(shearable_rods[arm_i]).using(
             GravityForces, acc_gravity=gravitational_acc
         )
-    """
-    simulator.add_forcing_to(rigid_rod).using(
-                GravityForces, acc_gravity=gravitational_acc
-            )
-    """
+    # simulator.add_forcing_to(rigid_rod).using(
+    #             GravityForces, acc_gravity=gravitational_acc
+    #         )
+
+    """ Add damping """
+    damping_constant = 1e-2
+    for arm_i in range(n_arm):
+        simulator.dampen(arm_i).using(
+            AnalyticalLinearDamper,
+            damping_constant=damping_constant,
+            time_step=time_step,
+        )
 
     """ Add drag force """
     # dl = L0 / n_elem
@@ -210,6 +217,7 @@ def build_octopus(
 def build_arm(
     simulator,
     n_elem: int = 11,
+    time_step: float = 7e-5,
     override_params: Optional[dict] = None,
     attach_head: bool = None,  # TODO: To be implemented
     attach_weight: Optional[bool] = None,  # TODO: To be implemented
@@ -269,6 +277,13 @@ def build_arm(
         slip_velocity_tol=slip_velocity_tol,
         static_mu_array=static_mu_array,
         kinetic_mu_array=kinetic_mu_array,
+    )
+
+    damping_constant = 1e-2
+    simulator.dampen(rod).using(
+        AnalyticalLinearDamper,
+        damping_constant=damping_constant,
+        time_step=time_step,
     )
 
     return rod

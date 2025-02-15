@@ -1,9 +1,7 @@
 from typing import Optional
 
-import gym
-from gym import core
-from gym import error, spaces, utils
-from gym.utils import seeding
+from gymnasium import spaces, Env
+from gymnasium.utils import seeding
 
 from collections import defaultdict
 import time
@@ -12,7 +10,7 @@ import copy
 import numpy as np
 from scipy.interpolate import interp1d
 
-from elastica import *
+import elastica as el
 from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
 
@@ -21,7 +19,6 @@ from gym_softrobot.config import RendererType
 from gym_softrobot.envs.octopus.build import build_arm
 from gym_softrobot.utils.custom_elastica.callback_func import (
     RodCallBack,
-    RigidCylinderCallBack,
 )
 from gym_softrobot.utils.linalg import do_normalization
 from gym_softrobot.utils.render.post_processing import plot_video
@@ -31,11 +28,13 @@ from gym_softrobot.utils.render.base_renderer import (
 )
 
 
-class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
+class BaseSimulator(
+    el.BaseSystemCollection, el.Constraints, el.Connections, el.Forcing, el.CallBacks
+):
     pass
 
 
-class ArmSingleEnv(core.Env):
+class ArmSingleEnv(Env):
     """
     Description:
     Source:
@@ -60,7 +59,6 @@ class ArmSingleEnv(core.Env):
         config_generate_video=False,
         policy_mode="centralized",
     ):
-
         # Integrator type
 
         self.final_time = final_time
@@ -125,7 +123,7 @@ class ArmSingleEnv(core.Env):
         {self.total_steps=}
         {self.step_skip=}
         simulation time per action: {1.0/self.step_skip=}
-        max number of action per episode: {self.total_steps/self.step_skip}
+        max number of action per episode: {self.total_steps / self.step_skip}
 
         {self.n_elems=}
         {self.action_space=}
@@ -159,7 +157,7 @@ class ArmSingleEnv(core.Env):
             )
 
         """ Finalize the simulator and create time stepper """
-        self.StatefulStepper = PositionVerlet()
+        self.StatefulStepper = el.PositionVerlet()
         self.simulator.finalize()
         self.do_step, self.stages_and_updates = extend_stepper_interface(
             self.StatefulStepper, self.simulator
@@ -264,7 +262,8 @@ class ArmSingleEnv(core.Env):
         # print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
 
         """ Done is a boolean to reset the environment before episode is completed """
-        done = False
+        terminated = False
+        truncated = False
         self.survive_reward = 0.0
         self.forward_reward = 0.0
         self.control_panelty = (
@@ -285,7 +284,8 @@ class ArmSingleEnv(core.Env):
 
         if invalid_values_condition:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
-            done = True
+            terminated = True
+            truncated = True
             self.survive_reward = -1.0  # 50.0
         else:
             self.cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
@@ -298,13 +298,13 @@ class ArmSingleEnv(core.Env):
             """ Goal """
             if dist_to_target < 0.1:
                 self.survive_reward = 5.0
-                done = True
+                terminated = True
 
         """ Time limit """
         timelimit = False
         if self.time > self.final_time:
             timelimit = True
-            done = True
+            terminated = True
 
         reward = self.forward_reward - self.control_panelty + self.survive_reward
         # reward *= 10 # Reward scaling
@@ -327,7 +327,7 @@ class ArmSingleEnv(core.Env):
 
         self.counter += 1
 
-        return states, reward, done, info
+        return states, reward, terminated, truncated, info
 
     def save_data(self, filename_video, fps):
         if self.config_generate_video:
@@ -351,12 +351,12 @@ class ArmSingleEnv(core.Env):
                 from gym_softrobot.utils.render.matplotlib_renderer import Session
             else:
                 raise NotImplementedError("Rendering module is not imported properly")
-            assert issubclass(
-                Session, BaseRenderer
-            ), "Rendering module is not properly subclassed"
-            assert issubclass(
-                Session, BaseElasticaRendererSession
-            ), "Rendering module is not properly subclassed"
+            assert issubclass(Session, BaseRenderer), (
+                "Rendering module is not properly subclassed"
+            )
+            assert issubclass(Session, BaseElasticaRendererSession), (
+                "Rendering module is not properly subclassed"
+            )
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
             self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
             self.renderer.add_rods(

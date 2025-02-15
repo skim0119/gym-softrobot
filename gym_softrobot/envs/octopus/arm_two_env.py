@@ -1,13 +1,9 @@
 from typing import Optional, Any, Union, Dict
 
-import gym
-from gym import core
-from gym import error, spaces, utils
-from gym.utils import seeding
+from gymnasium import spaces, Env
+from gymnasium.utils import seeding
 
-from collections import defaultdict, OrderedDict
 import time
-import copy
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -20,7 +16,10 @@ from gym_softrobot.envs.octopus.build_muscle_octopus import build_two_arms
 
 from gym_softrobot.config import RendererType
 from gym_softrobot import RENDERER_CONFIG
-from gym_softrobot.utils.render.base_renderer import BaseRenderer, BaseElasticaRendererSession
+from gym_softrobot.utils.render.base_renderer import (
+    BaseRenderer,
+    BaseElasticaRendererSession,
+)
 from gym_softrobot.envs.octopus.controllable_constraint import ControllableFixConstraint
 
 
@@ -28,7 +27,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
     pass
 
 
-class ArmTwoEnv(core.Env):
+class ArmTwoEnv(Env):
     """
     Description:
         Decentralized
@@ -41,15 +40,15 @@ class ArmTwoEnv(core.Env):
     Solved Requirements:
     """
 
-    metadata = {'render.modes': ['rgb_array']}
+    metadata = {"render.modes": ["rgb_array"]}
 
-    def __init__(self,
-                 final_time=5.0,
-                 time_step=5.0e-5,
-                 recording_fps=25,
-                 n_elems=20,
-                 ):
-
+    def __init__(
+        self,
+        final_time=5.0,
+        time_step=5.0e-5,
+        recording_fps=25,
+        n_elems=20,
+    ):
         # Integrator type
         self.final_time = final_time
         self.time_step = time_step
@@ -62,24 +61,34 @@ class ArmTwoEnv(core.Env):
         self.n_elems = n_elems
         self.n_seg = n_elems - 1
         self.n_sucker = 3
-        self.sucker_location = [self.n_elems // (self.n_sucker * 2) * (2 * i + 1) for i in range(self.n_sucker)]
+        self.sucker_location = [
+            self.n_elems // (self.n_sucker * 2) * (2 * i + 1)
+            for i in range(self.n_sucker)
+        ]
         self.control_location = [0] + self.sucker_location + [self.n_elems - 1]
 
         # Spaces
         n_action = 9
         self.n_action = n_action
         # TODO: for non-HER, use decentral training shapes
-        self.action_space = spaces.Box(0.0, 1.0, shape=(n_arm * n_action,), dtype=np.float32)
+        self.action_space = spaces.Box(
+            0.0, 1.0, shape=(n_arm * n_action,), dtype=np.float32
+        )
 
         shared_space = 3
         self.grid_size = 1
-        self._observation_size = (n_arm * (self.n_seg * 2 + n_action + n_arm + shared_space),)
-        self.observation_space = spaces.Box(-np.inf, np.inf, shape=self._observation_size, dtype=np.float32)
+        self._observation_size = (
+            n_arm * (self.n_seg * 2 + n_action + n_arm + shared_space),
+        )
+        self.observation_space = spaces.Box(
+            -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
+        )
 
         self.metadata = {}
         self.reward_range = 100.0
-        self._prev_action = np.zeros(list(self.action_space.shape),
-                                     dtype=self.action_space.dtype)
+        self._prev_action = np.zeros(
+            list(self.action_space.shape), dtype=self.action_space.dtype
+        )
         self._prev_kappa = np.zeros((n_arm, self.n_elems - 1), dtype=np.float32)
 
         # Configurations
@@ -100,11 +109,11 @@ class ArmTwoEnv(core.Env):
         return [seed]
 
     def reset(
-            self,
-            *,
-            seed: Optional[int] = None,
-            return_info: bool = False,
-            options: Optional[dict] = None,
+        self,
+        *,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
         self.simulator = BaseSimulator()
@@ -119,10 +128,14 @@ class ArmTwoEnv(core.Env):
         for i in range(self.n_arm):
             each_arm_constraints = []
             for j in range(self.n_sucker):
-                constraint_id = self.simulator.constrain(self.shearable_rods[i]).using(
-                    ControllableFixConstraint,
-                    index=self.sucker_location[j],
-                ).id()
+                constraint_id = (
+                    self.simulator.constrain(self.shearable_rods[i])
+                    .using(
+                        ControllableFixConstraint,
+                        index=self.sucker_location[j],
+                    )
+                    .id()
+                )
                 each_arm_constraints.append(constraint_id)
             constraint_ids.append(each_arm_constraints)
 
@@ -133,7 +146,9 @@ class ArmTwoEnv(core.Env):
         for each_arm_constraints in constraint_ids:
             each_arm_sucker = []
             for constraint_id in each_arm_constraints:
-                controllable_constraint = dict(self.simulator._constraints)[constraint_id]
+                controllable_constraint = dict(self.simulator._constraints)[
+                    constraint_id
+                ]
                 controller = controllable_constraint.get_controller
                 controller.turn_on()
                 each_arm_sucker.append(controller)
@@ -169,23 +184,38 @@ class ArmTwoEnv(core.Env):
     def get_state(self):
         # Build state
         kappa_state = np.vstack([rod.kappa[0] for rod in self.shearable_rods])
-        pos_state1 = np.vstack([rod.position_collection[0] for rod in self.shearable_rods])  # x
-        pos_state2 = np.vstack([rod.position_collection[1] for rod in self.shearable_rods])  # y
-        vel_state1 = np.vstack([rod.velocity_collection[0] for rod in self.shearable_rods])  # x
-        vel_state2 = np.vstack([rod.velocity_collection[1] for rod in self.shearable_rods])  # y
+        pos_state1 = np.vstack(
+            [rod.position_collection[0] for rod in self.shearable_rods]
+        )  # x
+        pos_state2 = np.vstack(
+            [rod.position_collection[1] for rod in self.shearable_rods]
+        )  # y
+        vel_state1 = np.vstack(
+            [rod.velocity_collection[0] for rod in self.shearable_rods]
+        )  # x
+        vel_state2 = np.vstack(
+            [rod.velocity_collection[1] for rod in self.shearable_rods]
+        )  # y
         previous_action = self._prev_action.reshape([self.n_arm, self.n_action])
 
-        shared_state = np.concatenate([
-            # self._target,  # 2
-            # self.rigid_rod.position_collection[:, 0],  # 3
-            self.rigid_rod.velocity_collection[:, 0],  # 3
-            # self.rigid_rod.director_collection[:, :, 0].ravel(),  # 9: orientation
-        ], dtype=np.float32)
-        observation_state = np.hstack([
-            kappa_state, self._prev_kappa,  # pos_state1, pos_state2, vel_state1, vel_state2,
-            previous_action, np.eye(self.n_arm),
-            np.repeat(shared_state[None, ...], self.n_arm, axis=0)
-        ]).astype(np.float32)
+        shared_state = np.concatenate(
+            [
+                # self._target,  # 2
+                # self.rigid_rod.position_collection[:, 0],  # 3
+                self.rigid_rod.velocity_collection[:, 0],  # 3
+                # self.rigid_rod.director_collection[:, :, 0].ravel(),  # 9: orientation
+            ],
+            dtype=np.float32,
+        )
+        observation_state = np.hstack(
+            [
+                kappa_state,
+                self._prev_kappa,  # pos_state1, pos_state2, vel_state1, vel_state2,
+                previous_action,
+                np.eye(self.n_arm),
+                np.repeat(shared_state[None, ...], self.n_arm, axis=0),
+            ]
+        ).astype(np.float32)
         self._prev_kappa[...] = kappa_state
         return np.nan_to_num(observation_state.ravel())
 
@@ -208,12 +238,15 @@ class ArmTwoEnv(core.Env):
             LM_activation = LM_activation - 0.5
             LM1_activation = np.max((LM_activation, [0.0] * 3), axis=0)
             LM2_activation = abs(np.min((LM_activation, [0.0] * 3), axis=0))
-            apply_LM1 = interp1d(self.control_location, [0] + list(LM1_activation) + [0], kind='cubic')(
-                range(self.n_elems - 1))
-            apply_LM2 = interp1d(self.control_location, [0] + list(LM2_activation) + [0], kind='cubic')(
-                range(self.n_elems - 1))
-            apply_TM = interp1d(self.control_location, [0] + list(TM_activation) + [0], kind='cubic')(
-                range(self.n_elems - 1))
+            apply_LM1 = interp1d(
+                self.control_location, [0] + list(LM1_activation) + [0], kind="cubic"
+            )(range(self.n_elems - 1))
+            apply_LM2 = interp1d(
+                self.control_location, [0] + list(LM2_activation) + [0], kind="cubic"
+            )(range(self.n_elems - 1))
+            apply_TM = interp1d(
+                self.control_location, [0] + list(TM_activation) + [0], kind="cubic"
+            )(range(self.n_elems - 1))
 
             self.muscle_activations[i][0].set_activation(apply_LM1)
             self.muscle_activations[i][1].set_activation(apply_LM2)
@@ -223,7 +256,7 @@ class ArmTwoEnv(core.Env):
         self._prev_action = action
 
     def step(self, action):
-        """ Set intrinsic strains (set actions) """
+        """Set intrinsic strains (set actions)"""
         self.set_action(action)
 
         """ Post-simulation """
@@ -242,7 +275,7 @@ class ArmTwoEnv(core.Env):
             # Debug
             """
             invalid_values_condition = _isnan_check(np.concatenate(
-                [rod.position_collection for rod in self.shearable_rods] + 
+                [rod.position_collection for rod in self.shearable_rods] +
                 [rod.velocity_collection for rod in self.shearable_rods]
                 ))
             if invalid_values_condition == True:
@@ -256,26 +289,36 @@ class ArmTwoEnv(core.Env):
         states = self.get_state()
 
         """ Done is a boolean to reset the environment before episode is completed """
-        done = False
+        terminated = False
+        truncated = False
         survive_reward = 0.0
         forward_reward = 0.0
         control_cost = 0.0  # 0.5 * np.square(action.ravel()).mean()
-        bending_energy = 0.0  # sum([rod.compute_bending_energy() for rod in self.shearable_rods])
-        shear_energy = 0.0  # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
+        bending_energy = (
+            0.0  # sum([rod.compute_bending_energy() for rod in self.shearable_rods])
+        )
+        shear_energy = (
+            0.0  # sum([rod.compute_shear_energy() for rod in self.shearable_rods])
+        )
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
-        invalid_values_condition = _isnan_check(np.concatenate(
-            [rod.position_collection for rod in self.shearable_rods] +
-            [rod.velocity_collection for rod in self.shearable_rods]
-        ))
+        invalid_values_condition = _isnan_check(
+            np.concatenate(
+                [rod.position_collection for rod in self.shearable_rods]
+                + [rod.velocity_collection for rod in self.shearable_rods]
+            )
+        )
 
         if invalid_values_condition == True:
             # print(f" Nan detected in, exiting simulation now. {self.time=}")
-            done = True
+            terminated = True
+            truncated = True
             survive_reward = -5.0
         else:
             xposafter = self.rigid_rod.position_collection[0:2, 0]
-            forward_reward = (np.linalg.norm(self._target - xposbefore) -
-                              np.linalg.norm(self._target - xposafter)) * 1e2
+            forward_reward = (
+                np.linalg.norm(self._target - xposbefore)
+                - np.linalg.norm(self._target - xposafter)
+            ) * 1e2
 
             # forward_reward = self.compute_reward(
             #        self.rigid_rod.position_collection[:2,0],
@@ -283,13 +326,13 @@ class ArmTwoEnv(core.Env):
             #        None)
             if np.linalg.norm(self._target - xposafter) < 0.2:
                 survive_reward = 5
-                done = True
+                terminated = True
 
         # print(self.rigid_rods.position_collection)
         # print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
-        if not done and self.time > self.final_time:
+        if not terminated and self.time > self.final_time:
             forward_reward -= np.linalg.norm(self._target - xposafter)
-            done = True
+            terminated = True
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
         # reward *= 10 # Reward scaling
@@ -303,32 +346,35 @@ class ArmTwoEnv(core.Env):
         # systems = [self.shearable_rod]
 
         # Info
-        info = {'time': self.time, 'rods': self.shearable_rods, 'body': self.rigid_rod}
+        info = {"time": self.time, "rods": self.shearable_rods, "body": self.rigid_rod}
         if np.isnan(reward):
+            # TODO: Not sure why this happens
             reward = -5
-            done = True
+            terminated = True
+            truncated = True
         reward = min(self.reward_range, reward)
 
         self.counter += 1
 
-        return states, reward, done, info
+        return states, reward, terminated, truncated, info
 
     def compute_reward(
-            self,
-            achieved_goal: Union[int, np.ndarray],
-            desired_goal: Union[int, np.ndarray],
-            _info: Optional[Dict[str, Any]] = None,
+        self,
+        achieved_goal: Union[int, np.ndarray],
+        desired_goal: Union[int, np.ndarray],
+        _info: Optional[Dict[str, Any]] = None,
     ) -> np.float32:
         eps = 0.01
         dist = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
         return -(dist > eps).astype(np.float32)
 
-    def render(self, mode='human', close=False) -> Optional[np.ndarray]:
+    def render(self, mode="human", close=False) -> Optional[np.ndarray]:
         maxwidth = 800
-        aspect_ratio = (3 / 4)
+        aspect_ratio = 3 / 4
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
+
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
 
         if self.renderer is None:
@@ -339,10 +385,12 @@ class ArmTwoEnv(core.Env):
                 from gym_softrobot.utils.render.matplotlib_renderer import Session
             else:
                 raise NotImplementedError("Rendering module is not imported properly")
-            assert issubclass(Session, BaseRenderer), \
+            assert issubclass(Session, BaseRenderer), (
                 "Rendering module is not properly subclassed"
-            assert issubclass(Session, BaseElasticaRendererSession), \
+            )
+            assert issubclass(Session, BaseElasticaRendererSession), (
                 "Rendering module is not properly subclassed"
+            )
             self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
             self.renderer.add_rods(self.shearable_rods)
             self.renderer.add_rigid_body(self.rigid_rod)
@@ -350,22 +398,23 @@ class ArmTwoEnv(core.Env):
 
         # POVRAY
         if RENDERER_CONFIG == RendererType.POVRAY:
-            state_image = self.renderer.render(maxwidth, int(maxwidth * aspect_ratio * 0.7))
+            state_image = self.renderer.render(
+                maxwidth, int(maxwidth * aspect_ratio * 0.7)
+            )
             state_image_side = self.renderer.render(
                 maxwidth // 2,
                 int(maxwidth * aspect_ratio * 0.3),
-                camera_param=('location', [0.0, 0.0, -0.5], 'look_at', [0.0, 0, 0])
+                camera_param=("location", [0.0, 0.0, -0.5], "look_at", [0.0, 0, 0]),
             )
             state_image_top = self.renderer.render(
                 maxwidth // 2,
                 int(maxwidth * aspect_ratio * 0.3),
-                camera_param=('location', [0.0, 0.3, 0.0], 'look_at', [0.0, 0, 0])
+                camera_param=("location", [0.0, 0.3, 0.0], "look_at", [0.0, 0, 0]),
             )
 
-            state_image = np.vstack([
-                state_image,
-                np.hstack([state_image_side, state_image_top])
-            ])
+            state_image = np.vstack(
+                [state_image, np.hstack([state_image_side, state_image_top])]
+            )
         elif RENDERER_CONFIG == RendererType.MATPLOTLIB:
             state_image = self.renderer.render()
         else:

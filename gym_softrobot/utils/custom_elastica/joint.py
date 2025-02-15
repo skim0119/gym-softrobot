@@ -1,13 +1,22 @@
 from elastica import *
 from elastica.joint import FreeJoint
 
+import numpy as np
 from numba import njit
+
 
 @njit(cache=True)
 def z_rotation(vector, theta):
     theta = theta / 180.0 * np.pi
-    R = np.array([[np.cos(theta), -np.sin(theta),0.0],[np.sin(theta), np.cos(theta),0],[0.0,0.0,1.0]])
-    return np.dot(R,vector.T).T
+    R = np.array(
+        [
+            [np.cos(theta), -np.sin(theta), 0.0],
+            [np.sin(theta), np.cos(theta), 0],
+            [0.0, 0.0, 1.0],
+        ]
+    )
+    return np.dot(R, vector.T).T
+
 
 class FixedJoint2Rigid(FreeJoint):
     """
@@ -33,43 +42,55 @@ class FixedJoint2Rigid(FreeJoint):
         # additional in-plane constraint through restoring torque
         # stiffness of the restoring constraint -- tuned empirically
         self.kt = kt
-        self.angle=angle
-        self.radius=radius
+        self.angle = angle
+        self.radius = radius
 
     # Apply force is same as free joint
     def apply_forces(self, rod_one, index_one, rod_two, index_two):
         self.rigid_rod_pos = rod_one.position_collection[..., index_one].copy()
         self.rigid_rod_pos[2] = 0.0
         self.rigid_rod_connection_dir, contact_force = self._apply_forces(
-                index_one, index_two,
-                self.rigid_rod_pos,
-                rod_two.position_collection,
-                rod_one.velocity_collection,
-                rod_two.velocity_collection,
-                rod_one.director_collection[1,...].T,
-                rod_one.external_forces,
-                rod_two.external_forces,
-                self.k, self.nu, self.kt, self.angle, self.radius)
+            index_one,
+            index_two,
+            self.rigid_rod_pos,
+            rod_two.position_collection,
+            rod_one.velocity_collection,
+            rod_two.velocity_collection,
+            rod_one.director_collection[1, ...].T,
+            rod_one.external_forces,
+            rod_two.external_forces,
+            self.k,
+            self.nu,
+            self.kt,
+            self.angle,
+            self.radius,
+        )
 
     @staticmethod
     @njit(cache=True)
-    def _apply_forces(index_one, index_two, rigid_rod_pos,
-            rod_two_position,
-            rod_one_velocity,
-            rod_two_velocity,
-            rod_one_binormal,
-            rod_one_external_forces,
-            rod_two_external_forces,
-            k, nu, kt, angle, radius):
+    def _apply_forces(
+        index_one,
+        index_two,
+        rigid_rod_pos,
+        rod_two_position,
+        rod_one_velocity,
+        rod_two_velocity,
+        rod_one_binormal,
+        rod_one_external_forces,
+        rod_two_external_forces,
+        k,
+        nu,
+        kt,
+        angle,
+        radius,
+    ):
         # return super().apply_forces(rod_one, index_one, rod_two, index_two)
         rigid_rod_connection_dir = -z_rotation(rod_one_binormal, angle)
-        #rigid_rod_connection_dir=-z_rotation(rod_one.binormal.T,angle)
+        # rigid_rod_connection_dir=-z_rotation(rod_one.binormal.T,angle)
 
-        rigid_rod_connection_pt=rigid_rod_connection_dir*radius
-        rigid_rod_pos+=rigid_rod_connection_pt[0]
-        end_distance_vector = (
-                rod_two_position[..., index_two] - rigid_rod_pos
-        )
+        rigid_rod_connection_pt = rigid_rod_connection_dir * radius
+        rigid_rod_pos += rigid_rod_connection_pt[0]
+        end_distance_vector = rod_two_position[..., index_two] - rigid_rod_pos
         # Calculate norm of end_distance_vector
         # this implementation timed: 2.48 µs ± 126 ns per loop (mean ± std. dev. of 7 runs, 100000 loops each)
         end_distance = np.sqrt(np.dot(end_distance_vector, end_distance_vector))
@@ -85,12 +106,11 @@ class FixedJoint2Rigid(FreeJoint):
         elastic_force = k * end_distance_vector
 
         relative_velocity = (
-                rod_two_velocity[..., index_two]
-                - rod_one_velocity[..., index_one]
+            rod_two_velocity[..., index_two] - rod_one_velocity[..., index_one]
         )
         normal_relative_velocity = (
-                np.dot(relative_velocity, normalized_end_distance_vector)
-                * normalized_end_distance_vector
+            np.dot(relative_velocity, normalized_end_distance_vector)
+            * normalized_end_distance_vector
         )
         damping_force = -nu * normal_relative_velocity
 
@@ -102,52 +122,63 @@ class FixedJoint2Rigid(FreeJoint):
         return rigid_rod_connection_dir, contact_force
 
     def apply_torques(self, rod_one, index_one, rod_two, index_two):
-        #self._apply_hard_director_boundary(
+        # self._apply_hard_director_boundary(
         #        index_one,
         #        index_two,
         #        rod_one.director_collection,
         #        rod_two.director_collection,
         #    )
         self._apply_torques(
-                index_one, index_two,
-                self.rigid_rod_pos,
-                self.rigid_rod_connection_dir,
-                rod_two.position_collection,
-                rod_one.director_collection,
-                rod_two.director_collection,
-                rod_two.rest_lengths,
-                rod_one.external_torques,
-                rod_two.external_torques,
-                self.k, self.nu, self.kt, self.angle, self.radius)
+            index_one,
+            index_two,
+            self.rigid_rod_pos,
+            self.rigid_rod_connection_dir,
+            rod_two.position_collection,
+            rod_one.director_collection,
+            rod_two.director_collection,
+            rod_two.rest_lengths,
+            rod_one.external_torques,
+            rod_two.external_torques,
+            self.k,
+            self.nu,
+            self.kt,
+            self.angle,
+            self.radius,
+        )
 
     @staticmethod
     @njit(cache=True)
     def _apply_hard_director_boundary(
-            index_one,
-            index_two,
-            rod_one_director_collection,
-            rod_two_director_collection,
-        ):
+        index_one,
+        index_two,
+        rod_one_director_collection,
+        rod_two_director_collection,
+    ):
         pass
 
     @staticmethod
     @njit(cache=True)
     def _apply_torques(
-            index_one, index_two,
-            rigid_rod_pos,
-            rigid_rod_connection_dir,
-            rod_two_position,
-            rod_one_director_collection,
-            rod_two_director_collection,
-            rod_two_rest_lengths,
-            rod_one_external_torques,
-            rod_two_external_torques,
-            k, nu, kt, angle, radius):
+        index_one,
+        index_two,
+        rigid_rod_pos,
+        rigid_rod_connection_dir,
+        rod_two_position,
+        rod_one_director_collection,
+        rod_two_director_collection,
+        rod_two_rest_lengths,
+        rod_one_external_torques,
+        rod_two_external_torques,
+        k,
+        nu,
+        kt,
+        angle,
+        radius,
+    ):
         # current direction of the first element of link two
         # also NOTE: - rod two is fixed at first element
         link_direction = (
-            rod_two_position[..., index_two + 1]
-            - rod_two_position[..., index_two]
+            rod_two_position[..., index_two + 1] - rod_two_position[..., index_two]
         )
 
         # To constrain the orientation of link two, the second node of link two should align with
@@ -161,8 +192,7 @@ class FixedJoint2Rigid(FreeJoint):
         # )  # dl of rod 2 can be different than rod 1 so use rest length of rod 2
 
         tgt_destination = (
-                rigid_rod_pos
-                + rod_two_rest_lengths[index_two] * rigid_rod_connection_dir
+            rigid_rod_pos + rod_two_rest_lengths[index_two] * rigid_rod_connection_dir
         )
 
         curr_destination = rod_two_position[
@@ -178,11 +208,15 @@ class FixedJoint2Rigid(FreeJoint):
         # The opposite torque will be applied on link one
         for i in range(3):
             for j in range(3):
-                rod_one_external_torques[i, index_one] -= rod_one_director_collection[i,j,index_one] * torque[j]
-                rod_two_external_torques[i, index_two] += rod_two_director_collection[i,j,index_two] * torque[j]
-        #rod_one_external_torques[..., index_one] -= (
+                rod_one_external_torques[i, index_one] -= (
+                    rod_one_director_collection[i, j, index_one] * torque[j]
+                )
+                rod_two_external_torques[i, index_two] += (
+                    rod_two_director_collection[i, j, index_two] * torque[j]
+                )
+        # rod_one_external_torques[..., index_one] -= (
         #    rod_one_director_collection[..., index_one] @ torque
-        #)
-        #rod_two_external_torques[..., index_two] += (
+        # )
+        # rod_two_external_torques[..., index_two] += (
         #    rod_two_director_collection[..., index_two] @ torque
-        #)
+        # )

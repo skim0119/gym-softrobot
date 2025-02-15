@@ -7,26 +7,16 @@ from typing import Optional
 from collections import defaultdict
 from functools import partial
 
-from tqdm import tqdm
 
-import gym
-from gym import error, spaces, utils
-from gym.utils import seeding
+from gymnasium import spaces
+from gymnasium.utils import seeding
 
 from elastica import *
-from elastica.utils import _bspline
 
 import numpy as np
 
-from gym_softrobot.utils.render.continuum_snake_postprocessing import (
-    plot_snake_velocity,
-    plot_video,
-    plot_curvature,
-)
-from gym_softrobot.utils.render.post_processing import plot_video
 
 def compute_projected_velocity(plot_params: dict, period):
-
     time_per_period = np.array(plot_params["time"]) / period
     avg_velocity = np.array(plot_params["avg_velocity"])
     center_of_mass = np.array(plot_params["center_of_mass"])
@@ -42,8 +32,8 @@ def compute_projected_velocity(plot_params: dict, period):
     # Number of steps in one period.
     period_step = int(1.0 / (time_per_period[-1] - time_per_period[-2]))
     number_of_period = int(time_per_period[-1])
-    if number_of_period-2 <= 0:
-        return (0,0,0,0)
+    if number_of_period - 2 <= 0:
+        return (0, 0, 0, 0)
 
     # Center of mass position averaged in one period
     center_of_mass_averaged_over_one_period = np.zeros((number_of_period - 2, 3))
@@ -103,12 +93,8 @@ class ContinuumSnakeCallBack(CallBackBaseClass):
         if current_step % self.every == 0:
             self.callback_params["time"].append(time)
             self.callback_params["step"].append(current_step)
-            self.callback_params["position"].append(
-                system.position_collection.copy()
-            )
-            self.callback_params["velocity"].append(
-                system.velocity_collection.copy()
-            )
+            self.callback_params["position"].append(system.position_collection.copy())
+            self.callback_params["velocity"].append(system.velocity_collection.copy())
             self.callback_params["avg_velocity"].append(
                 system.compute_velocity_center_of_mass()
             )
@@ -120,19 +106,25 @@ class ContinuumSnakeCallBack(CallBackBaseClass):
             return
 
 
-class ContinuumSnakeEnv(gym.Env):
-    metadata = {'render.modes': ['rgb_array', 'human']}
+class ContinuumSnakeEnv(Env):
+    metadata = {"render.modes": ["rgb_array", "human"]}
 
     def __init__(self):
         # Action space
-        action_space_low = -np.ones(7) * 1e-2; action_space_low[-1] = 0.5
-        action_space_high = np.ones(7) * 1e-2; action_space_high[-1] = 3.0
-        self.action_space = spaces.Box(action_space_low, action_space_high, dtype=np.float32)
+        action_space_low = -np.ones(7) * 1e-2
+        action_space_low[-1] = 0.5
+        action_space_high = np.ones(7) * 1e-2
+        action_space_high[-1] = 3.0
+        self.action_space = spaces.Box(
+            action_space_low, action_space_high, dtype=np.float32
+        )
 
         # State space
         self._n_elem = 50
-        observation_space = (((self._n_elem+1) * 3 * 2) + ((self._n_elem) * 9),)
-        self.observation_space = spaces.Box(-np.inf, np.inf, shape=observation_space, dtype=np.float32)
+        observation_space = (((self._n_elem + 1) * 3 * 2) + ((self._n_elem) * 9),)
+        self.observation_space = spaces.Box(
+            -np.inf, np.inf, shape=observation_space, dtype=np.float32
+        )
 
         self.metadata = {}
 
@@ -150,13 +142,13 @@ class ContinuumSnakeEnv(gym.Env):
     def reset(
         self,
         *,
-		seed: Optional[int] = None,
-		return_info: bool = False,
-		options: Optional[dict] = None,
+        seed: Optional[int] = None,
+        return_info: bool = False,
+        options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
         self.snake_sim, self.stepper, self.muscle_torque, self.data = self._build()
-        self.time= np.float64(0.0)
+        self.time = np.float64(0.0)
         if return_info:
             return self.get_state(), {}
         else:
@@ -197,19 +189,22 @@ class ContinuumSnakeEnv(gym.Env):
             self.time = self.stepper(time=self.time)
 
         # Compute the average forward velocity. These will be used for optimization.
-        [_, _, avg_forward, avg_lateral] = compute_projected_velocity(self.data, self.period)
+        [_, _, avg_forward, avg_lateral] = compute_projected_velocity(
+            self.data, self.period
+        )
 
-        done = False
+        terminated = False
+        truncated = False
         if self.time >= self.final_time:
-            done = True
+            terminated = True
+            truncated = True
 
         info = {}
 
-        return self.get_state(), avg_forward, done, info
+        return self.get_state(), avg_forward, terminated, truncated, info
 
-
-    def render(self, mode='human', close=False):
-        '''
+    def render(self, mode="human", close=False):
+        """
         filename_plot = "continuum_snake_velocity.png"
         plot_snake_velocity(self.data, self.period, filename_plot, 1)
         plot_curvature(self.data, self.shearable_rod.rest_lengths, self.period, 1)
@@ -223,34 +218,34 @@ class ContinuumSnakeEnv(gym.Env):
                 xlim=(0, 4),
                 ylim=(-1, 1),
             )
-        '''
+        """
         maxwidth = 800
-        aspect_ratio = (3/4)
+        aspect_ratio = 3 / 4
 
         if self.viewer is None:
             from gym_softrobot.utils.render import pyglet_rendering
             from gym_softrobot.utils.render.povray_renderer import Session
+
             self.viewer = pyglet_rendering.SimpleImageViewer(maxwidth=maxwidth)
-            self.renderer = Session(width=maxwidth, height=int(maxwidth*aspect_ratio))
+            self.renderer = Session(width=maxwidth, height=int(maxwidth * aspect_ratio))
             self.renderer.add_rod(self.shearable_rod)
 
         # Temporary rendering to add side-view
-        state_image = self.renderer.render(maxwidth, int(maxwidth*aspect_ratio*0.7))
+        state_image = self.renderer.render(maxwidth, int(maxwidth * aspect_ratio * 0.7))
         state_image_side = self.renderer.render(
-                maxwidth//2,
-                int(maxwidth*aspect_ratio*0.3),
-                camera_param=('location',[0.0, 0.0, -0.5],'look_at',[0.0,0,0])
-            )
+            maxwidth // 2,
+            int(maxwidth * aspect_ratio * 0.3),
+            camera_param=("location", [0.0, 0.0, -0.5], "look_at", [0.0, 0, 0]),
+        )
         state_image_top = self.renderer.render(
-                maxwidth//2,
-                int(maxwidth*aspect_ratio*0.3),
-                camera_param=('location',[0.0, 0.3, 0.0],'look_at',[0.0,0,0])
-            )
+            maxwidth // 2,
+            int(maxwidth * aspect_ratio * 0.3),
+            camera_param=("location", [0.0, 0.3, 0.0], "look_at", [0.0, 0, 0]),
+        )
 
-        state_image = np.vstack([
-            state_image,
-            np.hstack([state_image_side, state_image_top])
-        ])
+        state_image = np.vstack(
+            [state_image, np.hstack([state_image_side, state_image_top])]
+        )
 
         self.viewer.imshow(state_image)
 
@@ -259,7 +254,7 @@ class ContinuumSnakeEnv(gym.Env):
     def close(self):
         pass
 
-    def _build(self, include_callback:bool=False):
+    def _build(self, include_callback: bool = False):
         # Initialize the simulation class
         snake_sim = SnakeSimulator()
 
@@ -355,16 +350,14 @@ class ContinuumSnakeEnv(gym.Env):
         # Integrator
         timestepper = PositionVerlet()
         snake_sim.finalize()
-        #integrate(timestepper, snake_sim, final_time, total_steps)
-        do_step, stages_and_updates = extend_stepper_interface(
-            timestepper, snake_sim
-        )
+        # integrate(timestepper, snake_sim, final_time, total_steps)
+        do_step, stages_and_updates = extend_stepper_interface(timestepper, snake_sim)
         stepper = partial(
-                do_step,
-                dt=time_step,
-                TimeStepper=PositionVerlet(),
-                SystemCollection=snake_sim,
-                _steps_and_prefactors=stages_and_updates,
-            )
+            do_step,
+            dt=time_step,
+            TimeStepper=PositionVerlet(),
+            SystemCollection=snake_sim,
+            _steps_and_prefactors=stages_and_updates,
+        )
 
         return snake_sim, stepper, muscle_torque, data

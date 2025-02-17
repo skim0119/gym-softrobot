@@ -367,7 +367,7 @@ wheels = [
 
 [[package]]
 name = "gym-softrobot"
-version = "0.1.1"
+version = "0.2.1"
 source = { editable = "." }
 dependencies = [
     { name = "gymnasium" },
@@ -403,7 +403,7 @@ requires-dist = [
     { name = "gymnasium", specifier = ">=1.0.0" },
     { name = "matplotlib" },
     { name = "pyelastica", specifier = ">=0.3.2" },
-    { name = "pyglet" },
+    { name = "pyglet", specifier = "==1.5.31" },
     { name = "tqdm" },
     { name = "vapory" },
 ]
@@ -1031,11 +1031,11 @@ wheels = [
 
 [[package]]
 name = "pyglet"
-version = "2.1.2"
+version = "1.5.31"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/ea/4b/44b4dc01ffac9f8950d540c99159f83e2c398df2a600394feb6d2dbf7340/pyglet-2.1.2.tar.gz", hash = "sha256:6fc1fed55eb6dc80c87a7a45ac62c2a61be08cd31114b27abef8619959be7845", size = 6515611 }
+sdist = { url = "https://files.pythonhosted.org/packages/f7/c0/59130a7edbcc8f84e35870b00a712538ca05415ff02d17181277b8ef8f05/pyglet-1.5.31.zip", hash = "sha256:a5e422b4c27b0fc99e92103bf493109cca5c18143583b868b3b4631a98ae9417", size = 6900712 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/aa/edc16d04f6de8e833b4cba3068185fd2aad9e6f3a22fbc89afec36414f12/pyglet-2.1.2-py3-none-any.whl", hash = "sha256:2819fa9d66ead4b1682d1b7fa7170692d46277e1a6661b329bdba3e65288c036", size = 961981 },
+    { url = "https://files.pythonhosted.org/packages/e2/43/46aa0ab49f2f5145d201780c7595cf0c305fb4fb5d00d6639792a3d0e770/pyglet-1.5.31-py3-none-any.whl", hash = "sha256:f68413564bbec380e4815898fef0fb7a4a494dc3f8718bfbf28ce2a802634c88", size = 1143660 },
 ]
 
 [[package]]

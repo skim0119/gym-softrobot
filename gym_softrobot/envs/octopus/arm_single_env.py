@@ -29,7 +29,12 @@ from gym_softrobot.utils.render.base_renderer import (
 
 
 class BaseSimulator(
-    el.BaseSystemCollection, el.Constraints, el.Connections, el.Forcing, el.CallBacks
+    el.BaseSystemCollection,
+    el.Constraints,
+    el.Connections,
+    el.Forcing,
+    el.Damping,
+    el.CallBacks,
 ):
     pass
 

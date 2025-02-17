@@ -24,7 +24,7 @@ dependencies = [
     "pyelastica>=0.3.2",
     "matplotlib",
     "tqdm",
-    "pyglet",
+    "pyglet==1.5.31",
     "vapory"
 ]
 

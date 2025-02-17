@@ -5,6 +5,7 @@
 > They claimed the included functions will not be maintained stably.
 
 """
+
 import os
 import sys
 
@@ -13,10 +14,11 @@ if "Apple" in sys.version:
         os.environ["DYLD_FALLBACK_LIBRARY_PATH"] += ":/usr/lib"
         # (JDS 2016/04/15): avoid bug on Anaconda 2.3.0 / Yosemite
 
-from gym import error
+from gymnasium import error
 
 try:
     import pyglet
+    import pyglet.canvas
 except ImportError as e:
     raise ImportError(
         """

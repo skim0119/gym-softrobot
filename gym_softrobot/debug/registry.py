@@ -16,12 +16,12 @@ class bcolors:
 def main():
     spec_list = [
         spec
-        for spec in sorted(envs.registry.all(), key=lambda x: x.id)
-        if "gym_softrobot" in spec.entry_point
+        for spec in envs.registry.values()
+        if "gym_softrobot" in str(spec.entry_point)
     ]
     for spec in spec_list:
-        print(f"{bcolors.BOLD}{spec.entry_point}{bcolors.ENDC}")
-        print(spec)
+        print(f"{bcolors.BOLD}{spec.name}{bcolors.ENDC}")
+        # print(spec)
 
 
 if __name__ == "__main__":

@@ -48,7 +48,7 @@ dev = [
 ]
 docs = [
     "sphinx",
-    "sphinx-book-theme",
+    "celshast @ git+https://github.com/Farama-Foundation/Celshast.git@b07c6566b9af04ec8dc0e2e2b6277090b895fc81",
     "readthedocs-sphinx-search",
     "sphinx-autodoc-typehints",
     "myst-parser",

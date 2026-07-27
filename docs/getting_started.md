@@ -26,21 +26,14 @@ import gym_softrobot
 env = gym.make("SoftPendulum-v0")
 observation, info = env.reset(seed=42)
 
-for _ in range(100):
-    action = env.action_space.sample()
-    observation, reward, terminated, truncated, info = env.step(action)
-    if terminated or truncated:
-        break
+action = env.action_space.sample()
+observation, reward, terminated, truncated, info = env.step(action)
 
 env.close()
 ```
 
-Gymnasium distinguishes two ways an episode can end:
-
-- `terminated` indicates a terminal state defined by the task.
-- `truncated` indicates an external limit, such as the maximum simulation time.
-
-Always reset when either value is true.
+See [Environments](envs/index.md) for the available tasks and their control
+interfaces.
 
 ## Rendering
 

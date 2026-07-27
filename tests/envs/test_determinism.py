@@ -10,16 +10,14 @@ def test_env(spec):
     # threads. However, we probably already can't do multithreading
     # due to some environments.
     env1 = spec.make()
-    env1.seed(seed=0)
-    initial_observation1 = env1.reset()
+    initial_observation1, _ = env1.reset(seed=0)
     env1.action_space.seed(0)
     action_samples1 = [env1.action_space.sample() for i in range(3)]
     step_responses1 = [env1.step(action) for action in action_samples1]
     env1.close()
 
     env2 = spec.make()
-    env2.seed(seed=0)
-    initial_observation2 = env2.reset()
+    initial_observation2, _ = env2.reset(seed=0)
     env2.action_space.seed(0)
     action_samples2 = [env2.action_space.sample() for i in range(3)]
     step_responses2 = [env2.step(action) for action in action_samples2]
@@ -47,12 +45,13 @@ def test_env(spec):
 
     assert_equals(initial_observation1, initial_observation2)
 
-    for i, ((o1, r1, d1, i1), (o2, r2, d2, i2)) in enumerate(
+    for i, ((o1, r1, t1, x1, i1), (o2, r2, t2, x2, i2)) in enumerate(
         zip(step_responses1, step_responses2)
     ):
         assert_equals(o1, o2, f"[{i}] ")
         assert r1 == r2, f"[{i}] r1: {r1}, r2: {r2}"
-        assert d1 == d2, f"[{i}] d1: {d1}, d2: {d2}"
+        assert t1 == t2, f"[{i}] t1: {t1}, t2: {t2}"
+        assert x1 == x2, f"[{i}] x1: {x1}, x2: {x2}"
 
         # We use extra information to pass the references, which may not be equal.
         # Hence, the 'info' is not asserted equal.

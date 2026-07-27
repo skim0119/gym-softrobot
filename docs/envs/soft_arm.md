@@ -1,8 +1,14 @@
 # Soft-arm environment
 
-`SoftArmTracking-v0` controls a muscle-actuated arm whose tip follows a target.
-The observation describes the arm and target, while the action controls muscle
-activation profiles.
+## `SoftArmTracking-v0`
+
+- **Task:** follow a moving three-dimensional target with the arm tip.
+- **Action:** control points defining muscle-torque profiles along the arm.
+- **Observation:** target-relative tip position, sampled arm state, and previous
+  activation.
+- **Reward:** tracking accuracy, measured from the distance between the tip and
+  target.
+- **Episode end:** the configured horizon or an invalid simulation state.
 
 ```python
 import gymnasium as gym
@@ -15,5 +21,3 @@ observation, reward, terminated, truncated, info = env.step(
 )
 env.close()
 ```
-
-The historical `SoftArmTrackingEnv-v0` name is not registered.

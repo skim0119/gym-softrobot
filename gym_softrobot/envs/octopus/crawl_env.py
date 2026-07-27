@@ -5,10 +5,17 @@ from gymnasium import Env, spaces
 import time
 
 import numpy as np
-
-from elastica import *
-from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
+
+from elastica import (
+    BaseSystemCollection,
+    CallBacks,
+    Connections,
+    Constraints,
+    Damping,
+    Forcing,
+    PositionVerlet,
+)
 
 from gym_softrobot.envs.octopus.build_muscle_octopus import build_octopus_muscles
 
@@ -18,10 +25,15 @@ from gym_softrobot.utils.render.base_renderer import (
     BaseRenderer,
     BaseElasticaRendererSession,
 )
-from gym_softrobot.envs.octopus.controllable_constraint import ControllableFixConstraint
+from gym_softrobot.envs.octopus.controllable_constraint import (
+    ControllableFixConstraint,
+    SuckerController,
+)
 
 
-class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
+class BaseSimulator(
+    BaseSystemCollection, Constraints, Connections, Forcing, Damping, CallBacks
+):
     pass
 
 
@@ -131,33 +143,26 @@ class CrawlEnv(Env):
         )
 
         """ Controller Setup """
-        constraint_ids = []
+        self.sucker_controller = []
         for i in range(self.n_arm):
-            constraint_id = (
-                self.simulator.constrain(self.shearable_rods[i])
-                .using(
-                    ControllableFixConstraint,
-                    index=0,
-                )
-                .id()
+            controller = SuckerController(index=0)
+            constraint = self.simulator.constrain(self.shearable_rods[i])
+            constraint.using(
+                ControllableFixConstraint,
+                index=0,
+                controller=controller,
             )
-            constraint_ids.append(constraint_id)
+            self.sucker_controller.append(controller)
 
         self.simulator.finalize()
 
         """ Sucker Controller Hook """
-        self.sucker_controller = []
-        for constraint_id in constraint_ids:
-            controllable_constraint = dict(self.simulator._constraints)[constraint_id]
-            controller = controllable_constraint.get_controller
+        for controller in self.sucker_controller:
             controller.turn_on()
-            self.sucker_controller.append(controller)
 
         """ Finalize the simulator and create time stepper """
         self.StatefulStepper = PositionVerlet()
-        self.do_step, self.stages_and_updates = extend_stepper_interface(
-            self.StatefulStepper, self.simulator
-        )
+        self.do_step = self.StatefulStepper.step
 
         # """ Return
         #     (1) total time steps for the simulation step iterations
@@ -250,13 +255,7 @@ class CrawlEnv(Env):
         """ Run the simulation for one step """
         stime = time.perf_counter()
         for _ in range(self.step_skip):
-            self.time = self.do_step(
-                self.StatefulStepper,
-                self.stages_and_updates,
-                self.simulator,
-                self.time,
-                self.time_step,
-            )
+            self.time = self.do_step(self.simulator, self.time, self.time_step)
         etime = time.perf_counter()
         states = self.get_state()
 
@@ -306,7 +305,7 @@ class CrawlEnv(Env):
         # print(f'{reward=:.3f}, {forward_reward=:.3f}, {control_cost=:.3f}, {survive_reward=:.3f}, {bending_energy=:.3f}') #, {shear_energy=:.3f}')
 
         # Info
-        info = {"time": self.time, "rods": self.shearable_rods, "body": self.rigid_rod}
+        info = {"time": self.time}
         if np.isnan(reward):
             reward -= 5
             terminated = True

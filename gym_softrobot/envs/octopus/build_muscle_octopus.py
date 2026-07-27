@@ -11,9 +11,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from elastica import *
-from elastica.timestepper import extend_stepper_interface
-from elastica.experimental.interaction import AnisotropicFrictionalPlaneRigidBody
+from elastica import AnalyticalLinearDamper, CosseratRod, Cylinder
 
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
@@ -37,7 +35,7 @@ ARM_MATERIAL = {
     "density": 1000.0,
     "youngs_modulus": 1.5e4,
     "shear_modulus": 1.5e4 / (1.0 + 0.5),  # 0.5 Poisson Ratio
-    "nu": 0.20,
+    "damping_constant": 0.20,
     "nu_scale": 1e-2,
 }
 DEFAULT_SCALE_LENGTH = {
@@ -70,10 +68,8 @@ def build_arm(
     arm_material["base_radius"] = np.linspace(
         DEFAULT_SCALE_LENGTH["base_radius"], DEFAULT_SCALE_LENGTH["tip_radius"], n_elem
     )
-    arm_material["nu"] *= (
-        (arm_material["base_radius"] / DEFAULT_SCALE_LENGTH["base_radius"]) ** 2.0
-    ) * arm_material["nu_scale"]
-
+    arm_material.pop("damping_constant")
+    arm_material.pop("nu_scale")
     rod = CosseratRod.straight_rod(**arm_material)
     return rod
 
@@ -110,6 +106,12 @@ def build_octopus_muscles(simulator, n_elem: int = 40):
         rod = build_arm(n_elem, arm_pos, arm_dir, arm_normal)
         shearable_rods.append(rod)
         simulator.append(rod)
+        simulator.dampen(rod).using(
+            AnalyticalLinearDamper,
+            damping_constant=ARM_MATERIAL["damping_constant"]
+            * ARM_MATERIAL["nu_scale"],
+            time_step=7e-5,
+        )
 
     """ Add head """
     start = np.zeros((3,))
@@ -216,6 +218,12 @@ def build_two_arms(simulator, n_elem: int = 40):
         rod = build_arm(n_elem, arm_pos, arm_dir, arm_normal)
         shearable_rods.append(rod)
         simulator.append(rod)
+        simulator.dampen(rod).using(
+            AnalyticalLinearDamper,
+            damping_constant=ARM_MATERIAL["damping_constant"]
+            * ARM_MATERIAL["nu_scale"],
+            time_step=7e-5,
+        )
 
     """ Add head """
     start = np.zeros((3,))

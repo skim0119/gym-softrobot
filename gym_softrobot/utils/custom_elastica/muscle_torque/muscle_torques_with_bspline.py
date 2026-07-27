@@ -123,7 +123,7 @@ class MuscleTorquesWithVaryingBetaSplines(NoForces):
         # so that code wont crash.
         self.initial_call_flag = 0
 
-    def apply_torques(self, system, time: np.float = 0.0):
+    def apply_torques(self, system, time: float = 0.0):
 
         # Check if RL algorithm changed the points we fit the spline at this time step
         # if points_array changed create a new spline. Using this approach we don't create a

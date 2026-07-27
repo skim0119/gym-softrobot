@@ -1,38 +1,40 @@
 from dataclasses import dataclass
 import numpy as np
 from numba import njit
-from elastica._rotations import _rotate
 
-from elastica.boundary_conditions import FreeRod
+from elastica import FreeBC
 
 
-class ControllableFixConstraint(FreeRod):
-    @dataclass
-    class _Controller:
-        index: int
-        flag: bool = True
-        reduction_ratio: float = 1.0
+@dataclass
+class SuckerController:
+    index: int
+    flag: bool = True
+    reduction_ratio: float = 1.0
 
-        def __bool__(self):
-            return self.flag
+    def __bool__(self):
+        return self.flag
 
-        def turn_on(self):
-            self.flag = True
+    def turn_on(self):
+        self.flag = True
 
-        def turn_off(self):
-            self.flag = False
+    def turn_off(self):
+        self.flag = False
 
+
+class ControllableFixConstraint(FreeBC):
     """ Modelled after sucker on octopus arm"""
 
-    def __init__(self, index, reduction_ratio=1.0, **kwargs):
+    def __init__(self, index, reduction_ratio=1.0, controller=None, **kwargs):
         super().__init__(**kwargs)
-        self.controller = self._Controller(index=index, reduction_ratio=reduction_ratio)
+        self.controller = controller or SuckerController(
+            index=index, reduction_ratio=reduction_ratio
+        )
 
     @property
     def get_controller(self):
         return self.controller
 
-    def constrain_values(self, rod, time):
+    def constrain_values(self, system, time):
         return
         # if self.controller.flag:
         #    self.nb_compute_constrain_values(
@@ -41,11 +43,11 @@ class ControllableFixConstraint(FreeRod):
         #        self.controller.index
         #    )
 
-    def constrain_rates(self, rod, time):
+    def constrain_rates(self, system, time):
         if self.controller.flag:
             self.nb_compute_constrain_rates(
-                rod.velocity_collection,
-                rod.omega_collection,
+                system.velocity_collection,
+                system.omega_collection,
                 self.controller.index,
                 self.controller.reduction_ratio,
             )

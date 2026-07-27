@@ -6,9 +6,21 @@ import numpy as np
 from typing import Optional
 from gymnasium import Env, spaces
 
-from elastica._calculus import _isnan_check
-from elastica.timestepper import extend_stepper_interface
-from elastica import *
+from elastica import (
+    BaseSystemCollection,
+    CallBackBaseClass,
+    CallBacks,
+    Connections,
+    Constraints,
+    CosseratRod,
+    Damping,
+    Forcing,
+    GravityForces,
+    OneEndFixedBC,
+    PositionVerlet,
+    Sphere,
+    AnalyticalLinearDamper,
+)
 
 from gym_softrobot import RENDERER_CONFIG
 from gym_softrobot.config import RendererType
@@ -23,7 +35,9 @@ from gym_softrobot.utils.custom_elastica.muscle_torque import (
 
 
 # Set base simulator class
-class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
+class BaseSimulator(
+    BaseSystemCollection, Constraints, Connections, Forcing, Damping, CallBacks
+):
     pass
 
 
@@ -209,13 +223,7 @@ class SoftArmTrackingEnv(Env):
 
         for _ in range(int(self.num_steps_per_update)):
             # print('step:', i)
-            self.time_tracker = self.do_step(
-                self.StatefulStepper,
-                self.stages_and_updates,
-                self.simulator,
-                self.time_tracker,
-                self.sim_dt,
-            )
+            self.time_tracker = self.do_step(self.simulator, self.time_tracker, self.sim_dt)
             self.tick += 1
             self.sphere.position_collection[..., 0] = self.wsol[self.tick]
             self.sphere.velocity_collection[..., 0] = self.velocity_sphere[self.tick]
@@ -236,7 +244,7 @@ class SoftArmTrackingEnv(Env):
         truncated = False
 
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
-        invalid_values_condition = _isnan_check(state)
+        invalid_values_condition = np.isnan(state).any()
         if invalid_values_condition == True:
             reward = -100
             state = np.nan_to_num(self.get_state())
@@ -286,14 +294,18 @@ class SoftArmTrackingEnv(Env):
             youngs_modulus=self.youngs_modulus,
         )
 
-        self.shearable_rod.dissipation_constant_for_torques *= (
-            1e6  # accounts for the new g/mm/s units (compared to kg/m/s)
-        )
         self.simulator.append(
             self.shearable_rod
         )  # Now rod is ready for simulation, append rod to simulation
+        self.simulator.dampen(self.shearable_rod).using(
+            AnalyticalLinearDamper,
+            damping_constant=damping,
+            time_step=self.sim_dt,
+        )
         self.simulator.constrain(self.shearable_rod).using(
-            OneEndFixedRod, constrained_position_idx=(0,), constrained_director_idx=(0,)
+            OneEndFixedBC,
+            constrained_position_idx=(0,),
+            constrained_director_idx=(0,),
         )
         # self.simulator.add_forcing_to(self.shearable_rod).using(GravityForces, acc_gravity=np.array([0.0, 9.81*1e3, 0.0]))
 
@@ -465,10 +477,8 @@ class SoftArmTrackingEnv(Env):
         # any forcing, constrain or call back functions
         self.simulator.finalize()
 
-        # do_step, stages_and_updates will be used in step function
-        self.do_step, self.stages_and_updates = extend_stepper_interface(
-            self.StatefulStepper, self.simulator
-        )
+        # The bound step method is used by the environment step function.
+        self.do_step = self.StatefulStepper.step
         self.time_tracker = np.float64(0.0)
 
         state = self.get_state()

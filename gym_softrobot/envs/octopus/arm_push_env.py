@@ -6,18 +6,31 @@ from collections import defaultdict
 import time
 
 import numpy as np
-
-
-from elastica import *
-from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
+
+
+from elastica import (
+    AnalyticalLinearDamper,
+    BaseSystemCollection,
+    CallBacks,
+    Connections,
+    Constraints,
+    CosseratRod,
+    Cylinder,
+    Damping,
+    Forcing,
+    PositionVerlet,
+)
 
 from gym_softrobot import RENDERER_CONFIG
 from gym_softrobot.config import RendererType
 from gym_softrobot.utils.custom_elastica.callback_func import (
     RodCallBack,
 )
-from gym_softrobot.envs.octopus.controllable_constraint import ControllableFixConstraint
+from gym_softrobot.envs.octopus.controllable_constraint import (
+    ControllableFixConstraint,
+    SuckerController,
+)
 from gym_softrobot.envs.octopus.build import create_es_muscle_layers
 from gym_softrobot.utils.render.base_renderer import (
     BaseRenderer,
@@ -29,7 +42,9 @@ from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
 from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
 
 
-class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
+class BaseSimulator(
+    BaseSystemCollection, Constraints, Connections, Forcing, Damping, CallBacks
+):
     pass
 
 
@@ -131,9 +146,7 @@ class ArmPushEnv(Env):
 
         """ Create time stepper """
         self.StatefulStepper = PositionVerlet()
-        self.do_step, self.stages_and_updates = extend_stepper_interface(
-            self.StatefulStepper, self.simulator
-        )
+        self.do_step = self.StatefulStepper.step
 
         self.time = np.float64(0.0)
 
@@ -160,21 +173,24 @@ class ArmPushEnv(Env):
             base_length=L0,
             base_radius=radius_mean.copy(),
             density=700,
-            nu=damp_coefficient * ((radius_mean / radius_base) ** 2) * 1e2,
             youngs_modulus=1e4,
             shear_modulus=1e4 / 1.5,
             # poisson_ratio=0.5,
             # nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
         )
         self.simulator.append(shearable_rod)
+        self.simulator.dampen(shearable_rod).using(
+            AnalyticalLinearDamper,
+            damping_constant=damp_coefficient * 1e2,
+            time_step=self.time_step,
+        )
 
-        controller_id = (
-            self.simulator.constrain(shearable_rod)
-            .using(
-                ControllableFixConstraint,
-                index=0,
-            )
-            .id()
+        self.BC = SuckerController(index=0)
+        constraint = self.simulator.constrain(shearable_rod)
+        constraint.using(
+            ControllableFixConstraint,
+            index=0,
+            controller=self.BC,
         )
 
         """ Add muscle actuation """
@@ -203,8 +219,6 @@ class ArmPushEnv(Env):
 
         self.simulator.finalize()
 
-        controllable_constraint = dict(self.simulator._constraints)[controller_id]
-        self.BC = controllable_constraint.get_controller
         self.BC.turn_on()
 
         return shearable_rod
@@ -269,13 +283,7 @@ class ArmPushEnv(Env):
         """ Run the simulation for one step """
         stime = time.perf_counter()
         for _ in range(self.step_skip):
-            self.time = self.do_step(
-                self.StatefulStepper,
-                self.stages_and_updates,
-                self.simulator,
-                self.time,
-                self.time_step,
-            )
+            self.time = self.do_step(self.simulator, self.time, self.time_step)
         etime = time.perf_counter()
 
         """ Done is a boolean to reset the environment before episode is completed """
@@ -342,7 +350,6 @@ class ArmPushEnv(Env):
         # Info
         info = {
             "time": self.time,
-            "rod": self.shearable_rod,
             "TimeLimit.truncated": timelimit,
         }
 
@@ -529,13 +536,17 @@ class ArmPullWeightEnv(ArmPushEnv):
             base_length=L0,
             base_radius=radius_mean.copy(),
             density=density,
-            nu=damp_coefficient * ((radius_mean / radius_base) ** 2) * 5e2,
             youngs_modulus=1e4,
             shear_modulus=1e4 / 1.5,
             # poisson_ratio=0.5,
             # nu_for_torques=damp_coefficient * ((radius_mean / radius_base) ** 4),
         )
         self.simulator.append(shearable_rod)
+        self.simulator.dampen(shearable_rod).using(
+            AnalyticalLinearDamper,
+            damping_constant=damp_coefficient * 5e2,
+            time_step=self.time_step,
+        )
 
         """ Add head """
         rigid_rod_length = radius_base * 2
@@ -573,10 +584,13 @@ class ArmPullWeightEnv(ArmPushEnv):
         )
 
         """ Set up controller """
-        controller_id = (
-            self.simulator.constrain(shearable_rod)
-            .using(ControllableFixConstraint, index=0, reduction_ratio=0.9)
-            .id()
+        self.BC = SuckerController(index=0, reduction_ratio=0.9)
+        constraint = self.simulator.constrain(shearable_rod)
+        constraint.using(
+            ControllableFixConstraint,
+            index=0,
+            reduction_ratio=0.9,
+            controller=self.BC,
         )
 
         """ Add muscle actuation """
@@ -602,8 +616,6 @@ class ArmPullWeightEnv(ArmPushEnv):
 
         self.simulator.finalize()
 
-        controllable_constraint = dict(self.simulator._constraints)[controller_id]
-        self.BC = controllable_constraint.get_controller
         self.BC.turn_on()
 
         return shearable_rod

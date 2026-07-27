@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit, jit
 
 from elastica._linalg import _batch_matvec, _batch_cross, _batch_norm, _batch_matrix_transpose
-from elastica._calculus import quadrature_kernel, difference_kernel
+from elastica._calculus import difference_kernel, quadrature_kernel
 
 from elastica.external_forces import NoForces
 

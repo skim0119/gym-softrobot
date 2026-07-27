@@ -74,6 +74,10 @@ register(
 register(
     id="SoftPendulum-v0", entry_point="gym_softrobot.envs.soft_pendulum:SoftPendulumEnv"
 )
+register(
+    id="SoftPendulum3D-v0",
+    entry_point="gym_softrobot.envs.soft_pendulum_3d:SoftPendulum3DEnv",
+)
 
 """ Global Configuration Parameters """
 RENDERER_CONFIG = RendererType.POVRAY

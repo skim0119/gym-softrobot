@@ -170,6 +170,15 @@ wheels = [
 ]
 
 [[package]]
+name = "coomm"
+version = "0.1.1"
+source = { git = "https://github.com/hanson-hschang/COOMM.git?rev=refactor-numba-hotloops#d33fa034fe69b2cb6b4481d4297e4f82f60e981b" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "pyelastica" },
+]
+
+[[package]]
 name = "coverage"
 version = "7.6.12"
 source = { registry = "https://pypi.org/simple" }
@@ -283,6 +292,7 @@ name = "gym-softrobot"
 version = "0.2.0"
 source = { editable = "." }
 dependencies = [
+    { name = "coomm" },
     { name = "gymnasium" },
     { name = "matplotlib" },
     { name = "pyelastica" },
@@ -313,6 +323,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
+    { name = "coomm", git = "https://github.com/hanson-hschang/COOMM.git?rev=refactor-numba-hotloops" },
     { name = "gymnasium", specifier = ">=1.0.0" },
     { name = "matplotlib" },
     { name = "pyelastica", specifier = ">=1.0.0" },

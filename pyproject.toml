@@ -20,6 +20,7 @@ requires-python = ">=3.12"
 dependencies = [
     "gymnasium>=1.0.0",
     "pyelastica>=1.0.0",
+    "coomm @ git+https://github.com/hanson-hschang/COOMM.git@refactor-numba-hotloops",
     "matplotlib",
     "tqdm",
     "pyglet==1.5.31",

@@ -16,14 +16,7 @@ from elastica import AnalyticalLinearDamper, CosseratRod, Cylinder
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
 
-# from gym_softrobot.utils.actuation.forces.drag_force import DragForce
-from gym_softrobot.utils.actuation.actuations.muscles.longitudinal_muscle import (
-    LongitudinalMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.transverse_muscle import (
-    TransverseMuscle,
-)
-from gym_softrobot.utils.actuation.actuations.muscles.muscle import ApplyMuscle
+from coomm.actuations.muscles.muscle import ApplyMuscles
 
 from gym_softrobot.envs.octopus.build import create_es_muscle_layers
 
@@ -176,7 +169,7 @@ def build_octopus_muscles(simulator, n_elem: int = 40):
             shearable_rods[i].radius, DEFAULT_SCALE_LENGTH["base_radius"]
         )
         simulator.add_forcing_to(shearable_rods[i]).using(
-            ApplyMuscle,
+            ApplyMuscles,
             muscles=muscle_layers,
             step_skip=10000,  # Not relavent
             callback_params_list=[],
@@ -288,7 +281,7 @@ def build_two_arms(simulator, n_elem: int = 40):
             shearable_rods[i].radius, DEFAULT_SCALE_LENGTH["base_radius"]
         )
         simulator.add_forcing_to(shearable_rods[i]).using(
-            ApplyMuscle,
+            ApplyMuscles,
             muscles=muscle_layers,
             step_skip=10000,  # Not relavent
             callback_params_list=[],

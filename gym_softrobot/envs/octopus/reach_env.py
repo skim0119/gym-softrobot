@@ -76,7 +76,7 @@ class ReachEnv(Env):
         self.n_seg = n_elems - 1
 
         # Spaces
-        n_action = self.n_seg * self.n_muscle
+        n_action = self.n_elems * self.n_muscle
         self.n_action = n_action
         # TODO: for non-HER, use decentral training shapes
         self.action_space = spaces.Box(
@@ -220,8 +220,8 @@ class ReachEnv(Env):
         # Continuous action
         for i in range(self.n_arm):
             for j in range(self.n_muscle):
-                self.muscle_activations[i][j].set_activation(
-                    action[i, self.n_seg * j : self.n_seg * (j + 1)]
+                self.muscle_activations[i][j].apply_activation(
+                    action[i, self.n_elems * j : self.n_elems * (j + 1)]
                 )
 
         # update previous action

@@ -280,7 +280,7 @@ wheels = [
 
 [[package]]
 name = "gym-softrobot"
-version = "0.2.1"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "gymnasium" },

@@ -10,96 +10,62 @@
 </a>
 </div>
 
-The environment is designed to leverage wide-range of reinforcement learning methods into soft-robotics control.
-Our inspiration is from slender-body living creatures, such as octopus or snake.
-The code is based on [PyElastica](https://github.com/GazzolaLab/PyElastica), an open-source physics simulation for highly-deformable slender structure.
-We intend this package to be easy-to-install and fully compatible to [OpenAI Gym](https://github.com/openai/gym) and other available RL algorithms.
+Gymnasium environments for soft-robot control, powered by
+[PyElastica](https://github.com/GazzolaLab/PyElastica). The package includes
+bio-inspired soft-slender-robot simulations.
+
 
 ## Installation
+
+gym-softrobot requires Python 3.12 or newer.
 
 ```bash
 pip install gym-softrobot
 ```
 
-> Some recent version of python might not be compatible with LLVM version. Please let us know usign the git-issue.
-> At the current stabe, we best recommend python 3.10.
+## Quick start
 
+```python
+import gymnasium as gym
+import gym_softrobot  # Registers the environments.
 
-To test the installation, we provide few debugging scripts.
-The environment can be tested using the following command.
+env = gym.make("SoftPendulum-v0")
+observation, info = env.reset(seed=42)
+
+terminated = truncated = False
+while not (terminated or truncated):
+    action = env.action_space.sample()
+    observation, reward, terminated, truncated, info = env.step(action)
+
+env.close()
+```
+
+List the registered environments:
 
 ```bash
-python -m gym_softrobot.debug.make     # Make environment and run 10 steps
-python -m gym_softrobot.debug.registry # Print gym-softrobot environment
+python -m gym_softrobot.debug.registry
 ```
 
-Requirements:
-- Python 3.10+
-- Gymnasium 1.0.0
-- PyElastica 0.3.2+
-- COOMM
-- Matplotlib (optional for display rendering and plotting)
-- POVray (optional for 3D rendering)
+See the [documentation](https://gym-softrobot.readthedocs.io/) for environment
+IDs, API conventions, and rendering notes.
 
-### Rendering
-
-We support two different backends for the rendering: [POVray](https://wiki.povray.org/content/HowTo:Install_POV) and [Matplotlib](https://matplotlib.org/).
-The default is set to use POVray, but the configuration can be switched by adding following lines.
-
-```py
-from gym_softrobot.config import RendererType
-gym_softrobot.RENDERER_CONFIG = RendererType.MATPLOTLIB  # Default: POVRAY
-```
-
-#### POVray
-
-To make a good-looking 3D videos and figures, we use [POVray](https://wiki.povray.org/content/HowTo:Install_POV) python wrapper [Vapory](https://github.com/Zulko/vapory).
-POVray is not a requirement to run the environment, but it is necessary to use `env.render()` function as typical gym environment.
-
-If you would like to test `POVray` with `gym-softrobot`, use
-
-```bash
-python -m gym_softrobot.debug.render  # Render 10 frames using vapory
-```
-
-#### Matplotlib
-
-We provide secondary rendering tool using [Matplotlib](https://matplotlib.org/) for a quick debugging and sanity checking.
-
-## Reinforcement Learning Example
-
-We tested the environment using [Stable Baselines3](https://github.com/DLR-RM/stable-baselines3) for centralized control.
-More advanced algorithms are still under development.
-
-If you have your own algorithm that you would like to test with our environment, you are welcome to reach out to us.
-
-## Citation
-
-Please use this bibtex to cite in your publications:
-
-```
-@misc{gym_softrobot,
-  author = {Chia-Hsien Shih, Seung Hyun Kim, Mattia Gazzola},
-  title = {Soft Robotics Environment for OpenAI Gym},
-  year = {2022},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  howpublished = {\url{https://github.com/skim0119/gym-softrobot}},
-}
-```
-
-## Environment Documentation
-
-The description of each environment is available in [documentation](docs/design.md).
-
-## Contribution
-
-We are currently developing the package internally.
-We mainly use `uv` to manage the project setting. If you plan to commit your code, please use the following commands to setup the pre-commit hooks.
+## Development
 
 ```bash
 uv sync --all-groups
 uv run pre-commit install
+```
+
+## Citation
+
+```bibtex
+@misc{gym_softrobot,
+  author = {Chia-Hsien Shih and Seung Hyun Kim and Mattia Gazzola},
+  title = {Soft Robotics Environment for Gymnasium},
+  year = {2026},
+  publisher = {GitHub},
+  howpublished = {\url{https://github.com/skim0119/gym-softrobot}}
+}
 ```
 
 ## Author

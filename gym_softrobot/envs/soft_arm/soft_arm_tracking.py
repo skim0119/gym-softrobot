@@ -4,9 +4,7 @@ import copy
 import numpy as np
 
 from typing import Optional
-import gym
-from gym import core
-from gym.utils import seeding
+from gymnasium import Env, spaces
 
 from elastica._calculus import _isnan_check
 from elastica.timestepper import extend_stepper_interface
@@ -30,8 +28,7 @@ class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, Cal
 
 
 # TODO: generalize this as a Class for online trajectory generation.
-# TODO: remove np.random: use fixed generator from seed value. (determinism)
-def generate_trajectory(final_time, sim_dt, target_v_scale):
+def generate_trajectory(final_time, sim_dt, target_v_scale, rng):
     end_time = (
         final_time * 1.1
     )  # Use of 1.1 just adds a little buffer on the end of the trajectory.
@@ -41,13 +38,13 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
     """ Generate a trajectory bounded in a box [-0.8, 0.8] x [-0.8, 0.8] x [0.0, 0.8] """
     t = np.array([end_time * float(i) / (numpoints - 1) for i in range(numpoints)])
     t += (
-        np.random.rand(1)[0] * 3600
+        rng.random() * 3600
     )  # start the trajectory anywhere within a 1 hour period
 
-    f1 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    f2 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    f3 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    direction = np.random.randint(0, 1) * 2 - 1
+    f1 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    f2 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    f3 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    direction = rng.integers(0, 2) * 2 - 1
     target_trajectory[:, 0] = (
         direction
         * 0.8
@@ -57,10 +54,10 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
         * 1000
     )
 
-    f1 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    f2 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    f3 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    direction = np.random.randint(0, 1) * 2 - 1
+    f1 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    f2 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    f3 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    direction = rng.integers(0, 2) * 2 - 1
     target_trajectory[:, 1] = (
         direction
         * 0.4
@@ -71,10 +68,10 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
     )
     target_trajectory[:, 1] += 0.4
 
-    f1 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    f2 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    f3 = np.random.uniform(2, 5) * 0.025 * target_v_scale
-    direction = np.random.randint(0, 1) * 2 - 1
+    f1 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    f2 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    f3 = rng.uniform(2, 5) * 0.025 * target_v_scale
+    direction = rng.integers(0, 2) * 2 - 1
     target_trajectory[:, 2] = (
         direction
         * 0.8
@@ -87,10 +84,16 @@ def generate_trajectory(final_time, sim_dt, target_v_scale):
     return target_trajectory
 
 
-class SoftArmTrackingEnv(core.Env):
-    metadata = {"render.modes": ["rgb_array", "human"]}
+class SoftArmTrackingEnv(Env):
+    metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 30}
 
-    def __init__(self, game_mode: int = 1):
+    def __init__(
+        self, game_mode: int = 1, render_mode: Optional[str] = None
+    ):
+        super().__init__()
+        if render_mode not in {None, *self.metadata["render_modes"]}:
+            raise ValueError(f"Unsupported render mode: {render_mode}")
+        self.render_mode = render_mode
         self.n_elem = 40
         self.sim_dt = 2.0e-4
         self.RL_update_interval = 0.01  # This is 100 updates per second
@@ -114,7 +117,7 @@ class SoftArmTrackingEnv(core.Env):
         self.rendering_fps = 30
         self.step_skip = np.rint(1.0 / (self.rendering_fps * self.sim_dt)).astype(int)
 
-        self.max_rate_of_change_of_activation = np.infty
+        self.max_rate_of_change_of_activation = np.inf
         self.target_v_scale = 0.1
 
         self.mode = game_mode
@@ -123,30 +126,22 @@ class SoftArmTrackingEnv(core.Env):
         self.StatefulStepper = PositionVerlet()
 
         # normal and/or binormal direction activation (3D)
-        self.action_space = gym.spaces.Box(
+        self.action_space = spaces.Box(
             low=-1.0,
             high=1.0,
             shape=(2 * self.number_of_control_points,),
             dtype=np.float64,
         )
-        self.observation_space = gym.spaces.Box(
+        self.observation_space = spaces.Box(
             low=-np.inf,
             high=np.inf,
             shape=(self.number_of_observation_segments * 2 + 6,),
             dtype=np.float64,
         )
 
-        # Determinism
-        self.seed()
-
         # Rendering-related
         self.viewer = None
         self.renderer = None
-
-    def seed(self, seed=None):
-        # Deprecated in new gym
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def get_state(self):
         """
@@ -246,11 +241,9 @@ class SoftArmTrackingEnv(core.Env):
             reward = -100
             state = np.nan_to_num(self.get_state())
             terminated = True
-            truncated = True
             print("Episode blew up. Maybe try a smaller dt?")
 
         if self.tick * self.sim_dt >= self.max_episode_final_time:
-            terminated = True
             truncated = True
             print("Episode has reached max time")
 
@@ -261,7 +254,6 @@ class SoftArmTrackingEnv(core.Env):
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
@@ -402,7 +394,10 @@ class SoftArmTrackingEnv(core.Env):
         if self.mode == 2:
             # TODO: change this to a object that will update thee target position as you go
             target_trajectory = generate_trajectory(
-                self.max_episode_final_time, self.sim_dt, self.target_v_scale
+                self.max_episode_final_time,
+                self.sim_dt,
+                self.target_v_scale,
+                self.np_random,
             )
             self.wsol = target_trajectory
         elif self.mode == 1:
@@ -479,12 +474,11 @@ class SoftArmTrackingEnv(core.Env):
         state = self.get_state()
         self._target = self.wsol[self.tick]
 
-        if return_info:
-            return state, {}
-        else:
-            return state
+        return state, {}
 
-    def render(self, mode="human", close=False):
+    def render(self):
+        if self.render_mode is None:
+            return None
         maxwidth = 800
         aspect_ratio = 3 / 4
 
@@ -530,7 +524,8 @@ class SoftArmTrackingEnv(core.Env):
         else:
             raise NotImplementedError("Rendering module is not imported properly")
 
-        self.viewer.imshow(state_image)
+        if self.render_mode == "human":
+            self.viewer.imshow(state_image)
 
         return state_image
 

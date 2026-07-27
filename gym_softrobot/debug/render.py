@@ -12,9 +12,9 @@ def main():
     parser.add_argument("--env", type=str, default="OctoArmSingle-v0")
     args = parser.parse_args()
 
-    env = gymnasium.make(args.env, recording_fps=30)
+    env = gymnasium.make(args.env, recording_fps=30, render_mode="human")
 
-    observation = env.reset()
+    observation, _ = env.reset()
     for step in range(10):
         env.render()  # rendering
         action = env.action_space.sample()

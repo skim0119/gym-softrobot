@@ -1,50 +1,40 @@
-# Environment Setup
+# Environment API
 
-Our environment contains set of controllable slender-bodies to achieve set of tasks.
-The theory and details of the physics simulation is documented in [CosseratRods.org](https://cosseratrods.org).
+gym-softrobot environments follow the Gymnasium API. Each task combines a
+PyElastica simulation with an action space, observation space, reward, and
+episode-ending conditions.
 
-## Interface
+## Observations
 
-### State
+Observations vary by task and may include:
 
-The state information may or may-not reflect the entirety of the system: partially observable.
-The state space is composed with the following parameters:
+- rod position, orientation, and velocity;
+- curvature, shear, stretch, or their rates;
+- previous actions;
+- target position or velocity;
+- shared state for multi-agent tasks.
 
-- __Position__ (relative) and __director__ at each element (spatial discretization in simulation)
-    - Could be supplemented with __velocity/acceleration__ and __angular velocity/acceleration__
-- __6-modes of strains__ (normal/binormal shear, normal/binormal curvature, stretch, twist)
-- __Absolute position__
-- __Target location__ and its velocity (if applicable)
-- Index of the agent (multi-agent case)
-- Previous action
+Consult an environment's `observation_space` at runtime for its exact shape,
+bounds, and data type.
 
+## Actions
 
-### Action 
+Actions control quantities such as muscle activation, internal curvature,
+torque, or applied force. Exact bounds and dimensions are available from
+`action_space`.
 
-- __Internal curvature__ resembling tendon-driven actuation or muscle actuation.
-    - The number of DoFs (degrees of freedoms) along the arm depends on the length of the arm, and may vary depending on the environment and its version. Actuation functions equals to the interpolation of provided DoFs.
-- Internal torque/force for direct activation
+```python
+action = env.action_space.sample()
+```
 
-### Reward
+## Rewards and episode endings
 
-> The reward function is not yet finalized. Different version may contain different reward function.
+Rewards are task-specific and can combine progress, target distance, control
+cost, elastic energy, and simulation-stability terms.
 
-The reward is defined as the composition of the following quantities:
-- __Forward Reward__: typically used in locomotion case
-    - Velocity of the body
-    - Position difference between control-steps
-- __Survive Reward__: given for stability purpose and to prevant wild policy
-    - Nan panelty: unstable or unexpected behavior
-    - Cross-over panelty: panelty for multiple arm crossing eachother (in 2D)
-- __Control Panelty__: minimum-actuation solution
-    - Square-average of the action
-- __Energy__: minimum-energy solution
-    - Total bending energy
-    - Total shear energy
-- __Time Limit__:
-    - Small constant panelty at each steps
-    - Large constant panelty for not achieving goal.
-- __Miscellaneous__:
-    - Target reaching/grabbing reward
-    - Remaining distance to the target
+`terminated` reports a task terminal state, such as reaching a target or an
+invalid simulation state. `truncated` reports a time limit. Reward definitions
+and numerical behavior may change while an environment remains experimental.
 
+For background on the underlying rod model, see
+[CosseratRods.org](https://www.cosseratrods.org/).

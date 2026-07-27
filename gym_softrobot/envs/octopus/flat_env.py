@@ -50,7 +50,7 @@ class FlatEnv(Env):
     Solved Requirements:
     """
 
-    metadata = {"render.modes": ["rgb_array", "human"]}
+    metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 5}
 
     def __init__(
         self,
@@ -63,7 +63,12 @@ class FlatEnv(Env):
         config_generate_video=False,
         config_save_head_data=False,
         policy_mode="centralized",
+        render_mode: Optional[str] = None,
     ):
+        super().__init__()
+        if render_mode not in {None, *self.metadata["render_modes"]}:
+            raise ValueError(f"Unsupported render mode: {render_mode}")
+        self.render_mode = render_mode
         # Integrator type
 
         self.final_time = final_time
@@ -125,7 +130,6 @@ class FlatEnv(Env):
             )
         else:
             raise NotImplementedError
-        self.metadata = {}
         self.reward_range = 100.0
         if policy_mode == "centralized":
             self._prev_action = np.zeros(
@@ -169,7 +173,6 @@ class FlatEnv(Env):
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
@@ -225,10 +228,7 @@ class FlatEnv(Env):
         # Initial State
         state = self.get_state()
 
-        if return_info:
-            return state, {}
-        else:
-            return state
+        return state, {}
 
     def get_state(self):
         states = {}
@@ -370,7 +370,6 @@ class FlatEnv(Env):
         if invalid_values_condition == True:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             terminated = True
-            truncated = True
             survive_reward = -50.0
         else:
             survive_reward = -0.02 * arm_crossing
@@ -387,7 +386,7 @@ class FlatEnv(Env):
         timelimit = False
         if self.time > self.final_time:
             timelimit = True
-            terminated = True
+            truncated = True
 
         reward = forward_reward - control_panelty + survive_reward - bending_energy
         # reward *= 10 # Reward scaling
@@ -430,7 +429,9 @@ class FlatEnv(Env):
                 self.rod_parameters_dict_list, filename_video, margin=0.2, fps=fps
             )
 
-    def render(self, mode="human", close=False):
+    def render(self):
+        if self.render_mode is None:
+            return None
         maxwidth = 800
         aspect_ratio = 3 / 4
 
@@ -482,7 +483,8 @@ class FlatEnv(Env):
         else:
             raise NotImplementedError("Rendering module is not imported properly")
 
-        self.viewer.imshow(state_image)
+        if self.render_mode == "human":
+            self.viewer.imshow(state_image)
 
         return state_image
 

@@ -12,16 +12,14 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Development Status :: 3 - Alpha",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Intended Audience :: Science/Research",
     "Intended Audience :: Education",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "gymnasium>=1.0.0",
-    "pyelastica>=0.3.2",
+    "pyelastica>=1.0.0",
     "matplotlib",
     "tqdm",
     "pyglet==1.5.31",
@@ -61,7 +59,7 @@ docs = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py312"
 lint.ignore = [
     "E712",  # Allow using if x == False, as it's not always equivalent to if x.
     "E402",  # Allow import statements to be non top-level.

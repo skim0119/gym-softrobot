@@ -1,10 +1,9 @@
 __all__ = ["ConvertToPyMarlEnv"]
 
-import typing
-from typing import List, Iterable, Union, Optional
+from typing import List, Optional
 import numpy as np
 
-import gym
+from gymnasium import Env
 
 
 class ConvertToPyMarlEnv:
@@ -24,7 +23,7 @@ class ConvertToPyMarlEnv:
         env = ConvertToPyMarlEnv(ma_env=gym.make("OctoCrawl-v0"))
     """
 
-    def __init__(self, ma_env: gym.Env, *args, **kwargs):
+    def __init__(self, ma_env: Env, *args, **kwargs):
         """
 
         Parameters
@@ -41,6 +40,7 @@ class ConvertToPyMarlEnv:
             "PyMARL" in ma_env.metadata["multiagent"]
         ), f"The given environment is not multi-agent compatible"
         self.env = ma_env
+        self._next_seed = None
 
     @property
     def n_agents(self):
@@ -48,8 +48,10 @@ class ConvertToPyMarlEnv:
 
     def step(self, actions):
         """Returns reward, terminated, info"""
-        self.observation, reward, done, info = self.env.step(actions.ravel())
-        return reward, done, info
+        self.observation, reward, terminated, truncated, info = self.env.step(
+            actions.ravel()
+        )
+        return reward, terminated or truncated, info
 
     def get_obs(self):
         """Returns all agent observations in a list"""
@@ -115,18 +117,20 @@ class ConvertToPyMarlEnv:
         self.env.close()
 
     def seed(self, seed=None):
-        self.env.seed(seed=seed)
+        self._next_seed = seed
 
-    def render(self, **kwargs):
-        self.env.render(**kwargs)
+    def render(self):
+        return self.env.render()
 
     def reset(
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         """Returns initial observations and states"""
-        self.observation = self.env.reset(**kwargs)
+        if seed is None:
+            seed = self._next_seed
+        self.observation, _ = self.env.reset(seed=seed, options=options)
+        self._next_seed = None
         return self.observation, self.get_state()

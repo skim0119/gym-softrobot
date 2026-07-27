@@ -1,13 +1,12 @@
-# Miscellaneous Env
+# Other environments
 
-## Soft Pendulum [Transfer learning, Soft Arm Control]
+## Soft pendulum
 
-- `SoftPendulum-v0`
+`SoftPendulum-v0` applies control forces to a deformable pendulum. It is a
+compact starting point for checking installation and the Gymnasium lifecycle.
 
-## Snake
+## Continuum snake
 
-- `ContinuumSnake-v0` [Alpha]
-
-This environment is inspired from the [Continuum Snake case](https://github.com/GazzolaLab/PyElastica/tree/master/examples/ContinuumSnakeCase) in PyElastica.
-The goal is to control the snake to achieve fastest velocity. 
-Unlike the original example, where the control is defined by the amplitude and phase-shift of the sinusoidal activation, our environment challenges the player to give an action every `dt` time-steps.
+`ContinuumSnake-v0` controls a friction-driven continuum snake. Its action
+parameterizes the traveling-wave actuation used to generate forward motion.
+The task is based on PyElastica's continuum-snake example.

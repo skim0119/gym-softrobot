@@ -1,33 +1,31 @@
-******************
-Available Wrappers
-******************
+External integrations
+=====================
 
-Here is the list of available wrappers that we provide. The purpose of the wrapper is to convert the environment
-to make it compatible with other external packages. These wrappers should be compatible with typical `OpenAI-gym` 
-wrappers, such as `SubprocVecEnv` or `VecFrameStack`, although we highly recommend using our wrapper on the outer-most layer to be safe. 
+gym-softrobot contains experimental adapters for multi-agent reinforcement
+learning frameworks.
 
-.. note::
-   Because of the nature of the wrapper design, we cannot guarantee 100% compatibility with all other available tools. Please make an GitHub issue if you find any bug in this feature.
+PyMARL
+------
 
-Converter
-=========
+``ConvertToPyMarlEnv`` adapts a compatible gym-softrobot multi-agent
+environment to PyMARL's expected observation, state, reward, and episode
+interface.
 
-.. _wrappers:
+.. code-block:: python
 
-.. automodule::  gym_softrobot.wrapper
+   import gymnasium as gym
+   import gym_softrobot
+   from gym_softrobot.wrapper import ConvertToPyMarlEnv
 
-Description
------------
+   base_env = gym.make("OctoCrawl-v0")
+   env = ConvertToPyMarlEnv(base_env.unwrapped)
 
-.. autosummary::
-   :nosignatures:
+The adapter is experimental and does not make every gym-softrobot environment
+multi-agent compatible.
 
-   ConvertToPyMarlEnv
+RLlib
+-----
 
-Built-in Wrappers
------------------
-
-.. autoclass:: ConvertToPyMarlEnv
-   :special-members: __init__
-   :members:
-
+The shared-policy adapter requires Ray RLlib. Ray is not part of the core
+installation, so install a compatible Ray release before importing that
+adapter.

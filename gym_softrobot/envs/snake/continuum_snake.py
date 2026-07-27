@@ -8,8 +8,7 @@ from collections import defaultdict
 from functools import partial
 
 
-from gymnasium import spaces
-from gymnasium.utils import seeding
+from gymnasium import Env, spaces
 
 from elastica import *
 
@@ -107,9 +106,13 @@ class ContinuumSnakeCallBack(CallBackBaseClass):
 
 
 class ContinuumSnakeEnv(Env):
-    metadata = {"render.modes": ["rgb_array", "human"]}
+    metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 30}
 
-    def __init__(self):
+    def __init__(self, render_mode: Optional[str] = None):
+        super().__init__()
+        if render_mode not in {None, *self.metadata["render_modes"]}:
+            raise ValueError(f"Unsupported render mode: {render_mode}")
+        self.render_mode = render_mode
         # Action space
         action_space_low = -np.ones(7) * 1e-2
         action_space_low[-1] = 0.5
@@ -126,33 +129,19 @@ class ContinuumSnakeEnv(Env):
             -np.inf, np.inf, shape=observation_space, dtype=np.float32
         )
 
-        self.metadata = {}
-
-        # Determinism
-        self.seed()
-
         self.viewer = None
-        self.rendere = None
-
-    def seed(self, seed=None):
-        # Deprecated in new gym
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
+        self.renderer = None
 
     def reset(
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
         self.snake_sim, self.stepper, self.muscle_torque, self.data = self._build()
         self.time = np.float64(0.0)
-        if return_info:
-            return self.get_state(), {}
-        else:
-            return self.get_state()
+        return self.get_state(), {}
 
     def get_state(self):
         # Build state
@@ -196,14 +185,15 @@ class ContinuumSnakeEnv(Env):
         terminated = False
         truncated = False
         if self.time >= self.final_time:
-            terminated = True
             truncated = True
 
         info = {}
 
         return self.get_state(), avg_forward, terminated, truncated, info
 
-    def render(self, mode="human", close=False):
+    def render(self):
+        if self.render_mode is None:
+            return None
         """
         filename_plot = "continuum_snake_velocity.png"
         plot_snake_velocity(self.data, self.period, filename_plot, 1)
@@ -247,7 +237,8 @@ class ContinuumSnakeEnv(Env):
             [state_image, np.hstack([state_image_side, state_image_top])]
         )
 
-        self.viewer.imshow(state_image)
+        if self.render_mode == "human":
+            self.viewer.imshow(state_image)
 
         return state_image
 

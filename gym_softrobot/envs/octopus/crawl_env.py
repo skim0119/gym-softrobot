@@ -1,7 +1,6 @@
 from typing import Optional
 
 from gymnasium import Env, spaces
-from gymnasium.utils import seeding
 
 import time
 
@@ -39,7 +38,11 @@ class CrawlEnv(Env):
     Solved Requirements:
     """
 
-    metadata = {"render.modes": ["rgb_array"], "multiagent": ["PyMARL"]}
+    metadata = {
+        "render_modes": ["rgb_array"],
+        "render_fps": 25,
+        "multiagent": ["PyMARL"],
+    }
 
     def __init__(
         self,
@@ -48,7 +51,12 @@ class CrawlEnv(Env):
         recording_fps=25,
         n_elems=20,
         config_random_final_time=False,
+        render_mode: Optional[str] = None,
     ):
+        super().__init__()
+        if render_mode not in {None, *self.metadata["render_modes"]}:
+            raise ValueError(f"Unsupported render mode: {render_mode}")
+        self.render_mode = render_mode
         # Integrator type
         self.final_time = final_time
         self.time_step = time_step
@@ -84,7 +92,6 @@ class CrawlEnv(Env):
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
         )
 
-        self.metadata = {}
         self.reward_range = 100.0
         self._prev_action = np.zeros(
             list(self.action_space.shape), dtype=self.action_space.dtype
@@ -97,9 +104,6 @@ class CrawlEnv(Env):
         self.viewer = None
         self.renderer = None
 
-        # Determinism
-        self.seed()
-
     @property
     def agent_id(self):
         return ["LF1", "LF2", "LB2", "LB1", "RB1", "RB2", "RF2", "RF1"]
@@ -108,16 +112,10 @@ class CrawlEnv(Env):
         # Need for decentralized control
         return dict(n_actions=self.n_action, n_agents=8)
 
-    def seed(self, seed=None):
-        # Deprecated in new gym
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
     def reset(
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
@@ -177,10 +175,7 @@ class CrawlEnv(Env):
         # Initial State
         state = self.get_state()
 
-        if return_info:
-            return state, {}
-        else:
-            return state
+        return state, {}
 
     def get_state(self):
         # Build state
@@ -288,7 +283,6 @@ class CrawlEnv(Env):
         if invalid_values_condition == True:
             # print(f" Nan detected in, exiting simulation now. {self.time=}")
             terminated = True
-            truncated = True
             survive_reward = -5.0
         else:
             xposafter = self.rigid_rod.position_collection[0:2, 0]
@@ -305,7 +299,7 @@ class CrawlEnv(Env):
         # print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
         if not terminated and self.time > self.final_time:
             # forward_reward -= np.linalg.norm(self._target - xposafter) * 1.0
-            terminated = True
+            truncated = True
 
         reward = forward_reward - control_cost + survive_reward - bending_energy
         # reward *= 10 # Reward scaling
@@ -316,14 +310,15 @@ class CrawlEnv(Env):
         if np.isnan(reward):
             reward -= 5
             terminated = True
-            truncated = True
         reward = min(self.reward_range, reward)
 
         self.counter += 1
 
         return states, reward, terminated, truncated, info
 
-    def render(self, mode="human", close=False) -> Optional[np.ndarray]:
+    def render(self) -> Optional[np.ndarray]:
+        if self.render_mode is None:
+            return None
         maxwidth = 800
         aspect_ratio = 3 / 4
 
@@ -374,8 +369,6 @@ class CrawlEnv(Env):
             state_image = self.renderer.render()
         else:
             raise NotImplementedError("Rendering module is not imported properly")
-
-        self.viewer.imshow(state_image)
 
         return state_image
 

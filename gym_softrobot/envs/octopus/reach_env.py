@@ -1,7 +1,6 @@
 from typing import Optional, Any, Union, Dict
 
 from gymnasium import spaces, Env
-from gymnasium.utils import seeding
 
 import time
 
@@ -38,7 +37,7 @@ class ReachEnv(Env):
     Solved Requirements:
     """
 
-    metadata = {"render.modes": ["rgb_array"]}
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 25}
 
     def __init__(
         self,
@@ -46,7 +45,12 @@ class ReachEnv(Env):
         time_step=5.0e-5,
         recording_fps=25,
         n_elems=20,
+        render_mode: Optional[str] = None,
     ):
+        super().__init__()
+        if render_mode not in {None, *self.metadata["render_modes"]}:
+            raise ValueError(f"Unsupported render mode: {render_mode}")
+        self.render_mode = render_mode
         # Integrator type
         self.final_time = final_time
         self.time_step = time_step
@@ -79,7 +83,6 @@ class ReachEnv(Env):
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
         )
 
-        self.metadata = {}
         self.reward_range = 100.0
         self._prev_action = np.zeros(
             list(self.action_space.shape), dtype=self.action_space.dtype
@@ -91,22 +94,13 @@ class ReachEnv(Env):
         self.viewer = None
         self.renderer = None
 
-        # Determinism
-        self.seed()
-
     def get_env_info(self):
         return dict(n_actions=self.n_action, n_agents=8)
-
-    def seed(self, seed=None):
-        # Deprecated in new gym
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def reset(
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
@@ -166,10 +160,7 @@ class ReachEnv(Env):
         # Initial State
         state = self.get_state()
 
-        if return_info:
-            return state, {}
-        else:
-            return state
+        return state, {}
 
     def get_state(self):
         # Build state
@@ -260,7 +251,6 @@ class ReachEnv(Env):
         if invalid_values_condition == True:
             # print(f" Nan detected in, exiting simulation now. {self.time=}")
             terminated = True
-            truncated = True
             survive_reward = -5.0
         else:
             all_tip_pos = [
@@ -278,7 +268,7 @@ class ReachEnv(Env):
                 terminated = True
 
             if self.time > self.final_time:
-                terminated = True
+                truncated = True
 
         reward = forward_reward + survive_reward
 
@@ -294,7 +284,6 @@ class ReachEnv(Env):
         if np.isnan(reward):
             reward = -5
             terminated = True
-            truncated = True
         reward = min(self.reward_range, reward)
 
         self.counter += 1
@@ -311,7 +300,9 @@ class ReachEnv(Env):
         dist = np.linalg.norm(achieved_goal - desired_goal, axis=-1)
         return -(dist > eps).astype(np.float32)
 
-    def render(self, mode="human", close=False) -> Optional[np.ndarray]:
+    def render(self) -> Optional[np.ndarray]:
+        if self.render_mode is None:
+            return None
         maxwidth = 800
         aspect_ratio = 3 / 4
 
@@ -362,8 +353,6 @@ class ReachEnv(Env):
             state_image = self.renderer.render()
         else:
             raise NotImplementedError("Rendering module is not imported properly")
-
-        self.viewer.imshow(state_image)
 
         return state_image
 

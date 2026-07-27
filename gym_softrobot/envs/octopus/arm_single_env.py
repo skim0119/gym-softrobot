@@ -1,7 +1,6 @@
 from typing import Optional
 
 from gymnasium import spaces, Env
-from gymnasium.utils import seeding
 
 from collections import defaultdict
 import time
@@ -51,7 +50,7 @@ class ArmSingleEnv(Env):
     Solved Requirements:
     """
 
-    metadata = {"render.modes": ["rgb_array", "human"]}
+    metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 20}
 
     def __init__(
         self,
@@ -63,7 +62,12 @@ class ArmSingleEnv(Env):
         control_penalty_coeff=0.001,
         config_generate_video=False,
         policy_mode="centralized",
+        render_mode: Optional[str] = None,
     ):
+        super().__init__()
+        if render_mode not in {None, *self.metadata["render_modes"]}:
+            raise ValueError(f"Unsupported render mode: {render_mode}")
+        self.render_mode = render_mode
         # Integrator type
 
         self.final_time = final_time
@@ -92,7 +96,6 @@ class ArmSingleEnv(Env):
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
         )
 
-        self.metadata = {}
         self.reward_range = 10.0
         self._prev_action = np.zeros(
             list(self.action_space.shape), dtype=self.action_space.dtype
@@ -105,18 +108,10 @@ class ArmSingleEnv(Env):
         self.viewer = None
         self.renderer = None
 
-        # Determinism
-        self.seed()
-
         self.kappa_range = [-49.33508476187419, 49.33545827754751]
         self.sigma_range = [-0.041537734572300755, 0.1019431615063144]
         self.kappa_rate_range = [-21.063520620377012, 24.664591289161944]
         self.sigma_rate_range = [-0.08387293777925456, 0.06838264835333994]
-
-    def seed(self, seed=None):
-        # Deprecated in new gym
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
 
     def summary(
         self,
@@ -141,7 +136,6 @@ class ArmSingleEnv(Env):
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
@@ -189,10 +183,7 @@ class ArmSingleEnv(Env):
         )
         # self.prev_cm_vel = self.shearable_rod.compute_velocity_center_of_mass()
 
-        if return_info:
-            return state, {}
-        else:
-            return state
+        return state, {}
 
     def get_state(self):
         # Build state
@@ -290,7 +281,6 @@ class ArmSingleEnv(Env):
         if invalid_values_condition:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             terminated = True
-            truncated = True
             self.survive_reward = -1.0  # 50.0
         else:
             self.cm_pos = self.shearable_rod.compute_position_center_of_mass()[:2]
@@ -309,7 +299,7 @@ class ArmSingleEnv(Env):
         timelimit = False
         if self.time > self.final_time:
             timelimit = True
-            terminated = True
+            truncated = True
 
         reward = self.forward_reward - self.control_panelty + self.survive_reward
         # reward *= 10 # Reward scaling
@@ -339,7 +329,9 @@ class ArmSingleEnv(Env):
             filename_video = f"save/{filename_video}"
             plot_video(self.rod_parameters_dict, filename_video, margin=0.2, fps=fps)
 
-    def render(self, mode="human", close=False):
+    def render(self):
+        if self.render_mode is None:
+            return None
         maxwidth = 800
         aspect_ratio = 3 / 4
 
@@ -393,7 +385,8 @@ class ArmSingleEnv(Env):
         else:
             raise NotImplementedError("Rendering module is not imported properly")
 
-        self.viewer.imshow(state_image)
+        if self.render_mode == "human":
+            self.viewer.imshow(state_image)
 
         return state_image
 

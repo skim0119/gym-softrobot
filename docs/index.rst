@@ -1,33 +1,23 @@
-.. gym-softrobot master file, created by
-   sphinx-quickstart on Wed Mar 16 17:11:27 2022.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+gym-softrobot
+=============
 
-*******************************
-Gym-Softrobot Environment Suite
-*******************************
-
-.. badges
+gym-softrobot provides Gymnasium environments for learning and testing control
+policies on soft robots simulated with PyElastica.
 
 .. toctree::
    :maxdepth: 2
-   :caption: Environment
+   :caption: User guide
 
+   getting_started
    envs/design
    envs/octopus
    envs/soft_arm
    envs/misc
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Other
-
    envs/wrappers
 
+Project links
+-------------
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+* `Source code <https://github.com/skim0119/gym-softrobot>`_
+* `Issue tracker <https://github.com/skim0119/gym-softrobot/issues>`_
+* `PyElastica <https://github.com/GazzolaLab/PyElastica>`_

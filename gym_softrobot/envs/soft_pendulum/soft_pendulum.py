@@ -1,8 +1,6 @@
 from typing import Optional
 
-from gym import core
-from gym import spaces
-from gym.utils import seeding
+from gymnasium import Env, spaces
 
 from collections import defaultdict
 import time
@@ -37,7 +35,7 @@ class BaseSimulator(
     pass
 
 
-class SoftPendulumEnv(core.Env):
+class SoftPendulumEnv(Env):
     """
     Description:
     Source:
@@ -49,7 +47,7 @@ class SoftPendulumEnv(core.Env):
     Solved Requirements:
     """
 
-    metadata = {"render.modes": ["rgb_array"]}
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 25}
 
     def __init__(
         self,
@@ -58,7 +56,12 @@ class SoftPendulumEnv(core.Env):
         recording_fps=25,
         n_elems=50,
         config_generate_video=False,
+        render_mode: Optional[str] = None,
     ):
+        super().__init__()
+        if render_mode not in {None, *self.metadata["render_modes"]}:
+            raise ValueError(f"Unsupported render mode: {render_mode}")
+        self.render_mode = render_mode
         # Integrator type
 
         self.final_time = final_time
@@ -83,7 +86,6 @@ class SoftPendulumEnv(core.Env):
             -np.inf, np.inf, shape=self._observation_size, dtype=np.float32
         )
 
-        self.metadata = {}
         self.reward_range = 100.0
         self._prev_action = np.zeros(
             list(self.action_space.shape), dtype=self.action_space.dtype
@@ -96,19 +98,10 @@ class SoftPendulumEnv(core.Env):
         self.viewer = None
         self.renderer = None
 
-        # Determinism
-        self.seed()
-
-    def seed(self, seed=None):
-        # Deprecated in new gym
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
     def reset(
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
@@ -146,10 +139,7 @@ class SoftPendulumEnv(core.Env):
         # Initial State
         state = self.get_state()
 
-        if return_info:
-            return state, {}
-        else:
-            return state
+        return state, {}
 
     def get_state(self):
         # Build state
@@ -216,7 +206,6 @@ class SoftPendulumEnv(core.Env):
         if invalid_values_condition:
             print(f" Nan detected in, exiting simulation now. {self.time=}")
             terminated = True
-            truncated = True
             survive_reward = -50.0
         else:
             distance_to_origin = np.abs(self.shearable_rod.position_collection[0, 0])
@@ -238,7 +227,6 @@ class SoftPendulumEnv(core.Env):
         timelimit = False
         if self.time > self.final_time:
             timelimit = True
-            terminated = True
             truncated = True
 
         reward = forward_reward - control_penalty + survive_reward
@@ -269,7 +257,9 @@ class SoftPendulumEnv(core.Env):
             filename_video = f"save/{filename_video}"
             plot_video(self.rod_parameters_dict, filename_video, margin=0.2, fps=fps)
 
-    def render(self, mode="human", close=False):
+    def render(self):
+        if self.render_mode is None:
+            return None
         maxwidth = 800
         aspect_ratio = 3 / 4
 
@@ -322,8 +312,6 @@ class SoftPendulumEnv(core.Env):
             state_image = self.renderer.render()
         else:
             raise NotImplementedError("Rendering module is not imported properly")
-
-        self.viewer.imshow(state_image)
 
         return state_image
 

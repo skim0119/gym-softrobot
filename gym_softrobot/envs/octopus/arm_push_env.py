@@ -1,7 +1,6 @@
 from typing import Optional
 
 from gymnasium import spaces, Env
-from gymnasium.utils import seeding
 
 from collections import defaultdict
 import time
@@ -46,7 +45,7 @@ class ArmPushEnv(Env):
     Solved Requirements:
     """
 
-    metadata = {"render.modes": ["rgb_array", "human"]}
+    metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 40}
 
     def __init__(
         self,
@@ -56,7 +55,12 @@ class ArmPushEnv(Env):
         mode: str = "discrete",
         config_generate_video: bool = False,
         config_early_termination: bool = False,
+        render_mode: Optional[str] = None,
     ):
+        super().__init__()
+        if render_mode not in {None, *self.metadata["render_modes"]}:
+            raise ValueError(f"Unsupported render mode: {render_mode}")
+        self.render_mode = render_mode
         # Integrator type
         self.final_time = final_time
         self.time_step = time_step
@@ -73,9 +77,6 @@ class ArmPushEnv(Env):
             self.mode = 1
         else:
             raise NotImplementedError(f"The mode {mode} is not available.")
-
-        # Determinism
-        seed = self.seed()
 
         # Action space
         if self.mode == 0:  # Discrete
@@ -118,16 +119,10 @@ class ArmPushEnv(Env):
         self.viewer = None
         self.renderer = None
 
-    def seed(self, seed=None):
-        # Deprecated in new gym
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
     def reset(
         self,
         *,
         seed: Optional[int] = None,
-        return_info: bool = False,
         options: Optional[dict] = None,
     ):
         super().reset(seed=seed)
@@ -145,10 +140,7 @@ class ArmPushEnv(Env):
         # Initial State
         state = self.get_state()
 
-        if return_info:
-            return state, {}
-        else:
-            return state
+        return state, {}
 
     def _build(self):
         """Set up arm params"""
@@ -314,7 +306,6 @@ class ArmPushEnv(Env):
         elif invalid_values_condition:
             # print(f" Nan detected in, exiting simulation now. {self.time=}")
             terminated = True
-            truncated = True
             survive_reward = -20.0
         else:
             moved_distance = np.linalg.norm(cm_pos, ord=2) - np.linalg.norm(
@@ -327,12 +318,11 @@ class ArmPushEnv(Env):
         if self.time > self.final_time:
             # survive_reward = np.linalg.norm(cm_pos, ord=2) * 10
             timelimit = True
-            terminated = True
+            truncated = True
 
         reward = forward_reward + survive_reward
         if np.isnan(reward):
             terminated = True
-            truncated = True
             reward = -20.0
         # reward *= 10 # Reward scaling
         # print(f'{reward=:.3f}: {forward_reward=:.3f}, {survive_reward=:.3f}')
@@ -358,7 +348,9 @@ class ArmPushEnv(Env):
 
         return states, reward, terminated, truncated, info
 
-    def render(self, mode="human", close=False):
+    def render(self):
+        if self.render_mode is None:
+            return None
         maxwidth = 800
         aspect_ratio = 3 / 4
 
@@ -410,7 +402,8 @@ class ArmPushEnv(Env):
         else:
             raise NotImplementedError("Rendering module is not imported properly")
 
-        self.viewer.imshow(state_image)
+        if self.render_mode == "human":
+            self.viewer.imshow(state_image)
 
         return state_image
 
@@ -615,7 +608,9 @@ class ArmPullWeightEnv(ArmPushEnv):
 
         return shearable_rod
 
-    def render(self, mode="human", close=False):
+    def render(self):
+        if self.render_mode is None:
+            return None
         maxwidth = 800
         aspect_ratio = 3 / 4
 
@@ -668,6 +663,7 @@ class ArmPullWeightEnv(ArmPushEnv):
         else:
             raise NotImplementedError("Rendering module is not imported properly")
 
-        self.viewer.imshow(state_image)
+        if self.render_mode == "human":
+            self.viewer.imshow(state_image)
 
         return state_image

@@ -10,9 +10,33 @@ from functools import partial
 
 from gymnasium import Env, spaces
 
-from elastica import *
+from elastica import (
+    BaseSystemCollection,
+    CallBackBaseClass,
+    CallBacks,
+    Constraints,
+    Contact,
+    CosseratRod,
+    Damping,
+    Forcing,
+    GravityForces,
+    MuscleTorques,
+    AnalyticalLinearDamper,
+    Plane,
+    PositionVerlet,
+    RodPlaneContactWithAnisotropicFriction,
+)
 
 import numpy as np
+
+
+class MutableMuscleTorques(MuscleTorques):
+    """Expose the finalized forcing instance for action updates."""
+
+    def __init__(self, *args, instance_ref=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if instance_ref is not None:
+            instance_ref["forcing"] = self
 
 
 def compute_projected_velocity(plot_params: dict, period):
@@ -74,7 +98,9 @@ def compute_projected_velocity(plot_params: dict, period):
     )
 
 
-class SnakeSimulator(BaseSystemCollection, Constraints, Forcing, CallBacks):
+class SnakeSimulator(
+    BaseSystemCollection, Constraints, Forcing, Damping, Contact, CallBacks
+):
     pass
 
 
@@ -154,7 +180,7 @@ class ContinuumSnakeEnv(Env):
     def set_action(self, action):
         wave_length = action[-1]
         b_coeff = action[:-1]
-        self.muscle_torque().__init__(
+        self.muscle_torque.__init__(
             base_length=self.base_length,
             b_coeff=b_coeff,
             period=self.period,
@@ -284,11 +310,15 @@ class ContinuumSnakeEnv(Env):
             base_length,
             base_radius,
             density,
-            nu,
-            E,
+            youngs_modulus=E,
             shear_modulus=shear_modulus,
         )
         snake_sim.append(self.shearable_rod)
+        snake_sim.dampen(self.shearable_rod).using(
+            AnalyticalLinearDamper,
+            damping_constant=nu,
+            time_step=time_step,
+        )
 
         # Add gravitational forces
         gravitational_acc = -9.80665
@@ -298,8 +328,9 @@ class ContinuumSnakeEnv(Env):
 
         # Add muscle torques
         wave_length = 1
-        muscle_torque = snake_sim.add_forcing_to(self.shearable_rod).using(
-            MuscleTorques,
+        muscle_torque_ref = {}
+        snake_sim.add_forcing_to(self.shearable_rod).using(
+            MutableMuscleTorques,
             base_length=base_length,
             b_coeff=np.zeros(4),
             period=period,
@@ -309,6 +340,7 @@ class ContinuumSnakeEnv(Env):
             ramp_up_time=period,
             direction=normal,
             with_spline=True,
+            instance_ref=muscle_torque_ref,
         )
 
         # Add friction forces
@@ -321,12 +353,12 @@ class ContinuumSnakeEnv(Env):
             [mu, 1.5 * mu, 2.0 * mu]
         )  # [forward, backward, sideways]
         static_mu_array = np.zeros(kinetic_mu_array.shape)
-        snake_sim.add_forcing_to(self.shearable_rod).using(
-            AnisotropicFrictionalPlane,
+        plane = Plane(plane_origin=origin_plane, plane_normal=normal_plane)
+        snake_sim.append(plane)
+        snake_sim.detect_contact_between(self.shearable_rod, plane).using(
+            RodPlaneContactWithAnisotropicFriction,
             k=1.0,
             nu=1e-6,
-            plane_origin=origin_plane,
-            plane_normal=normal_plane,
             slip_velocity_tol=slip_velocity_tol,
             static_mu_array=static_mu_array,
             kinetic_mu_array=kinetic_mu_array,
@@ -342,13 +374,6 @@ class ContinuumSnakeEnv(Env):
         timestepper = PositionVerlet()
         snake_sim.finalize()
         # integrate(timestepper, snake_sim, final_time, total_steps)
-        do_step, stages_and_updates = extend_stepper_interface(timestepper, snake_sim)
-        stepper = partial(
-            do_step,
-            dt=time_step,
-            TimeStepper=PositionVerlet(),
-            SystemCollection=snake_sim,
-            _steps_and_prefactors=stages_and_updates,
-        )
+        stepper = partial(timestepper.step, snake_sim, dt=time_step)
 
-        return snake_sim, stepper, muscle_torque, data
+        return snake_sim, stepper, muscle_torque_ref["forcing"], data

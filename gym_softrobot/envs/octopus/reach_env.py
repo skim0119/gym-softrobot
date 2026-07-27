@@ -5,10 +5,18 @@ from gymnasium import spaces, Env
 import time
 
 import numpy as np
-
-from elastica import *
-from elastica.timestepper import extend_stepper_interface
 from elastica._calculus import _isnan_check
+
+from elastica import (
+    BaseSystemCollection,
+    CallBacks,
+    Connections,
+    Constraints,
+    Damping,
+    Forcing,
+    OneEndFixedBC,
+    PositionVerlet,
+)
 
 from gym_softrobot.envs.octopus.build_muscle_octopus import build_octopus_muscles
 
@@ -20,7 +28,9 @@ from gym_softrobot.utils.render.base_renderer import (
 )
 
 
-class BaseSimulator(BaseSystemCollection, Constraints, Connections, Forcing, CallBacks):
+class BaseSimulator(
+    BaseSystemCollection, Constraints, Connections, Forcing, Damping, CallBacks
+):
     pass
 
 
@@ -114,7 +124,9 @@ class ReachEnv(Env):
         )
 
         self.simulator.constrain(self.rigid_rod).using(
-            OneEndFixedRod, constrained_position_idx=(0,), constrained_director_idx=(0,)
+            OneEndFixedBC,
+            constrained_position_idx=(0,),
+            constrained_director_idx=(0,),
         )
 
         # """ Controller Setup """
@@ -138,9 +150,7 @@ class ReachEnv(Env):
 
         """ Finalize the simulator and create time stepper """
         self.StatefulStepper = PositionVerlet()
-        self.do_step, self.stages_and_updates = extend_stepper_interface(
-            self.StatefulStepper, self.simulator
-        )
+        self.do_step = self.StatefulStepper.step
 
         # """ Return
         #     (1) total time steps for the simulation step iterations
@@ -224,13 +234,7 @@ class ReachEnv(Env):
         """ Run the simulation for one step """
         stime = time.perf_counter()
         for _ in range(self.step_skip):
-            self.time = self.do_step(
-                self.StatefulStepper,
-                self.stages_and_updates,
-                self.simulator,
-                self.time,
-                self.time_step,
-            )
+            self.time = self.do_step(self.simulator, self.time, self.time_step)
         etime = time.perf_counter()
         states = self.get_state()
 
@@ -280,7 +284,7 @@ class ReachEnv(Env):
         # systems = [self.shearable_rod]
 
         # Info
-        info = {"time": self.time, "rods": self.shearable_rods, "body": self.rigid_rod}
+        info = {"time": self.time}
         if np.isnan(reward):
             reward = -5
             terminated = True

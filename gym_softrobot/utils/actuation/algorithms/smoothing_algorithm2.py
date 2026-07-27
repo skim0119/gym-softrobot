@@ -19,9 +19,13 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import matplotlib.colors as mcolors
 
-from elastica._linalg import _batch_cross, _batch_matvec, _batch_matrix_transpose
 from elastica._calculus import quadrature_kernel
-from elastica._rotations import _rotate, _inv_rotate
+from elastica._linalg import (
+    _batch_cross,
+    _batch_matvec,
+    _batch_matrix_transpose,
+)
+from elastica._rotations import _inv_rotate, _rotate
 from elastica.external_forces import inplace_addition
 
 from gym_softrobot.utils.actuation.algorithms.algorithm import Algorithm

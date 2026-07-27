@@ -6,15 +6,19 @@ from typing import Optional
 
 import numpy as np
 
-from elastica import *
-from elastica.boundary_conditions import ConstraintBase
+from elastica import (
+    AnalyticalLinearDamper,
+    ConstraintBase,
+    CosseratRod,
+    GravityForces,
+    NoForces,
+)
 
 
 _PENDULUM_PROPERTIES = {  # default parameters
     # Arm properties
     "youngs_modulus": 1e6,
     "density": 1000.0,
-    "nu": 50,
 }
 _DEFAULT_SCALE_LENGTH = {
     "base_length": 1.0,
@@ -64,15 +68,15 @@ def build_soft_pendulum(
             self.fixed_position = fixed_position
             self.fixed_directors = fixed_directors
 
-        def constrain_values(self, rod, time):
-            rod.position_collection[1:, 0] = self.fixed_position[1:]
-            rod.director_collection[0, :, 0] = self.fixed_directors[0, :]
-            rod.director_collection[2, :, 0] = self.fixed_directors[2, :]
+        def constrain_values(self, system, time):
+            system.position_collection[1:, 0] = self.fixed_position[1:]
+            system.director_collection[0, :, 0] = self.fixed_directors[0, :]
+            system.director_collection[2, :, 0] = self.fixed_directors[2, :]
 
-        def constrain_rates(self, rod, time):
-            rod.velocity_collection[1:, 0] = 0
-            rod.omega_collection[0, 0] = 0
-            rod.omega_collection[2, 0] = 0
+        def constrain_rates(self, system, time):
+            system.velocity_collection[1:, 0] = 0
+            system.omega_collection[0, 0] = 0
+            system.omega_collection[2, 0] = 0
 
     simulator.constrain(shearable_rod).using(
         PendulumBoundaryConditions,
@@ -93,8 +97,8 @@ def build_soft_pendulum(
 
             self.point_force = point_force
 
-        def apply_forces(self, system, time: np.float = 0.0):
-            system.external_forces[0, 0] = self.point_force
+        def apply_forces(self, system, time: float = 0.0):
+            system.external_forces[0, 0] = self.point_force.item()
 
     simulator.add_forcing_to(shearable_rod).using(
         PendulumPointForces, point_force=point_force

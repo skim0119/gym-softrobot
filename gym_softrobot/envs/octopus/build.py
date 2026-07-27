@@ -11,7 +11,14 @@ from typing import Optional
 
 import numpy as np
 
-from elastica import *
+from elastica import (
+    AnalyticalLinearDamper,
+    CosseratRod,
+    Cylinder,
+    GravityForces,
+    Plane,
+    RodPlaneContactWithAnisotropicFriction,
+)
 
 from gym_softrobot.utils.custom_elastica.joint import FixedJoint2Rigid
 from gym_softrobot.utils.custom_elastica.constraint import BodyBoundaryCondition
@@ -184,13 +191,13 @@ def build_octopus(
             np.array([mu, 1.5 * mu, 2.0 * mu]) * param["friction_multiplier"]
         )  # [forward, backward, sideways]
     static_mu_array = 2 * kinetic_mu_array
+    plane = Plane(plane_origin=origin_plane, plane_normal=normal_plane)
+    simulator.append(plane)
     for arm_i in range(n_arm):
-        simulator.add_forcing_to(shearable_rods[arm_i]).using(
-            AnisotropicFrictionalPlane,
+        simulator.detect_contact_between(shearable_rods[arm_i], plane).using(
+            RodPlaneContactWithAnisotropicFriction,
             k=1e2,
             nu=1e1,
-            plane_origin=origin_plane,
-            plane_normal=normal_plane,
             slip_velocity_tol=slip_velocity_tol,
             static_mu_array=static_mu_array,
             kinetic_mu_array=kinetic_mu_array,
@@ -268,12 +275,12 @@ def build_arm(
             np.array([mu, 1.5 * mu, 2.0 * mu]) * param["friction_multiplier"]
         )  # [forward, backward, sideways]
     static_mu_array = 2 * kinetic_mu_array
-    simulator.add_forcing_to(rod).using(
-        AnisotropicFrictionalPlane,
+    plane = Plane(plane_origin=origin_plane, plane_normal=normal)
+    simulator.append(plane)
+    simulator.detect_contact_between(rod, plane).using(
+        RodPlaneContactWithAnisotropicFriction,
         k=contact_k,
         nu=contact_nu,
-        plane_origin=origin_plane,
-        plane_normal=normal,
         slip_velocity_tol=slip_velocity_tol,
         static_mu_array=static_mu_array,
         kinetic_mu_array=kinetic_mu_array,

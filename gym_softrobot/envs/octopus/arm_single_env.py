@@ -7,11 +7,10 @@ import time
 import copy
 
 import numpy as np
+from elastica._calculus import _isnan_check
 from scipy.interpolate import interp1d
 
 import elastica as el
-from elastica.timestepper import extend_stepper_interface
-from elastica._calculus import _isnan_check
 
 from gym_softrobot import RENDERER_CONFIG
 from gym_softrobot.config import RendererType
@@ -32,6 +31,7 @@ class BaseSimulator(
     el.Constraints,
     el.Connections,
     el.Forcing,
+    el.Contact,
     el.Damping,
     el.CallBacks,
 ):
@@ -158,9 +158,7 @@ class ArmSingleEnv(Env):
         """ Finalize the simulator and create time stepper """
         self.StatefulStepper = el.PositionVerlet()
         self.simulator.finalize()
-        self.do_step, self.stages_and_updates = extend_stepper_interface(
-            self.StatefulStepper, self.simulator
-        )
+        self.do_step = self.StatefulStepper.step
 
         self.time = np.float64(0.0)
         self.counter = 0
@@ -247,13 +245,7 @@ class ArmSingleEnv(Env):
         """ Run the simulation for one step """
         stime = time.perf_counter()
         for _ in range(self.step_skip):
-            self.time = self.do_step(
-                self.StatefulStepper,
-                self.stages_and_updates,
-                self.simulator,
-                self.time,
-                self.time_step,
-            )
+            self.time = self.do_step(self.simulator, self.time, self.time_step)
         etime = time.perf_counter()
         # print(f'{self.counter=}, {etime-stime}sec, {self.time=}')
 
@@ -316,7 +308,6 @@ class ArmSingleEnv(Env):
         # Info
         info = {
             "time": self.time,
-            "rod": self.shearable_rod,
             "TimeLimit.truncated": timelimit,
         }
 

@@ -1,5 +1,4 @@
-from elastica import *
-from elastica.joint import FreeJoint
+from elastica import Damping, FreeJoint
 
 import numpy as np
 from numba import njit
@@ -46,19 +45,21 @@ class FixedJoint2Rigid(FreeJoint):
         self.radius = radius
 
     # Apply force is same as free joint
-    def apply_forces(self, rod_one, index_one, rod_two, index_two):
-        self.rigid_rod_pos = rod_one.position_collection[..., index_one].copy()
+    def apply_forces(
+        self, system_one, index_one, system_two, index_two, time=np.float64(0.0)
+    ):
+        self.rigid_rod_pos = system_one.position_collection[..., index_one].copy()
         self.rigid_rod_pos[2] = 0.0
         self.rigid_rod_connection_dir, contact_force = self._apply_forces(
             index_one,
             index_two,
             self.rigid_rod_pos,
-            rod_two.position_collection,
-            rod_one.velocity_collection,
-            rod_two.velocity_collection,
-            rod_one.director_collection[1, ...].T,
-            rod_one.external_forces,
-            rod_two.external_forces,
+            system_two.position_collection,
+            system_one.velocity_collection,
+            system_two.velocity_collection,
+            system_one.director_collection[1, ...].T,
+            system_one.external_forces,
+            system_two.external_forces,
             self.k,
             self.nu,
             self.kt,
@@ -121,7 +122,9 @@ class FixedJoint2Rigid(FreeJoint):
 
         return rigid_rod_connection_dir, contact_force
 
-    def apply_torques(self, rod_one, index_one, rod_two, index_two):
+    def apply_torques(
+        self, system_one, index_one, system_two, index_two, time=np.float64(0.0)
+    ):
         # self._apply_hard_director_boundary(
         #        index_one,
         #        index_two,
@@ -133,12 +136,12 @@ class FixedJoint2Rigid(FreeJoint):
             index_two,
             self.rigid_rod_pos,
             self.rigid_rod_connection_dir,
-            rod_two.position_collection,
-            rod_one.director_collection,
-            rod_two.director_collection,
-            rod_two.rest_lengths,
-            rod_one.external_torques,
-            rod_two.external_torques,
+            system_two.position_collection,
+            system_one.director_collection,
+            system_two.director_collection,
+            system_two.rest_lengths,
+            system_one.external_torques,
+            system_two.external_torques,
             self.k,
             self.nu,
             self.kt,

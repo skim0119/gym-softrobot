@@ -6,11 +6,10 @@ from collections import defaultdict
 import time
 
 import numpy as np
+from elastica._calculus import _isnan_check
 from scipy.interpolate import interp1d
 
 import elastica as el
-from elastica.timestepper import extend_stepper_interface
-from elastica._calculus import _isnan_check
 
 from gym_softrobot import RENDERER_CONFIG
 from gym_softrobot.config import RendererType
@@ -32,6 +31,7 @@ class BaseSimulator(
     el.Constraints,
     el.Connections,
     el.Forcing,
+    el.Contact,
     el.CallBacks,
     el.Damping,
 ):
@@ -207,9 +207,7 @@ class FlatEnv(Env):
         """ Finalize the simulator and create time stepper """
         self.StatefulStepper = el.PositionVerlet()
         self.simulator.finalize()
-        self.do_step, self.stages_and_updates = extend_stepper_interface(
-            self.StatefulStepper, self.simulator
-        )
+        self.do_step = self.StatefulStepper.step
 
         # """ Return
         #     (1) total time steps for the simulation step iterations
@@ -326,13 +324,7 @@ class FlatEnv(Env):
         """ Run the simulation for one step """
         stime = time.perf_counter()
         for _ in range(self.step_skip):
-            self.time = self.do_step(
-                self.StatefulStepper,
-                self.stages_and_updates,
-                self.simulator,
-                self.time,
-                self.time_step,
-            )
+            self.time = self.do_step(self.simulator, self.time, self.time_step)
         etime = time.perf_counter()
 
         """ Done is a boolean to reset the environment before episode is completed """
@@ -408,8 +400,6 @@ class FlatEnv(Env):
         # Info
         info = {
             "time": self.time,
-            "rods": self.shearable_rods,
-            "body": self.rigid_rod,
             "TimeLimit.truncated": timelimit,
         }
 

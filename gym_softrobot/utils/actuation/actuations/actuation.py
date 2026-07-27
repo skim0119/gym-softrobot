@@ -7,7 +7,7 @@ import numpy as np
 from numba import njit
 
 from elastica._linalg import _batch_matvec, _batch_cross
-from elastica._calculus import quadrature_kernel, difference_kernel
+from elastica._calculus import difference_kernel, quadrature_kernel
 from elastica.external_forces import inplace_addition, NoForces
 
 @njit(cache=True)

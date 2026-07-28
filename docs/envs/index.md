@@ -1,44 +1,26 @@
 # Environments
 
-gym-softrobot groups its environments by the soft-body system and control
-objective. All public IDs are versioned so experiments can record the exact task
-definition.
+Environments are grouped by **theme**: a simulated body together with its task.
+IDs within a theme are variants distinguished by actuation, action space,
+dimensionality, constraints, or scene configuration.
 
-## Environment catalog
+| Theme | Environments | Main variant details |
+| --- | --- | --- |
+| [Arm](arm.md) | `SoftArmTracking-v0`, `ElasticaArmTracking-v0`, `ElasticaArmReach-v0`, [`TendonArmReach-v0`](tendon_arm.md), `ElasticaArmObstacle-v0`, `ElasticaArmObstacleRandom-v0` | Tracking, reaching, or obstacle reaching; torque or tendon actuation; 2-D or 3-D |
+| [Octopus](octopus.md) | `OctoArmSingle-v0`, `OctoArmTwo-v0`, `OctoArmPush-v0`, `OctoArmPush-v1`, `OctoArmPullWeight-v0`, `OctoFlat-v0`, `OctoFlatLite-v0`, `OctoCrawl-v0`, `OctoReach-v0` | Arm or whole-body task; discrete or continuous actuation; fixed or controllable constraints |
+| [Snake](snake.md) | `ContinuumSnake-v0` | Traveling-wave actuation with anisotropic ground contact |
+| [Pendulum](pendulum.md) | `SoftPendulum-v0`, `SoftPendulum3D-v0` | Point-force or moving-base actuation; planar or 3-D motion |
 
-| Family | Environment | Objective | Control |
-| --- | --- | --- | --- |
-| Octopus | `OctoArmSingle-v0` | Move the tip of one soft arm | Distributed muscle activation |
-| Octopus | `OctoArmTwo-v0` | Coordinate two arms | Muscle activation with controllable anchors |
-| Octopus | `OctoArmPush-v0` | Push an object | Discrete arm commands |
-| Octopus | `OctoArmPush-v1` | Push an object | Continuous arm commands |
-| Octopus | `OctoArmPullWeight-v0` | Pull an attached weight | Continuous arm commands |
-| Octopus | `OctoFlat-v0` | Control an eight-arm planar body | Per-arm muscle activation |
-| Octopus | `OctoFlatLite-v0` | Run a reduced planar task | Single-arm activation |
-| Octopus | `OctoCrawl-v0` | Move the body by coordinated crawling | Arm muscles and controllable anchors |
-| Octopus | `OctoReach-v0` | Move the body toward a target | Coordinated arm muscles |
-| Soft arm | `SoftArmTracking-v0` | Track a moving target with the arm tip | Muscle-torque profiles |
-| Locomotion | `ContinuumSnake-v0` | Generate forward motion | Traveling-wave coefficients |
-| Control | `SoftPendulum-v0` | Stabilize a deformable pendulum | Applied point force |
-| Control | `SoftPendulum3D-v0` | Stabilize a vertical deformable pendulum | Two-axis base motion |
-
-## Choosing an environment
-
-- Start with `SoftPendulum-v0` for a compact control problem.
-- Use `SoftPendulum3D-v0` for pendulum stabilization with coupled motion in
-  three dimensions.
-- Use `OctoArmSingle-v0` before moving to multi-arm octopus tasks.
-- Use `ContinuumSnake-v0` for friction-driven locomotion.
-- Use `SoftArmTracking-v0` for trajectory tracking.
-
-The octopus tasks are the most computationally intensive. Their reduced
-variants are useful for integration tests and early policy experiments.
+See each theme page for the detailed comparison. All public IDs are versioned
+so experiments can record the exact task definition.
 
 ```{toctree}
+:maxdepth: 2
+:caption: Environment themes
 :hidden:
 
+arm
 octopus
-soft_arm
-misc
-wrappers
+snake
+pendulum
 ```

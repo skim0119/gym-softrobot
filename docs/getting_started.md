@@ -1,19 +1,4 @@
-# Getting started
-
-## Installation
-
-gym-softrobot supports Python 3.12 and newer.
-
-```bash
-pip install gym-softrobot
-```
-
-For development, clone the repository and create the complete environment with
-`uv`:
-
-```bash
-uv sync --all-groups
-```
+# Getting Started
 
 ## Run an environment
 

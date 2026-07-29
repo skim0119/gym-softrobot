@@ -1,0 +1,8 @@
+/*
+ * Temporarily hide the Farama Foundation project menu in the top-right header.
+ * Remove this rule when gym-softrobot is ready to expose those links.
+ */
+.farama-header__right,
+.farama-header-menu {
+  display: none !important;
+}

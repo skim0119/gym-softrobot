@@ -3,6 +3,15 @@
 The continuum-arm environments share a slender Cosserat-rod body, but differ in
 task, actuation, and workspace constraints.
 
+In each case, the arm is a distributed mechanical system rather than a chain of
+rigid links. Centerline positions and material frames evolve under inertia,
+elastic force and moment resultants, damping, boundary reactions, and applied
+loads. The actuation choice determines how a low-dimensional policy couples to
+those equations: idealized B-spline torques act directly as a smooth moment
+density, whereas routed tendons generate forces and offset moments at discrete
+vertebrae. The obstacle tasks additionally solve compliant rod-cylinder
+contact.
+
 ## Tracking
 
 | Environment | Actuation | Action | Workspace | Target |

@@ -20,6 +20,14 @@ elements and advances PyElastica with a Position Verlet integrator at a
 `3e-5` s time step. Linear damping suppresses unresolved high-frequency motion.
 Gravity is disabled in the reference task.
 
+Unlike a rigid serial manipulator, the simulated arm has distributed
+translational and rotational degrees of freedom. The Cosserat formulation
+resolves centerline stretching and shear together with bending and twist of the
+material frames. Internal force and moment resultants are computed from these
+strains using the rod's elastic constitutive law. Fixing the first node and
+director frame creates a clamped base while leaving the remainder of the body
+free to deform in three dimensions.
+
 Eight tendons are divided into two antagonistic groups:
 
 - four tendons run through six vertebrae over approximately 98% of the arm;
@@ -30,6 +38,29 @@ The long and short groups use routing radii of 15 mm and 8 mm, respectively.
 Forces follow the tendon segments between vertebrae, and their offsets from the
 centerline also produce torques on the rod.
 
+At an intermediate vertebra, a tendon changes direction. The two adjacent
+tension vectors therefore produce the nodal force
+
+```{math}
+\mathbf{f}_{i,j}
+= T_i\left(\hat{\mathbf{t}}_{i,j}^{+}
+- \hat{\mathbf{t}}_{i,j}^{-}\right),
+```
+
+where $T_i$ is the tendon tension and the unit vectors point along the
+outgoing and incoming tendon segments. Because the tendon passes through an
+offset $\mathbf{r}_{i,j}$ in the local cross-section, it also applies
+
+```{math}
+\boldsymbol{\tau}_{i,j}
+= \mathbf{r}_{i,j}\times\mathbf{f}_{i,j}.
+```
+
+Opposing tendons can therefore generate bending in either transverse direction.
+Co-activating tendons increases internal loading and stiffness-like resistance
+without requiring the same net bending moment, while the shorter group
+concentrates its control authority in the proximal half of the arm.
+
 ## Action space
 
 The action is an eight-value `Box(-1, 1, shape=(8,), dtype=float32)`. The first
@@ -37,9 +68,9 @@ four values command the full-length tendons and the remaining four command the
 half-length tendons. Each normalized command is mapped linearly to a
 nonnegative tension:
 
-\[
+```{math}
 T_i = \frac{a_i + 1}{2} T_{\max},
-\]
+```
 
 where the default maximum tension is 8 N. Thus `-1` releases a tendon and `1`
 applies its maximum tension.

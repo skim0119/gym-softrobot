@@ -20,6 +20,16 @@ register(
 )
 
 register(
+    id="OctoPhaseCrawl-v0",
+    entry_point="gym_softrobot.envs.octopus:OctoPhaseCrawlEnv",
+)
+
+register(
+    id="OctoMuscleCrawl-v0",
+    entry_point="gym_softrobot.envs.octopus:OctoMuscleCrawlEnv",
+)
+
+register(
     id="OctoReach-v0",
     entry_point="gym_softrobot.envs.octopus:ReachEnv",
 )

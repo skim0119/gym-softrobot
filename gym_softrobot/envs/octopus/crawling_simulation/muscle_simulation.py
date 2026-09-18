@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from gym_softrobot.envs.octopus.phase_physics.forcing import SuckerActuation
-from gym_softrobot.envs.octopus.phase_physics.muscles import create_octopus_muscle_groups
-from gym_softrobot.envs.octopus.phase_physics.muscle_policy import OctoArmMusclePolicy
-from gym_softrobot.envs.octopus.phase_physics.simulation import PhaseOctopusSimulation
+from gym_softrobot.envs.octopus.control.muscle_policy import OctoArmMusclePolicy
+from gym_softrobot.envs.octopus.control.muscles import create_octopus_muscle_groups
+from gym_softrobot.envs.octopus.crawling_simulation.phase_simulation import (
+    PhaseOctopusSimulation,
+)
+from gym_softrobot.envs.octopus.physics.forcing import SuckerActuation
 
 from coomm.actuations.batch_muscle import ApplyMuscleActuations
 
@@ -63,4 +65,3 @@ class PhaseOctopusMuscleSimulation(PhaseOctopusSimulation):
             ApplyMuscleActuations,
             batch_muscles,
         )
-

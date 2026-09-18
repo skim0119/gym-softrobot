@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import numpy as np
-from gym_softrobot.envs.octopus.phase_physics.policy import (
+from gym_softrobot.envs.octopus.control.phase_policy import (
     current_activation,
 )
 
@@ -285,4 +285,3 @@ class OctoArmMusclePolicy:
             arm.middle_suction_scale = 0.0
             arm.om_positive_scale = 0.0
             arm.om_negative_scale = 0.0
-

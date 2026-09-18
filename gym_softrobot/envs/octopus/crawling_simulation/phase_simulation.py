@@ -9,17 +9,17 @@ import elastica as ea
 import numpy as np
 import numpy.typing as npt
 
-from gym_softrobot.envs.octopus.phase_physics.crawling import SegmentExtensionActuation
-from gym_softrobot.envs.octopus.phase_physics.config import OctopusV1Config
-from gym_softrobot.envs.octopus.phase_physics.policy import OctoArmPolicy
-from gym_softrobot.envs.octopus.phase_physics.forcing import SuckerActuation, YSurfaceBallwGravity
-from gym_softrobot.envs.octopus.phase_physics.dissipation import RayleighDamping
-from gym_softrobot.envs.octopus.phase_physics.tapered_arm import create_arm
-from gym_softrobot.envs.octopus.phase_physics.contacts import BaseSphereTether
-from gym_softrobot.envs.octopus.phase_physics.friction import AnisotropicFriction
-from gym_softrobot.envs.octopus.phase_physics.rod_rod_contact import (
+from gym_softrobot.envs.octopus.control.phase_policy import OctoArmPolicy
+from gym_softrobot.envs.octopus.crawling_simulation.config import OctopusV1Config
+from gym_softrobot.envs.octopus.physics.contacts import BaseSphereTether
+from gym_softrobot.envs.octopus.physics.crawling import SegmentExtensionActuation
+from gym_softrobot.envs.octopus.physics.dissipation import RayleighDamping
+from gym_softrobot.envs.octopus.physics.forcing import SuckerActuation, YSurfaceBallwGravity
+from gym_softrobot.envs.octopus.physics.friction import AnisotropicFriction
+from gym_softrobot.envs.octopus.physics.rod_contact import (
     RodRodContactSkipBaseElements,
 )
+from gym_softrobot.envs.octopus.physics.tapered_arm import create_arm
 
 Vector3: TypeAlias = tuple[float, float, float] | npt.NDArray[np.float64]
 
@@ -165,7 +165,7 @@ class PhaseOctopusSimulation(Generic[C]):
             self.simulator.append(base_sphere)
 
             if fix_sphere:
-                from gym_softrobot.envs.octopus.phase_physics.boundary_condition import FixSphere
+                from gym_softrobot.envs.octopus.physics.boundary import FixSphere
 
                 self.simulator.constrain(base_sphere).using(
                     FixSphere,

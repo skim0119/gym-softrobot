@@ -63,24 +63,28 @@ while not (terminated or truncated):
 env.close()
 ```
 
-List the registered environments:
+For a more involved example, the Octopus environments expose distributed
+feedback control over multiple soft arms:
+
+```python
+import gymnasium as gym
+import gym_softrobot
+
+env = gym.make("OctoMuscleCrawl-v0")
+observation, info = env.reset(seed=42)
+observation, reward, terminated, truncated, info = env.step(
+    env.action_space.sample()
+)
+env.close()
+```
+
+See the [documentation](https://gym-softrobot.readthedocs.io/) for the
+environment catalog, API conventions, rendering, Octopus variants, and RL
+examples. The registered IDs can also be listed with:
 
 ```bash
 python -m gym_softrobot.debug.registry
 ```
-
-See the [documentation](https://gym-softrobot.readthedocs.io/) for environment
-IDs, API conventions, and rendering notes.
-
-## Reinforcement-learning examples
-
-The four `ElasticaArm*` environments are modern Gymnasium/PyElastica ports of
-the tracking, orientation-reaching, structured-obstacle, and
-unstructured-obstacle benchmarks from
-[Elastica-RL-control](https://github.com/GazzolaLab/Elastica-RL-control).
-See the [benchmark documentation](docs/envs/elastica_rl.md) for the mapping to
-upstream Cases 1–4 and the [PPO example](examples/elastica_arm_tracking/README.md)
-for Stable-Baselines3 training.
 
 ## Development
 
@@ -93,7 +97,7 @@ uv run pre-commit install
 
 ```bibtex
 @misc{gym_softrobot,
-  author = {Chia-Hsien Shih and Seung Hyun Kim and Mattia Gazzola},
+  author = {Seung Hyun Kim and Chia-Hsien Shih and Mattia Gazzola},
   title = {Soft Robotics Environment for Gymnasium},
   year = {2026},
   publisher = {GitHub},

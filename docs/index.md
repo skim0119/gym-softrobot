@@ -19,6 +19,13 @@ abstraction to study control and actuator co-design, policy transfer,
 curriculum learning from simple to physically constrained tasks, robustness,
 and reinforcement learning for distributed soft-robot control.
 
+```{tip}
+Start with [Getting started](getting_started.md) and the compact
+[pendulum](envs/pendulum.md) tasks to check a control pipeline. Move to
+[arm](envs/arm.md) or [octopus](envs/octopus.md) environments when the
+research question depends on a particular actuation model.
+```
+
 ```{toctree}
 :maxdepth: 1
 :caption: Getting started

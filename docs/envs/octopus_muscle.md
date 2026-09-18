@@ -17,10 +17,13 @@ two suction bands on each arm. Ground friction, sucker attachment, and
 elastic arm–body coupling then determine whether those activations produce
 net translation.
 
-The reusable `phase_physics` layer still contains the open-loop
-phase-Gaussian parameters used by the earlier full-rollout bandit interface.
-Those parameters are not the Gymnasium action; they remain available for a
-later whole-episode wrapper.
+```{note}
+`OctoPhaseCrawl-v0` uses the same body and suction layout with a lower-level
+phase action (stiffness, extension, suction, bend). This page is the explicit
+muscle-group interface. Open-loop phase-Gaussian parameters remain in
+`phase_physics` for a later whole-episode wrapper; they are not the
+Gymnasium action.
+```
 
 ## Physical model
 
@@ -139,7 +142,9 @@ while not (terminated or truncated):
 env.close()
 ```
 
+```{warning}
 The default model is computationally expensive. For smoke tests, construct
 `OctoMuscleCrawlEnv` with a reduced `OctopusMuscleConfig` (fewer elements,
 a larger time step, and a short horizon) rather than sampling full-length
 rollouts.
+```

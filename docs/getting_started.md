@@ -1,5 +1,10 @@
 # Getting Started
 
+```{tip}
+`SoftPendulum-v0` is the cheapest environment for a first `reset`/`step` loop.
+Use an octopus ID only after that loop works.
+```
+
 ## Run an environment
 
 Importing `gym_softrobot` registers its environment IDs with Gymnasium.
@@ -31,8 +36,11 @@ env.render()
 env.close()
 ```
 
-Available modes differ by environment. Interactive and POV-Ray rendering may
-require graphics or system packages beyond the core Python installation.
+```{note}
+Available modes differ by environment and are listed in
+`env.metadata["render_modes"]`. Interactive and POV-Ray rendering may require
+graphics or system packages beyond the core Python installation.
+```
 
 ## Debug commands
 

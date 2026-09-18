@@ -59,13 +59,13 @@ forces and moments; the lite variant isolates the mechanics of one arm.
 
 ## Body — crawling and reaching
 
-### Legacy compatibility
-
-`OctoCrawl-v0` is a legacy environment retained for compatibility with older
-experiments and PyMARL-style decentralized controllers. Its action,
-observation, physics, and reward contracts differ from the migrated phase
-environments, so new experiments should use `OctoPhaseCrawl-v0` for abstract
-phase actuation or `OctoMuscleCrawl-v0` for explicit TM/LM/OM muscle control.
+```{caution}
+`OctoCrawl-v0` is retained for older experiments and PyMARL-style
+decentralized controllers. Its action, observation, physics, and reward
+contracts differ from the migrated crawlers. New work should use
+`OctoPhaseCrawl-v0` for abstract phase actuation or `OctoMuscleCrawl-v0` for
+explicit TM/LM/OM muscle control.
+```
 
 | Environment | Task | Actuation | Action | Constraint or scene |
 | --- | --- | --- | --- | --- |
@@ -81,10 +81,11 @@ combined elastic loads from several arms, making coordination important because
 unbalanced activation can rotate or deform the assembly instead of advancing
 it toward the target.
 
-`OctoMuscleCrawl-v0` is the octopus-muscle crawler. See the
-[octopus-muscle guide](octopus_muscle.md) for its Cosserat-arm and suction
-model, the nine-channel muscle action, the body observation, and the crawl
-reward.
+```{seealso}
+The [octopus-muscle guide](octopus_muscle.md) documents `OctoMuscleCrawl-v0`:
+Cosserat arms and suction, the nine-channel muscle action, the body
+observation, and the crawl reward.
+```
 
 ## Usage
 
@@ -100,8 +101,10 @@ observation, reward, terminated, truncated, info = env.step(
 env.close()
 ```
 
-These simulations are comparatively expensive. Start with a reduced model or
-short horizon while validating a training pipeline.
+```{warning}
+Octopus simulations are comparatively expensive. Validate a training pipeline
+on a reduced model or a short horizon before full-length rollouts.
+```
 
 ```{toctree}
 :hidden:

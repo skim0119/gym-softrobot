@@ -4,6 +4,15 @@ Environments are grouped by **theme**: a simulated body together with its task.
 IDs within a theme are variants distinguished by actuation, action space,
 dimensionality, constraints, or scene configuration.
 
+```{seealso}
+Theme pages compare those variants in detail. Use this table only to pick a
+family, then open the theme page before training.
+```
+
+A practical order is pendulum (pipeline checks), arm (continuum reaching or
+tracking), snake (traveling-wave locomotion), then octopus (distributed muscle
+and whole-body coordination). Octopus simulations are the most expensive.
+
 | Theme | Environments | Main variant details |
 | --- | --- | --- |
 | [Arm](arm.md) | `SoftArmTracking-v0`, `ElasticaArmTracking-v0`, `ElasticaArmReach-v0`, `TendonArmReach-v0`, `ElasticaArmObstacle-v0`, `ElasticaArmObstacleRandom-v0` | Tracking, reaching, or obstacle reaching; torque or tendon actuation; 2-D or 3-D |

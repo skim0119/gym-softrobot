@@ -5,4 +5,9 @@ from gym_softrobot.envs.octopus.arm_push_env import ArmPushEnv
 from gym_softrobot.envs.octopus.arm_push_env import ArmPullWeightEnv
 from gym_softrobot.envs.octopus.reach_env import ReachEnv
 from gym_softrobot.envs.octopus.crawl_env import CrawlEnv
+from gym_softrobot.envs.octopus.phase_crawl_env import (
+    OctoPhaseCrawlEnv,
+    OctopusPhaseCrawlEnv,
+)
+from gym_softrobot.envs.octopus.muscle_crawl_env import OctoMuscleCrawlEnv
 # from gym_softrobot.envs.octopus.crawlCurvature_env import CrawlCurvatureEnv

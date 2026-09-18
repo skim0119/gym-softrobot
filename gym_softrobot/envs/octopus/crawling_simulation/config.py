@@ -8,8 +8,8 @@ from typing import Literal
 
 import numpy as np
 
-from gym_softrobot.envs.octopus.phase_physics.policy import ArmControlPolicy, OctoArmPolicy
-from gym_softrobot.envs.octopus.phase_physics.muscle_policy import MuscleArmControlPolicy
+from gym_softrobot.envs.octopus.control.phase_policy import ArmControlPolicy, OctoArmPolicy
+from gym_softrobot.envs.octopus.control.muscle_policy import MuscleArmControlPolicy
 
 RewardMode = Literal["forward", "three_heading_avg"]
 FrictionMode = Literal["no-friction", "anisotropic", "isotropic"]
@@ -217,4 +217,3 @@ def _normalize_arm_interaction_mask(
     if len(flags) != n_arms:
         raise ValueError(f"interaction mask must have length {n_arms}, got {len(flags)}")
     return tuple(flags)
-

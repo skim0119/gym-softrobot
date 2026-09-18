@@ -3,7 +3,7 @@
 The muscle-group simulator is deliberately exposed as a regular Gymnasium
 environment here.  Each action controls one interval of muscle actuation;
 the policy parameters used by the old bandit interface remain in
-``phase_physics`` for the later whole-rollout wrapper.
+the internal crawling simulation modules for the later whole-rollout wrapper.
 """
 
 from __future__ import annotations
@@ -15,8 +15,8 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from gym_softrobot.envs.octopus.phase_physics.config import OctopusMuscleConfig
-from gym_softrobot.envs.octopus.phase_physics.muscle_simulation import (
+from gym_softrobot.envs.octopus.crawling_simulation.config import OctopusMuscleConfig
+from gym_softrobot.envs.octopus.crawling_simulation.muscle_simulation import (
     PhaseOctopusMuscleSimulation,
 )
 

@@ -3,7 +3,7 @@ import numpy as np
 from gymnasium.utils.env_checker import check_env
 
 from gym_softrobot.envs.octopus.muscle_crawl_env import OctoMuscleCrawlEnv
-from gym_softrobot.envs.octopus.phase_physics.config import OctopusMuscleConfig
+from gym_softrobot.envs.octopus.crawling_simulation.config import OctopusMuscleConfig
 
 
 def _small_config() -> OctopusMuscleConfig:

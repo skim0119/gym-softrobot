@@ -9,8 +9,10 @@ import gymnasium as gym
 import numpy as np
 from gymnasium import spaces
 
-from gym_softrobot.envs.octopus.phase_physics.config import OctopusV1Config
-from gym_softrobot.envs.octopus.phase_physics.simulation import PhaseOctopusSimulation
+from gym_softrobot.envs.octopus.crawling_simulation.config import OctopusV1Config
+from gym_softrobot.envs.octopus.crawling_simulation.phase_simulation import (
+    PhaseOctopusSimulation,
+)
 
 
 class OctoPhaseCrawlEnv(gym.Env[np.ndarray, np.ndarray]):

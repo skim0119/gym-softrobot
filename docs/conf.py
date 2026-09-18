@@ -31,10 +31,8 @@ myst_enable_extensions = [
     "dollarmath",
 ]
 
-html_theme = "celshast"
+html_theme = "furo"
 html_title = "gym-softrobot"
-html_static_path = ["_static"]
-html_css_files = ["css/custom.css"]
 html_theme_options = {
     "source_repository": "https://github.com/skim0119/gym-softrobot/",
     "source_branch": "main",

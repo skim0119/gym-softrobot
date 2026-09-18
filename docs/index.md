@@ -30,8 +30,13 @@ getting_started
 ```{toctree}
 :maxdepth: 2
 :caption: Environments
+:titlesonly:
 
-envs/index
+Overview <envs/index>
+envs/arm
+envs/octopus
+envs/snake
+envs/pendulum
 ```
 
 ```{toctree}

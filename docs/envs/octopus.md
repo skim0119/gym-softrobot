@@ -59,9 +59,19 @@ forces and moments; the lite variant isolates the mechanics of one arm.
 
 ## Body — crawling and reaching
 
+### Legacy compatibility
+
+`OctoCrawl-v0` is a legacy environment retained for compatibility with older
+experiments and PyMARL-style decentralized controllers. Its action,
+observation, physics, and reward contracts differ from the migrated phase
+environments, so new experiments should use `OctoPhaseCrawl-v0` for abstract
+phase actuation or `OctoMuscleCrawl-v0` for explicit TM/LM/OM muscle control.
+
 | Environment | Task | Actuation | Action | Constraint or scene |
 | --- | --- | --- | --- | --- |
-| `OctoCrawl-v0` | Crawl by coordinating the arms | Arm muscles and anchor control | Continuous | Eight arms with controllable anchors |
+| `OctoCrawl-v0` | Legacy crawl task | Arm muscles and anchor control | Continuous | Eight arms with controllable anchors; retained for compatibility |
+| `OctoPhaseCrawl-v0` | Feedback-controlled crawling | Abstract stiffness, extension, suction, and bend | Continuous | Eight arms; one action per control interval |
+| `OctoMuscleCrawl-v0` | Feedback-controlled crawling | TM/LM/OM muscle groups and suction | Continuous | Eight arms; one action per control interval |
 | `OctoReach-v0` | Move toward a target | Coordinated arm muscles | Continuous | Eight arms; central rigid body fixed |
 
 Crawling requires an asymmetric interaction cycle. Anchored arms provide
@@ -70,6 +80,11 @@ converts otherwise reciprocal deformation into translation. Reaching uses the
 combined elastic loads from several arms, making coordination important because
 unbalanced activation can rotate or deform the assembly instead of advancing
 it toward the target.
+
+`OctoMuscleCrawl-v0` is the octopus-muscle crawler. See the
+[octopus-muscle guide](octopus_muscle.md) for its Cosserat-arm and suction
+model, the nine-channel muscle action, the body observation, and the crawl
+reward.
 
 ## Usage
 
@@ -87,3 +102,9 @@ env.close()
 
 These simulations are comparatively expensive. Start with a reduced model or
 short horizon while validating a training pipeline.
+
+```{toctree}
+:hidden:
+
+octopus_muscle
+```

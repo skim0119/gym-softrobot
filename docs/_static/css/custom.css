@@ -1,0 +1,22 @@
+/*
+ * Environments catalog: first-column theme names are page links, so Furo
+ * otherwise paints them with --color-brand-content / --color-brand-visited
+ * and vertically centers them in tall rows.
+ */
+#environments table.docutils td:first-child {
+  font-weight: 600;
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+#environments table.docutils td:first-child a,
+#environments table.docutils td:first-child a:visited {
+  color: var(--color-foreground-primary);
+  text-decoration-color: var(--color-background-border);
+}
+
+#environments table.docutils td:first-child a:hover,
+#environments table.docutils td:first-child a:visited:hover {
+  color: var(--color-link--hover);
+  text-decoration-color: var(--color-link-underline--hover);
+}

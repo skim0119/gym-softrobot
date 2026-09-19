@@ -17,7 +17,7 @@ def main() -> None:
     except ImportError as error:
         raise SystemExit(
             "Install Stable-Baselines3 to run this example: "
-            "uv pip install stable-baselines3"
+            "uv sync --group benchmark"
         ) from error
 
     output_dir = Path("save/soft_pendulum_3d")

@@ -1,6 +1,6 @@
 [project]
 name = "gym-softrobot"
-version = "0.2.0"
+version = "0.3.0"
 description = "Soft-robotics control environment package for Gymnasium"
 readme = "README.md"
 keywords = []
@@ -56,6 +56,9 @@ docs = [
     "myst-parser",
     "numpydoc",
     "docutils",
+]
+benchmark = [
+    "stable-baselines3>=2.9.0",
 ]
 
 

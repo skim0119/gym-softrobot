@@ -91,7 +91,7 @@ from policies that generalize across contact configurations.
 Stable-Baselines3 remains optional. For example:
 
 ```bash
-uv pip install stable-baselines3
+uv sync --group benchmark
 uv run python examples/elastica_arm_tracking/train_ppo.py \
   --env-id ElasticaArmObstacle-v0 \
   --total-timesteps 1000000 \

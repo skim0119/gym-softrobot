@@ -14,7 +14,7 @@ Gymnasium and current PyElastica:
 Stable-Baselines3 is an optional dependency:
 
 ```bash
-uv pip install stable-baselines3
+uv sync --group benchmark
 uv run python examples/elastica_arm_tracking/train_ppo.py \
   --env-id ElasticaArmReach-v0 --total-timesteps 1000000 --seed 0
 ```

@@ -13,8 +13,8 @@ uv run --no-sync python examples/tendon_arm_reach/check_env.py --fast
 
 Run the faithful 100-element, 800-substep configuration by omitting `--fast`.
 
-Stable-Baselines3 is optional. After installing it, check the training pipeline
-with:
+Stable-Baselines3 is optional. After `uv sync --group benchmark`, check the
+training pipeline with:
 
 ```console
 uv run --no-sync python examples/tendon_arm_reach/train_ppo.py \

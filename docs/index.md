@@ -22,7 +22,7 @@ and reinforcement learning for distributed soft-robot control.
 ```{tip}
 Start with [Getting started](getting_started.md) and the compact
 [pendulum](envs/pendulum.md) tasks to check a control pipeline. Move to
-[arm](envs/arm.md) or [octopus](envs/octopus.md) environments when the
+[arm](envs/arm.md) or [CyberOctopus](envs/octopus.md) environments when the
 research question depends on a particular actuation model.
 ```
 
@@ -41,7 +41,7 @@ getting_started
 
 Overview <envs/index>
 envs/arm
-envs/octopus
+CyberOctopus <envs/octopus>
 envs/snake
 envs/pendulum
 ```

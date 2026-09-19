@@ -1,8 +1,8 @@
-# Octopus Control
+# CyberOctopus
 
-Octopus environments use tapered Cosserat rods for arms and, for whole-body
-tasks, a rigid central body. The tables below make the variant-defining details
-explicit.
+CyberOctopus groups the octopus-arm and whole-body environments. They use
+tapered Cosserat rods for arms and, for whole-body tasks, a rigid central body.
+The tables below make the variant-defining details explicit.
 
 ## Shared mechanics
 
@@ -82,7 +82,7 @@ unbalanced activation can rotate or deform the assembly instead of advancing
 it toward the target.
 
 ```{seealso}
-The [octopus-muscle guide](octopus_muscle.md) documents `OctoMuscleCrawl-v0`:
+The [muscle-crawler guide](octopus_muscle.md) documents `OctoMuscleCrawl-v0`:
 Cosserat arms and suction, the nine-channel muscle action, the body
 observation, and the crawl reward.
 ```
@@ -102,8 +102,8 @@ env.close()
 ```
 
 ```{warning}
-Octopus simulations are comparatively expensive. Validate a training pipeline
-on a reduced model or a short horizon before full-length rollouts.
+CyberOctopus simulations are comparatively expensive. Validate a training
+pipeline on a reduced model or a short horizon before full-length rollouts.
 ```
 
 ```{toctree}

@@ -204,12 +204,8 @@ class OctoArmMusclePolicy:
             )
 
     @classmethod
-    def num_arms(cls) -> int:
-        return 8
-
-    @classmethod
     def vector_size(cls) -> int:
-        return cls.num_arms() * MuscleArmControlPolicy.vector_size()
+        return cls().n_arms * MuscleArmControlPolicy.vector_size()
 
     def lower_bounds(self) -> np.ndarray:
         return np.tile(MuscleArmControlPolicy().lower_bounds(), self.n_arms)
@@ -224,8 +220,9 @@ class OctoArmMusclePolicy:
         *,
         n_arms: int | None = None,
     ) -> "OctoArmMusclePolicy":
-        arm_count = int(n_arms if n_arms is not None else cls.num_arms())
-        return cls(T_L=float(T_L), n_arms=arm_count)
+        if n_arms is None:
+            return cls(T_L=float(T_L))
+        return cls(T_L=float(T_L), n_arms=int(n_arms))
 
     def to_vector(self) -> np.ndarray:
         return np.concatenate([policy.to_vector() for policy in self.arm_policies]).astype(
@@ -242,7 +239,7 @@ class OctoArmMusclePolicy:
         normalized: bool = False,
     ) -> "OctoArmMusclePolicy":
         flat = np.asarray(values, dtype=np.float64).reshape(-1)
-        arm_count = int(n_arms if n_arms is not None else cls.num_arms())
+        arm_count = int(n_arms if n_arms is not None else cls().n_arms)
         arm_width = MuscleArmControlPolicy.vector_size()
         expected = arm_count * arm_width
         if flat.size != expected:

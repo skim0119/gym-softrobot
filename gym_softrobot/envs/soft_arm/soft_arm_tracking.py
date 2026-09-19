@@ -3,7 +3,7 @@ import copy
 
 import numpy as np
 
-from typing import Optional
+from typing import Any
 from gymnasium import Env, spaces
 
 from elastica import (
@@ -11,11 +11,11 @@ from elastica import (
     CallBackBaseClass,
     CallBacks,
     Connections,
+    Contact,
     Constraints,
     CosseratRod,
     Damping,
     Forcing,
-    GravityForces,
     OneEndFixedBC,
     PositionVerlet,
     Sphere,
@@ -36,7 +36,13 @@ from gym_softrobot.utils.custom_elastica.muscle_torque import (
 
 # Set base simulator class
 class BaseSimulator(
-    BaseSystemCollection, Constraints, Connections, Forcing, Damping, CallBacks
+    BaseSystemCollection,
+    Constraints,
+    Connections,
+    Contact,
+    Forcing,
+    Damping,
+    CallBacks,
 ):
     pass
 
@@ -99,33 +105,50 @@ def generate_trajectory(final_time, sim_dt, target_v_scale, rng):
 
 
 class SoftArmTrackingEnv(Env):
+    """Control a Cosserat-rod arm to track a target in three dimensions.
+
+    This is a Gymnasium port of Case 1 from ``Elastica-RL-control``. Actions
+    define B-spline control points for bending torques in the material normal
+    and binormal directions.
+    """
+
     metadata = {"render_modes": ["rgb_array", "human"], "render_fps": 30}
 
     def __init__(
-        self, game_mode: int = 1, render_mode: Optional[str] = None
+        self,
+        game_mode: int = 1,
+        render_mode: str | None = None,
+        number_of_control_points: int = 4,
+        final_time: float = 5.0,
     ):
         super().__init__()
         if render_mode not in {None, *self.metadata["render_modes"]}:
             raise ValueError(f"Unsupported render mode: {render_mode}")
+        if game_mode not in (1, 2):
+            raise ValueError("game_mode must be 1 (fixed) or 2 (moving)")
+        if number_of_control_points < 2:
+            raise ValueError("number_of_control_points must be at least 2")
+        if final_time <= 0:
+            raise ValueError("final_time must be positive")
         self.render_mode = render_mode
         self.n_elem = 40
         self.sim_dt = 2.0e-4
-        self.RL_update_interval = 0.01  # This is 100 updates per second
+        self.rl_update_interval = 0.01  # This is 100 updates per second
         self.num_steps_per_update = np.rint(
-            self.RL_update_interval / self.sim_dt
+            self.rl_update_interval / self.sim_dt
         ).astype(int)
         self.youngs_modulus = 2e6
         poisson_ratio = 0.45
 
         self.torque_scale = 10
 
-        self.max_episode_final_time = 5  # seconds
+        self.max_episode_final_time = final_time
 
         self.base_length = 1000
         self.radius = 50
         self.COLLECT_DATA_FOR_POSTPROCESSING = False
 
-        self.number_of_control_points = 4
+        self.number_of_control_points = number_of_control_points
         self.number_of_observation_segments = self.number_of_control_points
 
         self.rendering_fps = 30
@@ -212,13 +235,15 @@ class SoftArmTrackingEnv(Env):
 
         return state
 
-    def step(self, action):
+    def step(
+        self, action: np.ndarray
+    ) -> tuple[np.ndarray, float, bool, bool, dict[str, Any]]:
         # set binormal activations to 0 if solving 2D case
         self.spline_points_func_array_normal_dir[:] = action[
             : self.number_of_control_points
         ]
         self.spline_points_func_array_binormal_dir[:] = action[
-            self.number_of_control_points :
+            self.number_of_control_points : 2 * self.number_of_control_points
         ]
 
         for _ in range(int(self.num_steps_per_update)):
@@ -245,25 +270,27 @@ class SoftArmTrackingEnv(Env):
 
         # Position of the rod cannot be NaN, it is not valid, stop the simulation
         invalid_values_condition = np.isnan(state).any()
-        if invalid_values_condition == True:
+        if invalid_values_condition:
             reward = -100
             state = np.nan_to_num(self.get_state())
             terminated = True
-            print("Episode blew up. Maybe try a smaller dt?")
 
         if self.tick * self.sim_dt >= self.max_episode_final_time:
             truncated = True
-            print("Episode has reached max time")
 
         self._target = self.wsol[self.tick]
-        return state, reward, terminated, truncated, {"ctime": self.time_tracker}
+        info = {
+            "ctime": self.time_tracker,
+            "tip_target_distance": float(np.linalg.norm(tip_to_target)),
+        }
+        return state, float(reward), terminated, truncated, info
 
     def reset(
         self,
         *,
-        seed: Optional[int] = None,
-        options: Optional[dict] = None,
-    ):
+        seed: int | None = None,
+        options: dict[str, Any] | None = None,
+    ) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)
         self.simulator = BaseSimulator()
 
@@ -435,6 +462,8 @@ class SoftArmTrackingEnv(Env):
         self.simulator.append(self.sphere)
         self.sphere.velocity_collection[..., 0] = self.velocity_sphere[0]
 
+        self._configure_task_systems()
+
         if self.COLLECT_DATA_FOR_POSTPROCESSING:
             # Call back function to collect target sphere data from simulation
             class RigidSphereCallBack(CallBackBaseClass):
@@ -485,6 +514,9 @@ class SoftArmTrackingEnv(Env):
         self._target = self.wsol[self.tick]
 
         return state, {}
+
+    def _configure_task_systems(self) -> None:
+        """Add task-specific systems before the simulator is finalized."""
 
     def render(self):
         if self.render_mode is None:

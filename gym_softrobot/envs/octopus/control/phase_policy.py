@@ -127,7 +127,7 @@ class ArmControlPolicy:
 @dataclass(slots=True)
 class OctoArmPolicy:
     T_L: float = 2.4
-    num_arms: int = 8
+    n_arms: int = 8
     arm_policies: tuple[ArmControlPolicy, ...] = ()
 
     target_stiffness: np.ndarray = field(init=False)
@@ -137,17 +137,17 @@ class OctoArmPolicy:
     target_bend: np.ndarray = field(init=False)
 
     def __post_init__(self) -> None:
-        self.target_stiffness = np.ones(self.num_arms, dtype=np.float64)
-        self.target_extension = np.zeros(self.num_arms, dtype=np.float64)
-        self.base_suction_active = np.zeros(self.num_arms, dtype=np.float64)
-        self.middle_suction_active = np.zeros(self.num_arms, dtype=np.float64)
-        self.target_bend = np.zeros(self.num_arms, dtype=np.float64)
+        self.target_stiffness = np.ones(self.n_arms, dtype=np.float64)
+        self.target_extension = np.zeros(self.n_arms, dtype=np.float64)
+        self.base_suction_active = np.zeros(self.n_arms, dtype=np.float64)
+        self.middle_suction_active = np.zeros(self.n_arms, dtype=np.float64)
+        self.target_bend = np.zeros(self.n_arms, dtype=np.float64)
 
         if not self.arm_policies:
             object.__setattr__(
                 self,
                 "arm_policies",
-                tuple(ArmControlPolicy() for _ in range(self.num_arms)),
+                tuple(ArmControlPolicy() for _ in range(self.n_arms)),
             )
 
     def actuation_vector(self) -> np.ndarray:
@@ -204,18 +204,19 @@ class OctoArmPolicy:
 
     @classmethod
     def vector_size(cls) -> int:
-        return cls.num_arms() * ArmControlPolicy.vector_size()
+        return cls().n_arms * ArmControlPolicy.vector_size()
 
     def lower_bounds(self) -> np.ndarray:
-        return np.tile(ArmControlPolicy().lower_bounds(), self.num_arms)
+        return np.tile(ArmControlPolicy().lower_bounds(), self.n_arms)
 
     def upper_bounds(self) -> np.ndarray:
-        return np.tile(ArmControlPolicy().upper_bounds(), self.num_arms)
+        return np.tile(ArmControlPolicy().upper_bounds(), self.n_arms)
 
     @classmethod
     def default(cls, T_L: float = 2.4, *, n_arms: int | None = None) -> OctoArmPolicy:
-        arm_count = int(n_arms if n_arms is not None else 8)
-        return cls(T_L=float(T_L), num_arms=arm_count)
+        if n_arms is None:
+            return cls(T_L=float(T_L))
+        return cls(T_L=float(T_L), n_arms=int(n_arms))
 
     def to_vector(self) -> np.ndarray:
         return np.concatenate([policy.to_vector() for policy in self.arm_policies]).astype(
@@ -232,13 +233,13 @@ class OctoArmPolicy:
         normalized: bool = False,
     ) -> OctoArmPolicy:
         flat = np.asarray(values, dtype=np.float64).reshape(-1)
-        arm_count = int(n_arms if n_arms is not None else 8)
+        arm_count = int(n_arms if n_arms is not None else cls().n_arms)
         arm_width = ArmControlPolicy.vector_size()
         expected = arm_count * arm_width
         if flat.size != expected:
             raise ValueError(f"Expected {expected} policy parameters, got {flat.size}")
         if normalized:
-            bounds = cls(T_L=float(T_L), num_arms=arm_count)
+            bounds = cls(T_L=float(T_L), n_arms=arm_count)
             low = bounds.lower_bounds()
             high = bounds.upper_bounds()
             clipped = np.clip(flat, -1.0, 1.0)
@@ -248,13 +249,13 @@ class OctoArmPolicy:
             ArmControlPolicy.from_vector(flat[arm_index * arm_width : (arm_index + 1) * arm_width])
             for arm_index in range(arm_count)
         ]
-        return cls(T_L=float(T_L), num_arms=arm_count, arm_policies=tuple(arms))
+        return cls(T_L=float(T_L), n_arms=arm_count, arm_policies=tuple(arms))
 
     def update_from(self, source: "OctoArmPolicy") -> None:
         """Copy open-loop arm parameters in place (keeps pre-bound actuator arrays)."""
-        if self.num_arms != source.num_arms:
+        if self.n_arms != source.n_arms:
             raise ValueError(
-                f"num_arms mismatch: destination={self.num_arms}, source={source.num_arms}"
+                f"n_arms mismatch: destination={self.n_arms}, source={source.n_arms}"
             )
         for arm_index, src_arm in enumerate(source.arm_policies):
             dst_arm = self.arm_policies[arm_index]

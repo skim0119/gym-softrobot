@@ -2,7 +2,7 @@
 
 This page documents the current `OctoMuscleCrawl-v0` environment. The older
 `OctoCrawl-v0` remains registered as a legacy compatibility environment and
-is documented separately on the [Octopus overview](octopus.md).
+is documented separately on the [CyberOctopus overview](octopus.md).
 
 `OctoMuscleCrawl-v0` is a closed-loop crawling task for an eight-arm octopus
 with independently commanded muscle groups. It exposes the phase-physics
@@ -21,7 +21,7 @@ net translation.
 `OctoPhaseCrawl-v0` uses the same body and suction layout with a lower-level
 phase action (stiffness, extension, suction, bend). This page is the explicit
 muscle-group interface. Open-loop phase-Gaussian parameters remain in
-`phase_physics` for a later whole-episode wrapper; they are not the
+the internal crawling simulation modules for a later whole-episode wrapper; they are not the
 Gymnasium action.
 ```
 

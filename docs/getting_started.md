@@ -2,7 +2,7 @@
 
 ```{tip}
 `SoftPendulum-v0` is the cheapest environment for a first `reset`/`step` loop.
-Use an octopus ID only after that loop works.
+Use a CyberOctopus ID only after that loop works.
 ```
 
 ## Run an environment

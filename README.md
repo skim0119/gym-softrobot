@@ -63,7 +63,7 @@ while not (terminated or truncated):
 env.close()
 ```
 
-For a more involved example, the Octopus environments expose distributed
+For a more involved example, the CyberOctopus environments expose distributed
 feedback control over multiple soft arms:
 
 ```python
@@ -79,7 +79,7 @@ env.close()
 ```
 
 See the [documentation](https://gym-softrobot.readthedocs.io/) for the
-environment catalog, API conventions, rendering, Octopus variants, and RL
+environment catalog, API conventions, rendering, CyberOctopus variants, and RL
 examples. The registered IDs can also be listed with:
 
 ```bash

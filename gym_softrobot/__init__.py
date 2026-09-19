@@ -61,6 +61,12 @@ register(
     kwargs=dict(mode="continuous"),
 )
 
+
+register(
+    id="TendonArmReach-v0",
+    entry_point="gym_softrobot.envs.tendon_arm:TendonArmReachEnv",
+)
+
 """ Snake Environment """
 register(
     id="ContinuumSnake-v0",

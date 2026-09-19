@@ -24,7 +24,7 @@ contact.
 | Environment | Actuation | Action | Workspace | Goal |
 | --- | --- | --- | --- | --- |
 | `ElasticaArmReach-v0` | Bending and tangent twist torques | Continuous | 3-D | Tip position and orientation |
-| `TendonArmReach-v0` | Four full-length and four half-length tendons | Continuous | 3-D | Tip position |
+| `TendonArmReach-v0` | 25-element Spirob-derived rod; six full-length and six half-length tendons | 12 continuous tensions | 3-D | Tip position |
 
 See the [tendon-arm guide](tendon_arm.md) for its physical model, action and
 observation definitions, reward terms, source provenance, and training example.

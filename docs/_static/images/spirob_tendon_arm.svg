@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="650" viewBox="0 0 1120 650" role="img" aria-labelledby="title desc">
+  <title id="title">Spirob-derived tendon arm geometry and actuator layout</title>
+  <desc id="desc">A 30 centimeter, 25-element tapered arm inspired by a Spirob spiral. Two sets of six tendons are arranged at 60 degree intervals and routed at 75 percent of the local radius. One group spans 95 percent of the arm and the other 50 percent.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z" fill="#334155"/></marker>
+    <pattern id="mesh" width="24" height="8" patternUnits="userSpaceOnUse"><path d="M0 0V8" stroke="#64748b" stroke-width="1" opacity=".65"/></pattern>
+    <style>
+      text{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;fill:#172033}
+      .title{font-size:25px;font-weight:700}.subtitle{font-size:15px;fill:#475569}.panel{fill:#f8fafc;stroke:#cbd5e1;stroke-width:1.5}.head{font-size:18px;font-weight:650}.label{font-size:14px}.small{font-size:12px;fill:#475569}.dim{stroke:#334155;stroke-width:1.5;fill:none;marker-start:url(#arrow);marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect width="1120" height="650" rx="18" fill="#fff"/>
+  <text x="36" y="44" class="title">Spirob-derived tendon arm</text>
+  <text x="36" y="70" class="subtitle">25-element Cosserat rod · 0.30 m long · tapered profile · 12 tension inputs</text>
+
+  <rect x="30" y="95" width="1060" height="240" rx="12" class="panel"/>
+  <text x="52" y="126" class="head">Side view — geometry and axial routing</text>
+  <text x="52" y="151" class="small">Schematic: taper and routing lengths exaggerated for readability</text>
+  <!-- rod body, clamped base at left; tapered toward the tip -->
+  <path d="M145 187 L805 218 L805 242 L145 273 Z" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <path d="M145 187 L805 218 L805 242 L145 273 Z" fill="url(#mesh)"/>
+  <line x1="145" y1="187" x2="145" y2="273" stroke="#172033" stroke-width="6"/>
+  <text x="111" y="292" class="label">clamped base</text>
+  <text x="781" y="272" class="label">tip</text>
+  <!-- long and short routes. Six tendons are grouped schematically into each colored path -->
+  <path d="M158 194 C340 196 580 210 790 220" fill="none" stroke="#dc2626" stroke-width="3"/>
+  <path d="M158 266 C340 264 580 250 790 240" fill="none" stroke="#dc2626" stroke-width="3"/>
+  <path d="M158 207 C260 208 390 214 476 224" fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="8 5"/>
+  <path d="M158 253 C260 252 390 246 476 236" fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="8 5"/>
+  <!-- vertebrae -->
+  <g stroke="#475569" stroke-width="2" opacity=".85"><path d="M205 190v80"/><path d="M300 195v70"/><path d="M395 199v61"/><path d="M490 203v53"/><path d="M585 207v44"/><path d="M680 211v35"/><path d="M775 216v27"/></g>
+  <line x1="145" y1="308" x2="805" y2="308" class="dim"/>
+  <text x="444" y="302" class="label">0.30 m · 25 elements</text>
+  <line x1="838" y1="187" x2="838" y2="273" class="dim"/>
+  <text x="852" y="211" class="label">base radius</text><text x="852" y="231" class="label">23 mm</text>
+  <text x="852" y="257" class="label">tip radius ≈10.8 mm</text>
+  <line x1="535" y1="177" x2="535" y2="199" stroke="#dc2626" stroke-width="3"/><text x="550" y="185" class="small">6 long tendons · 95% L</text>
+  <line x1="535" y1="280" x2="535" y2="260" stroke="#7c3aed" stroke-width="3" stroke-dasharray="6 4"/><text x="550" y="286" class="small">6 half-length tendons · 50% L</text>
+
+  <rect x="30" y="355" width="515" height="260" rx="12" class="panel"/>
+  <text x="52" y="387" class="head">Cross-section — tendon placement</text>
+  <text x="52" y="410" class="small">Either six-tendon group, viewed along the arm</text>
+  <circle cx="282" cy="504" r="79" fill="#e0f2fe" stroke="#2563eb" stroke-width="2"/>
+  <circle cx="282" cy="504" r="59" fill="none" stroke="#0f766e" stroke-width="1.5" stroke-dasharray="5 4"/>
+  <circle cx="282" cy="504" r="4" fill="#172033"/>
+  <g fill="#dc2626" stroke="#fff" stroke-width="2">
+    <circle cx="341" cy="504" r="8"/><circle cx="311.5" cy="452.9" r="8"/><circle cx="252.5" cy="452.9" r="8"/>
+    <circle cx="223" cy="504" r="8"/><circle cx="252.5" cy="555.1" r="8"/><circle cx="311.5" cy="555.1" r="8"/>
+  </g>
+  <g stroke="#94a3b8" stroke-width="1.5">
+    <line x1="282" y1="504" x2="361" y2="504"/><line x1="282" y1="504" x2="321.5" y2="435.6"/>
+    <line x1="282" y1="504" x2="242.5" y2="435.6"/><line x1="282" y1="504" x2="203" y2="504"/>
+    <line x1="282" y1="504" x2="242.5" y2="572.4"/><line x1="282" y1="504" x2="321.5" y2="572.4"/>
+  </g>
+  <line x1="282" y1="504" x2="341" y2="504" stroke="#0f766e" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="288" y="493" class="small">0.75 r</text>
+  <text x="387" y="463" class="label">6 tendons</text><text x="387" y="483" class="label">60° apart</text>
+  <text x="387" y="512" class="label">route radius</text><text x="387" y="532" class="label">= 75% of local r</text>
+  <rect x="565" y="355" width="525" height="260" rx="12" class="panel"/>
+  <text x="587" y="387" class="head">Spirob-inspired taper</text>
+  <text x="587" y="416" class="small">A spiral strip motivates the arm's narrowing profile.</text>
+  <path d="M690 520 C690 492 750 492 750 520 C750 546 708 546 708 520 C708 505 732 505 732 520 C732 529 720 529 720 520" fill="none" stroke="#0f766e" stroke-width="4"/>
+  <text x="780" y="510" class="label">Spiral profile</text>
+  <text x="780" y="534" class="small">approximated as a</text>
+  <text x="780" y="553" class="small">tapered Cosserat rod</text>
+  <text x="587" y="590" class="small">25 elements · 0.30 m long · 23 mm base radius · ≈10.8 mm tip radius</text>
+</svg>

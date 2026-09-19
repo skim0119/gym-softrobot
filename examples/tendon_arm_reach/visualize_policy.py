@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 import gym_softrobot  # noqa: F401
+from gym_softrobot.envs.tendon_arm.rendering import add_tapered_rod
 
 
 def main() -> None:
@@ -23,7 +24,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, default=Path("policy_rollout"))
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--steps", type=int, default=250)
-    parser.add_argument("--fast", action="store_true")
+    parser.add_argument("--max-tension", type=float, default=55.2)
     parser.add_argument(
         "--video",
         type=Path,
@@ -36,27 +37,18 @@ def main() -> None:
         from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
     except ImportError as error:
         raise SystemExit(
-            "Install the optional trainer with: uv sync --group benchmark"
+            "Install the optional trainer with: uv pip install stable-baselines3"
         ) from error
 
     args.output.mkdir(parents=True, exist_ok=True)
-    env_kwargs = {}
-    if args.fast:
-        env_kwargs = {
-            "n_elements": 20,
-            "simulation_steps_per_action": 5,
-            "episode_time": 0.0375,
-        }
-    raw_env = gym.make("TendonArmReach-v0", **env_kwargs)
+    raw_env = gym.make("TendonArmReach-v0", max_tension=args.max_tension)
     raw_env.reset(seed=args.seed)
     vec_env = DummyVecEnv([lambda: raw_env])
 
     if args.vecnormalize is not None:
         vecnormalize_path = args.vecnormalize
     else:
-        checkpoint_stats = args.model.with_name(
-            f"{args.model.stem}_vecnormalize.pkl"
-        )
+        checkpoint_stats = args.model.with_name(f"{args.model.stem}_vecnormalize.pkl")
         final_stats = args.model.with_name("vecnormalize.pkl")
         vecnormalize_path = (
             checkpoint_stats if checkpoint_stats.exists() else final_stats
@@ -71,6 +63,7 @@ def main() -> None:
     observation = env.reset()
     arm = raw_env.unwrapped
     positions = [arm.rod.position_collection.copy()]
+    radii = arm.rod.radius.copy()
     targets = [arm._target.copy()]
     tensions = []
     distances = []
@@ -96,6 +89,7 @@ def main() -> None:
     np.savez_compressed(
         args.output / "rollout.npz",
         positions=positions_array,
+        radii=radii,
         targets=targets_array,
         tensions=tensions_array,
         distances=distances_array,
@@ -103,6 +97,7 @@ def main() -> None:
     )
     plot_summary(
         positions_array,
+        radii,
         targets_array[-1],
         tensions_array,
         distances_array,
@@ -110,7 +105,13 @@ def main() -> None:
         args.output / "rollout_summary.png",
     )
     if args.video is not None:
-        save_animation(positions_array, targets_array, args.video)
+        save_animation(
+            positions_array,
+            targets_array,
+            radii,
+            args.video,
+            frame_duration=arm.time_step * arm.simulation_steps_per_action,
+        )
     env.close()
 
     print(f"steps: {len(distances_array)}")
@@ -123,6 +124,7 @@ def main() -> None:
 
 def plot_summary(
     positions: np.ndarray,
+    radii: np.ndarray,
     target: np.ndarray,
     tensions: np.ndarray,
     distances: np.ndarray,
@@ -132,12 +134,13 @@ def plot_summary(
     figure = plt.figure(figsize=(12, 8), constrained_layout=True)
     grid = figure.add_gridspec(2, 2)
     axis_3d = figure.add_subplot(grid[:, 0], projection="3d")
+    axis_3d.view_init(vertical_axis="y")
     time_axis = np.arange(len(distances))
 
     stride = max(1, len(positions) // 12)
     for frame in positions[::stride]:
         axis_3d.plot(*frame, color="tab:blue", alpha=0.18)
-    axis_3d.plot(*positions[-1], color="tab:blue", linewidth=3, label="final arm")
+    add_tapered_rod(axis_3d, positions[-1], radii, color="tab:blue")
     axis_3d.scatter(*target, marker="*", s=140, color="tab:red", label="target")
     axis_3d.set(
         xlabel="x (m)",
@@ -145,6 +148,16 @@ def plot_summary(
         zlabel="z (m)",
         title="Arm trajectory",
     )
+    bounds = np.vstack((positions[-1].T, target))
+    padding = float(np.max(radii)) + 0.01
+    lower = bounds.min(axis=0) - padding
+    upper = bounds.max(axis=0) + padding
+    axis_3d.set(
+        xlim=(lower[0], upper[0]),
+        ylim=(lower[1], upper[1]),
+        zlim=(lower[2], upper[2]),
+    )
+    axis_3d.set_box_aspect(upper - lower)
     axis_3d.legend()
 
     distance_axis = figure.add_subplot(grid[0, 1])
@@ -172,36 +185,65 @@ def plot_summary(
 
 
 def save_animation(
-    positions: np.ndarray, targets: np.ndarray, output: Path
+    positions: np.ndarray,
+    targets: np.ndarray,
+    radii: np.ndarray,
+    output: Path,
+    *,
+    frame_duration: float,
 ) -> None:
     from matplotlib.animation import FuncAnimation, FFMpegWriter, PillowWriter
 
     output.parent.mkdir(parents=True, exist_ok=True)
     figure = plt.figure(figsize=(6, 6))
     axis = figure.add_subplot(111, projection="3d")
-    line, = axis.plot([], [], [], color="tab:blue", linewidth=3)
+    axis.view_init(vertical_axis="y")
     target_plot = axis.scatter([], [], [], marker="*", s=140, color="tab:red")
-    limit = 0.25
+    horizontal_extent = max(
+        np.max(np.abs(positions[:, 0, :])),
+        np.max(np.abs(positions[:, 2, :])),
+        np.max(np.abs(targets[:, (0, 2)])),
+    ) + np.max(radii) + 0.01
+    y_min = (
+        min(np.min(positions[:, 1, :]), np.min(targets[:, 1]))
+        - np.max(radii)
+        - 0.01
+    )
+    y_max = (
+        max(np.max(positions[:, 1, :]), np.max(targets[:, 1]))
+        + np.max(radii)
+        + 0.01
+    )
     axis.set(
-        xlim=(0.0, limit),
-        ylim=(-limit / 2, limit / 2),
-        zlim=(-limit / 2, limit / 2),
+        xlim=(-horizontal_extent, horizontal_extent),
+        ylim=(y_min, y_max),
+        zlim=(-horizontal_extent, horizontal_extent),
         xlabel="x (m)",
         ylabel="y (m)",
         zlabel="z (m)",
     )
+    axis.set_box_aspect(
+        (
+            2.0 * horizontal_extent,
+            y_max - y_min,
+            2.0 * horizontal_extent,
+        )
+    )
+    tube = None
 
     def update(frame_index: int):
+        nonlocal tube
+        if tube is not None:
+            tube.remove()
         frame = positions[frame_index]
-        line.set_data(frame[0], frame[1])
-        line.set_3d_properties(frame[2])
+        tube = add_tapered_rod(axis, frame, radii, color="tab:blue")
         target_plot._offsets3d = (
             [targets[frame_index, 0]],
             [targets[frame_index, 1]],
             [targets[frame_index, 2]],
         )
-        axis.set_title(f"Policy step {frame_index}")
-        return line, target_plot
+        axis.set_title(f"Simulation time: {frame_index * frame_duration:.2f} s")
+        return tube, target_plot
 
     animation = FuncAnimation(
         figure, update, frames=len(positions), interval=1000 / 20, blit=False

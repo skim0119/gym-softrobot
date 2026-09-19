@@ -1,133 +1,81 @@
-# Tendon-driven continuum arm
+# Spirob tendon-arm reaching
 
-`TendonArmReach-v0` is a three-dimensional reaching task for a tendon-driven
-continuum arm. It ports the core environment design from
-[`gabotuzl/rl-cr-robot`](https://github.com/gabotuzl/rl-cr-robot) to Gymnasium
-and current PyElastica. The port retains the reference project's eight-tendon
-layout, target distribution, observation structure, action scaling, and shaped
-reward while using seeded Gymnasium randomness and explicit
-`terminated`/`truncated` episode semantics.
+`TendonArmReach-v0` is a Gymnasium task for controlling a tendon-driven,
+Spirob-inspired continuum arm. The arm is a 0.30 m tapered Cosserat rod with
+12 tension inputs. It is clamped at the base and initially hangs downward.
 
-This environment complements the idealized torque-controlled soft-arm tasks.
-Tendon forces are routed through discrete vertebra locations, so actions act on
-the rod through a physically interpretable transmission rather than as direct
-bending torques.
+The geometry is derived from the outer spiral of a Spirob arm and represented
+as a straight, tapered rod. The schematic shows the spiral-profile idea, the
+arm dimensions, and the tendon layout. Six tendons are spaced at 60-degree
+intervals around each cross-section; their routing radius is 75% of the local
+arm radius. One group runs to 95% of the arm and the other to 50%. The two
+groups share idealized routing lanes where they overlap.
 
-## Physical model
+![Spirob profile, arm geometry, and tendon placement](../_static/images/spirob_tendon_arm.svg)
 
-The arm is a 0.25 m Cosserat rod fixed at its base. Its default model uses 100
-elements and advances PyElastica with a Position Verlet integrator at a
-`3e-5` s time step. Linear damping suppresses unresolved high-frequency motion.
-Gravity is disabled in the reference task.
+## Tendon model
 
-Unlike a rigid serial manipulator, the simulated arm has distributed
-translational and rotational degrees of freedom. The Cosserat formulation
-resolves centerline stretching and shear together with bending and twist of the
-material frames. Internal force and moment resultants are computed from these
-strains using the rod's elastic constitutive law. Fixing the first node and
-director frame creates a clamped base while leaving the remainder of the body
-free to deform in three dimensions.
+Actions prescribe tendon **forces (tensions)**, not tendon displacement or
+motor position. At each routing contact, the change in tendon direction
+produces a force on the rod; the offset from the centerline also produces a
+moment. This provides distributed tendon actuation while avoiding a detailed
+motor, pulley, or tendon-dynamics model.
 
-Eight tendons are divided into two antagonistic groups:
+The current model assumes massless, inextensible tendons with instantaneous,
+uniform nonnegative tension along each route. Slack, pretension, friction, and
+contact wear are not modeled. A more systematic muscle model is a future
+direction; see the [octopus-muscle crawling environment](octopus_muscle.md) for
+the related muscle-driven arm task.
 
-- four tendons run through six vertebrae over approximately 98% of the arm;
-- four tendons run through six vertebrae over approximately 50% of the arm.
+## Actions and observations
 
-Within each group, tendons are placed at 90-degree intervals around the rod.
-The long and short groups use routing radii of 15 mm and 8 mm, respectively.
-Forces follow the tendon segments between vertebrae, and their offsets from the
-centerline also produce torques on the rod.
+The action space is `Box(0, 1, shape=(12,), dtype=float32)`. The first six
+values control the longer routes and the remaining six control the shorter
+routes. Each value is scaled linearly to a tension from 0 to the default
+maximum of 55.2 N. This is a simulation calibration, not a hardware-safe force
+recommendation. The arm model uses a fixed 25-element mesh and fixed simulation
+time step; each action advances approximately 1/30 second of simulated time.
 
-At an intermediate vertebra, a tendon changes direction. The two adjacent
-tension vectors therefore produce the nodal force
+The observation is a 125-value `float32` vector: five frames of tip-position
+and tendon-tension history, target and target-relative position, tip velocity
+and speed, plus sampled rod-node positions and speeds. `stack_frame` can be
+changed from its default of 5, which changes the observation length to
+`15 * stack_frame + 50`.
 
-```{math}
-\mathbf{f}_{i,j}
-= T_i\left(\hat{\mathbf{t}}_{i,j}^{+}
-- \hat{\mathbf{t}}_{i,j}^{-}\right),
-```
+## Targets, episodes, and reward
 
-where $T_i$ is the tendon tension and the unit vectors point along the
-outgoing and incoming tendon segments. Because the tendon passes through an
-offset $\mathbf{r}_{i,j}$ in the local cross-section, it also applies
-
-```{math}
-\boldsymbol{\tau}_{i,j}
-= \mathbf{r}_{i,j}\times\mathbf{f}_{i,j}.
-```
-
-Opposing tendons can therefore generate bending in either transverse direction.
-Co-activating tendons increases internal loading and stiffness-like resistance
-without requiring the same net bending moment, while the shorter group
-concentrates its control authority in the proximal half of the arm.
-
-## Action space
-
-The action is an eight-value `Box(-1, 1, shape=(8,), dtype=float32)`. The first
-four values command the full-length tendons and the remaining four command the
-half-length tendons. Each normalized command is mapped linearly to a
-nonnegative tension:
-
-```{math}
-T_i = \frac{a_i + 1}{2} T_{\max},
-```
-
-where the default maximum tension is 8 N. Thus `-1` releases a tendon and `1`
-applies its maximum tension.
-
-## Observation space
-
-The observation is a 105-value `float32` vector:
-
-| Values | Description |
-| ---: | --- |
-| 15 | Five-step arm-tip position history |
-| 3 | Target position |
-| 3 | Target position relative to the current tip |
-| 3 | Current tip velocity |
-| 1 | Tip speed |
-| 10 | Speeds at ten sampled rod nodes |
-| 30 | Positions of those ten nodes |
-| 40 | Five-step tendon-tension history |
-
-The history terms expose short-time motion and control changes without requiring
-the policy to reconstruct them from a single instantaneous state.
-
-## Target and episode
-
-Unless a fixed target is supplied to the constructor, `reset(seed=...)` samples
-a reachable target near the undeformed tip. A target can also be selected for a
-single episode:
+By default, reset samples a target from a cylindrical region near the hanging
+tip (lateral radius at most 10 cm, vertical position from -26 to -20 cm). Use a
+seed for repeatable target sampling, or supply a target for a particular
+episode:
 
 ```python
 observation, info = env.reset(
     seed=1,
-    options={"target": [0.20, 0.02, -0.03]},
+    options={"target": [0.02, -0.20, -0.03]},
 )
 ```
 
-Each policy action advances 800 simulation substeps by default. A 6 s episode
-therefore contains 250 policy steps. Reaching the time limit sets
-`truncated=True`. A non-finite simulation state or a control collapse that
-moves the tip-target distance beyond the arm length sets `terminated=True`.
-The reason is reported as `info["termination_reason"]`.
+Episodes last 6 seconds, or 180 control steps at the default control rate.
+Reaching the time limit sets `truncated=True`. An invalid simulation state or
+control collapse sets `terminated=True`; `info["termination_reason"]` reports
+the cause.
 
-## Reward
+The reward favors proximity and settling, with no progress-shaping or
+tendon-effort term:
 
-The shaped reward follows the final reward structure in the source project. It
-combines:
+```{math}
+r_t = -d_t
+- \lambda_v \max\left(0, 1 - \frac{d_t}{d_{\mathrm{gate}}}\right)
+  \left(\frac{v_t}{v_{\mathrm{ref}}}\right)^2
+- 50\,\mathbf{1}_{\mathrm{failure}}.
+```
 
-- a continuous piecewise distance objective;
-- progress relative to the best distance achieved in the episode;
-- a penalty for tip displacement;
-- a tip-speed penalty near the target;
-- a tendon-command-rate penalty close to the goal; and
-- a bonus for remaining nearly stationary within 2 cm of the target.
+Here, $d_t$ is tip-to-target distance and $v_t$ is tip speed. The speed penalty
+only applies within a 3 cm target gate, encouraging the arm to settle after
+reaching the target. Reward components and tip speed are returned in `info`.
 
-Individual terms are available in `info["reward_components"]`, which is useful
-for diagnosing policy behavior.
-
-## Usage
+## Gymnasium example
 
 ```python
 import gymnasium as gym
@@ -144,20 +92,21 @@ while not (terminated or truncated):
 env.close()
 ```
 
-## Training example
+## PPO example
 
-The
-[example guide](https://github.com/skim0119/gym-softrobot/tree/main/examples/tendon_arm_reach)
-provides a fast environment check and an optional Stable-Baselines3 PPO
-baseline:
+Install Stable-Baselines3 in the environment where `gym-softrobot` is
+installed, then train and visualize a policy:
 
 ```bash
-uv run --no-sync python examples/tendon_arm_reach/check_env.py --fast
-uv run --no-sync python examples/tendon_arm_reach/train_ppo.py \
-  --fast --timesteps 4096
+uv pip install stable-baselines3
+python examples/tendon_arm_reach/train_ppo.py --timesteps 4096
+python examples/tendon_arm_reach/visualize_policy.py \
+  save/tendon_arm_reach/final_model.zip \
+  --video save/tendon_arm_reach/policy.mp4
 ```
 
-The upstream project notes that PPO from scratch can converge to degenerate
-solutions and uses PID demonstrations, behavioral cloning, and PPO
-fine-tuning. The included PPO script is a minimal integration baseline rather
-than a reproduction of an upstream trained policy.
+Training saves a PPO model, observation/reward normalization statistics,
+checkpoints, logs, and a progress plot under `save/tendon_arm_reach/`. Keep the
+normalization statistics alongside the model for replay. This script is a
+minimal integration example, not a guarantee that PPO will solve the reaching
+task; use the reported target distance to evaluate a run.

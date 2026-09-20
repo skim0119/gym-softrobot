@@ -30,7 +30,7 @@ class OctoMuscleCrawlEnv(gym.Env[np.ndarray, np.ndarray]):
     ``control_dt`` interval, so the environment is suitable for RL policies.
     """
 
-    metadata = {"render_modes": [], "render_fps": 60}
+    metadata = {"render_modes": ["rgb_array"], "render_fps": 60}
 
     def __init__(
         self,
@@ -120,8 +120,52 @@ class OctoMuscleCrawlEnv(gym.Env[np.ndarray, np.ndarray]):
         }
         return self._observation(), float(reward), terminated, truncated, info
 
-    def render(self) -> None:
-        return None
+    def render(self) -> np.ndarray | None:
+        """Return an RGB snapshot of the current crawler state."""
+        if self.render_mode is None:
+            return None
+
+        simulation = self._require_simulation()
+        import matplotlib
+
+        matplotlib.use("Agg", force=True)
+        import matplotlib.pyplot as plt
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.patches import Circle
+
+        figure, axis = plt.subplots(figsize=(8, 5), dpi=100)
+        positions = [np.asarray(rod.position_collection) for rod in simulation.rods]
+        points = np.concatenate([rod[[0, 2], :].T for rod in positions], axis=0)
+        sphere_position = simulation.sphere_position()
+        points = np.concatenate([points, sphere_position[[0, 2]][None, :]], axis=0)
+        lower = points.min(axis=0)
+        upper = points.max(axis=0)
+        span = np.maximum(upper - lower, 0.2)
+        center = 0.5 * (lower + upper)
+        half_span = 0.5 * np.max(span) + 0.12
+        axis.set_xlim(center[0] - half_span, center[0] + half_span)
+        axis.set_ylim(center[1] - half_span, center[1] + half_span)
+        for rod in positions:
+            axis.plot(rod[0], rod[2], color="tab:blue", linewidth=2)
+        axis.add_patch(
+            Circle(
+                (sphere_position[0], sphere_position[2]),
+                radius=self.config.base_sphere_radius,
+                color="tab:orange",
+            )
+        )
+        axis.set_aspect("equal")
+        axis.set_xlabel("x (m)")
+        axis.set_ylabel("z (m)")
+        axis.set_title(f"OctoMuscleCrawl-v0  t={simulation.time:.2f} s")
+        axis.grid(True, alpha=0.25)
+        figure.tight_layout()
+
+        canvas = FigureCanvasAgg(figure)
+        canvas.draw()
+        frame = np.asarray(canvas.buffer_rgba())[..., :3].copy()
+        plt.close(figure)
+        return frame
 
     def close(self) -> None:
         self.simulation = None

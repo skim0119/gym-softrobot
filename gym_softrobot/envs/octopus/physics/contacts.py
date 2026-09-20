@@ -9,10 +9,13 @@ from numpy import arccos, maximum, minimum, sin
 class BaseSphereTether(ea.NoContact):
     """Attach a rod node to a sphere with translational and rotational springs.
 
-    The tether applies a linear force from rod node `rod_node_index` toward the
-    sphere center using stiffness `k`, plus a restoring torque that penalizes
-    orientation error from `relative_rotation`. Optional `nut` adds rotational
-    damping from angular-velocity mismatch.
+    The tether applies a linear force from rod node `rod_node_index` toward
+    ``sphere_center - rest_offset`` using stiffness `k`, plus a restoring torque
+    that penalizes orientation error from `relative_rotation`. Optional `nut`
+    adds rotational damping from angular-velocity mismatch.
+
+    ``rest_offset`` is a world-frame vector from the attachment point to the
+    sphere center. The default is zero (attach to the center).
     """
 
     def __init__(
@@ -23,6 +26,7 @@ class BaseSphereTether(ea.NoContact):
         *,
         k_rot: float | None = None,
         nut: float = 0.0,
+        rest_offset: np.ndarray | None = None,
     ) -> None:
         super().__init__()
 
@@ -30,6 +34,10 @@ class BaseSphereTether(ea.NoContact):
         self.idx = int(rod_node_index)
         self.k_rot = float(k) if k_rot is None else float(k_rot)
         self.nut = float(nut)
+        if rest_offset is None:
+            self.rest_offset = np.zeros(3, dtype=np.float64)
+        else:
+            self.rest_offset = np.asarray(rest_offset, dtype=np.float64).reshape(3)
 
         self._relative_rotation = relative_rotation
         if self._relative_rotation.shape != (3, 3):
@@ -52,6 +60,7 @@ class BaseSphereTether(ea.NoContact):
             system_one.external_forces,
             system_two.position_collection[:, 0],
             system_two.external_forces,
+            self.rest_offset,
         )
 
         _apply_base_sphere_tether_rotation(
@@ -158,10 +167,11 @@ def _apply_base_sphere_tether_translation(
     rod_external_forces: np.ndarray,
     sphere_positions: np.ndarray,
     sphere_external_forces: np.ndarray,
+    rest_offset: np.ndarray,
 ) -> None:
-    fx = k * (sphere_positions[0] - rod_positions[0, idx])
-    fy = k * (sphere_positions[1] - rod_positions[1, idx])
-    fz = k * (sphere_positions[2] - rod_positions[2, idx])
+    fx = k * (sphere_positions[0] - rest_offset[0] - rod_positions[0, idx])
+    fy = k * (sphere_positions[1] - rest_offset[1] - rod_positions[1, idx])
+    fz = k * (sphere_positions[2] - rest_offset[2] - rod_positions[2, idx])
 
     rod_external_forces[0, idx] += fx
     rod_external_forces[1, idx] += fy

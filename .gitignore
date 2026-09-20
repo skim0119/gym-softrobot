@@ -10,8 +10,16 @@ save
 *.mp4
 .DS_Store
 .vscode
-
+*.png
+*.jpg
+*.csv
+*.gif
+*.mp4
+*.pdf
+*.npz
+*.inc
 *.pov
+output/
 
 # C extensions
 *.so

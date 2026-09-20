@@ -2,11 +2,10 @@ __doc__ = """ Factory function to allocate variables for Cosserat Rod, keeping t
 import logging
 
 import numpy as np
-from gym_softrobot.utils.custom_elastica.compat import (
+from elastica._linalg import _batch_cross, _batch_dot
+from elastica.rod.factory_function import (
     _assert_dim,
     _assert_shape,
-    _batch_cross,
-    _batch_dot,
     _directors_validity_checker,
     _position_validity_checker,
 )

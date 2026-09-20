@@ -156,15 +156,18 @@ class PhaseOctopusSimulation(Generic[C]):
 
         for instance_index in range(self.n_instances):
             base_position = np.zeros(3, dtype=np.float64)
+            sphere_lift = float(cfg.base_sphere_radius - cfg.base_radius)
+            sphere_rest_offset = np.array([0.0, sphere_lift, 0.0])
+            sphere_position = base_position + sphere_rest_offset
             policy = self.PolicyCls.default(T_L=float(cfg.T_L), n_arms=cfg.n_arms)
             base_sphere = ea.Sphere(
-                base_position.copy(),
+                sphere_position,
                 cfg.base_sphere_radius,
                 cfg.sphere_density,
             )
             self.simulator.append(base_sphere)
 
-            if fix_sphere:
+            if fix_sphere: #  This is useful to analyze arm-only motion
                 from gym_softrobot.envs.octopus.physics.boundary import FixSphere
 
                 self.simulator.constrain(base_sphere).using(
@@ -178,7 +181,7 @@ class PhaseOctopusSimulation(Generic[C]):
                     k_c=cfg.sphere_plane_k,
                     nu_c=cfg.sphere_plane_nu,
                     mu=cfg.sphere_plane_mu,
-                    plane_origin=-cfg.base_sphere_radius,
+                    plane_origin=plane_y,
                 )
                 self.simulator.dampen(base_sphere).using(
                     RayleighDamping,
@@ -210,6 +213,7 @@ class PhaseOctopusSimulation(Generic[C]):
                     k=cfg.tether_k,
                     k_rot=cfg.tether_k_rot,
                     rod_node_index=0,
+                    rest_offset=sphere_rest_offset,
                     relative_rotation=rod.director_collection[..., 0]
                     @ base_sphere.director_collection[..., 0].T,
                 )
@@ -363,6 +367,7 @@ class PhaseOctopusSimulation(Generic[C]):
         vertical_steps: list[list[float]] = [[] for _ in range(self.n_instances)]
         rotation_steps: list[list[float]] = [[] for _ in range(self.n_instances)]
         strain_steps: list[list[float]] = [[] for _ in range(self.n_instances)]
+        max_lateral_steps = [0.0 for _ in range(self.n_instances)]
 
         elapsed = 0.0
         while elapsed < duration - 1.0e-12:
@@ -374,6 +379,8 @@ class PhaseOctopusSimulation(Generic[C]):
             for index, instance in enumerate(self.instances):
                 displacement = self.sphere_position(index) - instance.initial_sphere_position
                 horizontal = np.asarray([displacement[0], displacement[2]], dtype=np.float64)
+                forward_progress = float(-horizontal[1])
+                lateral_deviation = float(abs(horizontal[0]))
                 vertical_deviation = float(abs(displacement[1]))
                 step_rotation_delta = rotation_delta(
                     np.asarray(
@@ -387,6 +394,14 @@ class PhaseOctopusSimulation(Generic[C]):
                 vertical_steps[index].append(vertical_deviation)
                 rotation_steps[index].append(step_rotation_delta)
                 strain_steps[index].append(strain)
+                max_lateral_steps[index] = max(max_lateral_steps[index], lateral_deviation)
+                reward = (
+                    forward_progress
+                    - cfg.lateral_penalty * max_lateral_steps[index]
+                    - cfg.vertical_penalty * vertical_deviation
+                    - cfg.rotation_penalty * step_rotation_delta
+                    - cfg.energy_penalty * strain
+                ) * cfg.reward_scale
 
                 diag = diags[index]
                 if diag is not None:
@@ -398,6 +413,9 @@ class PhaseOctopusSimulation(Generic[C]):
                             dtype=np.float64,
                         ).copy()
                     )
+                    diag.reward.append(reward)
+                    diag.forward_progress.append(forward_progress)
+                    diag.lateral_deviation.append(max_lateral_steps[index])
                     diag.vertical_deviation.append(vertical_deviation)
                     diag.rotation_delta.append(step_rotation_delta)
                     diag.strain_energy.append(strain)

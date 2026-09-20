@@ -35,8 +35,8 @@ is the plane $y = -R_{\mathrm{arm}}$.
 
 Each arm is tethered to the sphere, so distributed muscle forces transmit
 loads into the rigid body. Rod–plane contact uses anisotropic kinetic
-friction; the sphere has its own plane contact and damping. Optional
-rod–rod contact is disabled by default.
+friction; the sphere uses the same ground plane with Hertz contact and
+damping. Optional rod–rod contact is disabled by default.
 
 Muscle actuation is applied through COOMM `BatchMuscle` groups on each arm:
 

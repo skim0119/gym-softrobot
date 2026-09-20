@@ -63,3 +63,15 @@ def test_muscle_simulation_accepts_direct_muscle_control() -> None:
 
     assert simulation.time == pytest.approx(simulation.config.control_dt)
     assert simulation.is_finite()
+
+
+def test_sphere_rests_on_arm_friction_plane() -> None:
+    simulation = PhaseOctopusMuscleSimulation(_small_config(OctopusMuscleConfig))
+    cfg = simulation.config
+    expected_lift = cfg.base_sphere_radius - cfg.base_radius
+    sphere_y = simulation.sphere_position()[1]
+    arm_base_y = simulation.rods[0].position_collection[1, 0]
+
+    assert sphere_y == pytest.approx(expected_lift)
+    assert arm_base_y == pytest.approx(0.0)
+    assert sphere_y - cfg.base_sphere_radius == pytest.approx(-cfg.base_radius)

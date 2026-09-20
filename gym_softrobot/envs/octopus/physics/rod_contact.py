@@ -4,14 +4,9 @@ from __future__ import annotations
 
 import elastica as ea
 import numpy as np
+from elastica._linalg import _batch_product_k_ik_to_ik
+from elastica.contact_utils import _find_min_dist, _prune_using_aabbs_rod_rod
 from elastica.typing import RodType
-from gym_softrobot.utils.custom_elastica.compat import (
-    _batch_product_k_ik_to_ik,
-    _dot_product,
-    _find_min_dist,
-    _norm,
-    _prune_using_aabbs_rod_rod,
-)
 from numba import njit
 from numpy.typing import NDArray
 
@@ -109,7 +104,7 @@ def _calculate_contact_forces_rod_rod_skip_base(
             x_selected_rod_two = x_collection_rod_two[..., j]
 
             del_x = x_selected_rod_one - x_selected_rod_two
-            norm_del_x = _norm(del_x)
+            norm_del_x = np.sqrt(np.dot(del_x, del_x))
             if norm_del_x >= (radii_sum + length_sum):
                 continue
 
@@ -119,7 +114,7 @@ def _calculate_contact_forces_rod_rod_skip_base(
                 x_selected_rod_two,
                 edge_collection_rod_two[..., j],
             )
-            distance_vector_length = _norm(distance_vector)
+            distance_vector_length = np.sqrt(np.dot(distance_vector, distance_vector))
             distance_vector /= distance_vector_length
             gamma = radii_sum - distance_vector_length
             if gamma < -1e-5:
@@ -138,7 +133,7 @@ def _calculate_contact_forces_rod_rod_skip_base(
                 + internal_forces_rod_two[..., j + 1]
             )
             equilibrium_forces = -rod_one_elemental_forces + rod_two_elemental_forces
-            normal_force = abs(min(_dot_product(equilibrium_forces, distance_vector), 0.0))
+            normal_force = abs(min(np.dot(equilibrium_forces, distance_vector), 0.0))
 
             mask = (gamma > 0.0) * 1.0
             contact_force = contact_k * gamma
@@ -146,7 +141,7 @@ def _calculate_contact_forces_rod_rod_skip_base(
                 (velocity_rod_one[..., i] + velocity_rod_one[..., i + 1])
                 - (velocity_rod_two[..., j] + velocity_rod_two[..., j + 1])
             )
-            contact_damping_force = contact_nu * _dot_product(
+            contact_damping_force = contact_nu * np.dot(
                 interpenetration_velocity, distance_vector
             )
             net_contact_force = (

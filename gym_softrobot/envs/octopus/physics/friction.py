@@ -6,7 +6,7 @@ import numpy.typing as npt
 from numpy.typing import NDArray
 
 import elastica as ea
-from gym_softrobot.utils.custom_elastica.compat import (
+from elastica._contact_functions import (
     _calculate_contact_forces_rod_plane_with_anisotropic_friction,
 )
 

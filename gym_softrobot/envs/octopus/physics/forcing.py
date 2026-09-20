@@ -11,8 +11,8 @@ if not hasattr(np, "typing"):
     np.typing = np_typing  # type: ignore[attr-defined]
 
 from elastica import NoForces
+from elastica._contact_functions import _calculate_contact_forces_rod_plane
 from elastica.typing import RigidBodyType, RodType
-from gym_softrobot.utils.custom_elastica.compat import _calculate_contact_forces_rod_plane
 
 
 def _normalize_sucker_intervals(

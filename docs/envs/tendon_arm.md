@@ -119,14 +119,18 @@ installed, then train and visualize a policy:
 
 ```bash
 uv pip install stable-baselines3
-python examples/tendon_arm_reach/train_ppo.py --timesteps 4096
-python examples/tendon_arm_reach/visualize_policy.py \
-  save/tendon_arm_reach/final_model.zip \
-  --video save/tendon_arm_reach/policy.mp4
+python examples/tendon_arm_reach/train_ppo.py \
+  --timesteps 4096 --n-envs 4 --checkpoint-freq 2048
+python examples/tendon_arm_reach/track_figure_eight_v1.py
 ```
 
-Training saves a PPO model, observation/reward normalization statistics,
-checkpoints, logs, and a progress plot under `save/tendon_arm_reach/`. Keep the
-normalization statistics alongside the model for replay. This script is a
-minimal integration example, not a guarantee that PPO will solve the reaching
-task; use the reported target distance to evaluate a run.
+Training defaults to v1 and runs four parallel environments by default (adjust
+with `--n-envs`). It saves PPO checkpoints, observation/reward
+normalization statistics, logs, and a progress plot under
+`examples/tendon_arm_reach/save/tendon_arm_tracking/`. The v1 video script
+evaluates the newest tracking checkpoint. To compare the already-trained v0
+reaching policy as a zero-shot moving-target baseline, run
+`python examples/tendon_arm_reach/track_figure_eight_v0.py`. Keep normalization
+statistics alongside each model for replay. These are minimal integration
+examples, not a guarantee that PPO will solve the task; use reported target
+error to evaluate a run.

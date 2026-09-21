@@ -4,11 +4,13 @@ This page documents the current `OctoMuscleCrawl-v0` environment. The older
 `OctoCrawl-v0` remains registered as a legacy compatibility environment and
 is documented separately on the [CyberOctopus overview](octopus.md).
 
-`OctoMuscleCrawl-v0` is a closed-loop crawling task for an eight-arm octopus
-with independently commanded muscle groups. It exposes the phase-physics
-muscle simulator as a standard Gymnasium environment: each `step` applies one
-normalized command per muscle channel and arm, then advances one control
-interval.
+`OctoMuscleCrawl-v0` is a feedback-ready crawling task for an eight-arm
+octopus with independently commanded muscle groups. It exposes the
+phase-physics muscle simulator as a standard Gymnasium environment: each
+`step` applies one normalized command per muscle channel and arm, advances one
+control interval, and returns the new observation and reward. The environment
+does not choose the next action; an RL policy or feedback controller does that
+from the observation returned by `step`.
 
 This environment sits at a more detailed actuation level than
 `OctoCrawl-v0`. Instead of a mixed muscle-and-anchor interface, the policy
@@ -24,6 +26,31 @@ muscle-group interface. Open-loop phase-Gaussian parameters remain in
 the internal crawling simulation modules for a later whole-episode wrapper; they are not the
 Gymnasium action.
 ```
+
+## A first feedback loop
+
+The action is selected after observing the current state. This is the intended
+RL interface and is different from replaying a precomputed gait:
+
+```python
+import gymnasium as gym
+import gym_softrobot
+
+env = gym.make("OctoMuscleCrawl-v0")
+observation, info = env.reset(seed=1)
+
+terminated = truncated = False
+while not (terminated or truncated):
+    action = controller(observation)  # shape: (8, 9), values in [-1, 1]
+    observation, reward, terminated, truncated, info = env.step(action)
+
+env.close()
+```
+
+`controller` may be an RL policy, a hand-written controller, or a random
+policy for a smoke test. The environment advances the mechanics by one
+`control_dt` interval per call, so the controller can react to the returned
+body displacement and velocity at every step.
 
 ## Physical model
 
@@ -108,7 +135,8 @@ that needs those signals must reconstruct them from its own action history.
 ## Reward and episode
 
 Forward progress is measured along $-z$, the default crawl heading implied
-by the arm layout. After each control interval the reward is
+by the arm layout. The current Gymnasium muscle-crawl environment uses the
+following per-step reward:
 
 ```{math}
 r=\frac{\Delta z_{\text{forward}}}{L}
@@ -124,6 +152,60 @@ The default horizon is the number of control intervals in five locomotion
 cycles of period $T_L=2.4$ s, or 12 s of simulated time (720 steps at
 60 Hz). `info` reports `time`, `forward_progress`, `lateral_deviation`, and
 `strain_energy`.
+
+## Rendering
+
+The environment supports an RGB-array renderer for diagnostics and video
+generation:
+
+```python
+env = gym.make("OctoMuscleCrawl-v0", render_mode="rgb_array")
+observation, info = env.reset(seed=1)
+frame = env.render()  # uint8 RGB NumPy array
+```
+
+Call `render()` after `reset()` and after any `step()` whose state you want to
+record. The current environment does not provide a human-window renderer;
+video writers and plotting tools can consume the returned frames.
+
+## Configuration and reduced-cost experiments
+
+The registered environment uses `OctopusMuscleConfig` defaults: 15 elements
+per arm, a `3e-4` s physics step, a `1/60` s control interval, and a five-cycle
+episode. For development and tests, pass a smaller configuration through
+`gym.make` and shorten the horizon:
+
+```python
+from gym_softrobot.envs.octopus.crawling_simulation.config import (
+    OctopusMuscleConfig,
+)
+
+config = OctopusMuscleConfig(
+    n_elem=5,
+    control_dt=0.01,
+    time_step=0.001,
+    episode_duration_cycles=0.01,
+)
+env = gym.make("OctoMuscleCrawl-v0", config=config, horizon=2)
+```
+
+The full model is intentionally detailed and can be expensive. Use a reduced
+configuration to validate an RL pipeline before starting long experiments.
+
+## Fixed-policy video example
+
+The environment can also produce a reproducible demonstration from a
+precomputed action sequence. This example is intentionally open-loop; it is
+not a replacement for the feedback loop above:
+
+```bash
+uv run python examples/octopus_crawling/replay_policy.py
+```
+
+`examples/octopus_crawling/policy.csv` stores normalized actions as flattened
+`(T, 72)` rows, corresponding to an action tensor of logical shape
+`(8, 9, T)`. The script still interacts with the environment only through
+`gym.make`, `reset`, `step`, and `render`.
 
 ## Usage
 
@@ -142,9 +224,7 @@ while not (terminated or truncated):
 env.close()
 ```
 
-```{warning}
-The default model is computationally expensive. For smoke tests, construct
-`OctoMuscleCrawlEnv` with a reduced `OctopusMuscleConfig` (fewer elements,
-a larger time step, and a short horizon) rather than sampling full-length
-rollouts.
+```{seealso}
+For the broader Octopus family and legacy compatibility environments, see the
+[CyberOctopus overview](octopus.md).
 ```

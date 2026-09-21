@@ -1,4 +1,4 @@
-"""Physics and rollout parameters for the Octopus-v1 bandit."""
+"""Physics and rollout parameters for the Octopus crawling environments."""
 
 from __future__ import annotations
 
@@ -100,8 +100,8 @@ class _OctopusMaterialProperties:
     def episode_duration_s(self) -> float:
         return self.episode_duration_cycles * self.T_L
 
-    # Reward settings
-    # FIXME: Could be relocated
+    # Reward settings. The phase-simulation rollout uses all terms below;
+    # OctoMuscleCrawlEnv currently uses lateral_penalty and failure_penalty.
     reward_mode: RewardMode = "three_heading_avg"
     lateral_penalty: float = 0.5
     vertical_penalty: float = 0.25

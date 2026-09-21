@@ -36,6 +36,8 @@ html_title = "gym-softrobot"
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
 html_theme_options = {
+    "light_logo": "images/gym-softrobot-logo-light.svg",
+    "dark_logo": "images/gym-softrobot-logo-dark.svg",
     "source_repository": "https://github.com/skim0119/gym-softrobot/",
     "source_branch": "main",
     "source_directory": "docs/",

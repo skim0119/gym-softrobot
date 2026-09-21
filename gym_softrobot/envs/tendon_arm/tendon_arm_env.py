@@ -47,6 +47,7 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
     """
 
     metadata = {"render_modes": ["rgb_array"], "render_fps": 30}
+    include_target_velocity = False
 
     def __init__(
         self,
@@ -71,7 +72,7 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
         self.n_elements = _N_ELEMENTS
         self.time_step = _TIME_STEP
         self.simulation_steps_per_action = _SIMULATION_STEPS_PER_ACTION
-        self.episode_time = _EPISODE_TIME
+        self.episode_time = self._episode_duration()
         self.max_episode_steps = max(
             1, int(self.episode_time / self.time_step / self.simulation_steps_per_action)
         )
@@ -87,8 +88,11 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
             raise ValueError("target must contain exactly three coordinates")
 
         self.action_space = spaces.Box(0.0, 1.0, shape=(12,), dtype=np.float32)
+        observation_size = 15 * stack_frame + 50 + (
+            3 if self.include_target_velocity else 0
+        )
         self.observation_space = spaces.Box(
-            -np.inf, np.inf, shape=(15 * stack_frame + 50,), dtype=np.float32
+            -np.inf, np.inf, shape=(observation_size,), dtype=np.float32
         )
         self._node_indices = np.linspace(
             1, self.n_elements - 1, num=10, dtype=np.int64
@@ -97,9 +101,13 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
         self._action_history = np.zeros((stack_frame, 12))
         self._tip_history = np.zeros((stack_frame, 3))
         self._target = np.zeros(3)
+        self._target_velocity = np.zeros(3)
         self._step_count = 0
         self._time = np.float64(0.0)
         self._build_simulator()
+
+    def _episode_duration(self) -> float:
+        return _EPISODE_TIME
 
     def _build_simulator(self) -> None:
         self.simulator = TendonArmSimulator()
@@ -166,15 +174,7 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
     ) -> tuple[np.ndarray, dict[str, Any]]:
         super().reset(seed=seed)
         options = options or {}
-        option_target = options.get("target")
-        if option_target is not None:
-            self._target = np.asarray(option_target, dtype=np.float64)
-            if self._target.shape != (3,):
-                raise ValueError("options['target'] must contain three coordinates")
-        elif self._fixed_target is not None:
-            self._target = self._fixed_target.copy()
-        else:
-            self._target = self._sample_target()
+        self._reset_target(options)
 
         self._tensions[:] = 0.0
         self._restore_rod()
@@ -188,8 +188,25 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
         observation = self._observation()
         return observation, {
             "target_position": self._target.copy(),
+            "target_velocity": self._target_velocity.copy(),
             "distance_to_target": distance,
         }
+
+    def _reset_target(self, options: dict[str, Any]) -> None:
+        option_target = options.get("target")
+        if option_target is not None:
+            self._target = np.asarray(option_target, dtype=np.float64)
+            if self._target.shape != (3,):
+                raise ValueError("options['target'] must contain three coordinates")
+        elif self._fixed_target is not None:
+            self._target = self._fixed_target.copy()
+        else:
+            self._target = self._sample_target()
+
+        self._target_velocity.fill(0.0)
+
+    def _advance_target(self) -> None:
+        """Advance task-specific target dynamics by one control step."""
 
     def _sample_target(self) -> np.ndarray:
         radius = 0.1 * np.sqrt(self.np_random.uniform())
@@ -238,6 +255,7 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
         for _ in range(self.simulation_steps_per_action):
             self._time = self._stepper.step(self.simulator, self._time, self.time_step)
 
+        self._advance_target()
         tip = self.rod.position_collection[:, -1].copy()
         invalid = not np.all(np.isfinite(tip))
         if invalid:
@@ -248,11 +266,7 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
             tip_speed = 0.0
         terminated = invalid or distance > self.base_length
 
-        reward, components = tendon_arm_reward(
-            distance=distance,
-            tip_speed=tip_speed,
-            failure=terminated,
-        )
+        reward, components = self._compute_reward(distance, tip_speed, terminated)
         self._step_count += 1
         truncated = self._step_count >= self.max_episode_steps
 
@@ -261,6 +275,7 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
         observation = self._observation()
         info = {
             "target_position": self._target.copy(),
+            "target_velocity": self._target_velocity.copy(),
             "distance_to_target": distance,
             "tip_position": tip.copy(),
             "tip_speed": tip_speed,
@@ -275,6 +290,15 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
             info["termination_reason"] = "time_limit"
         return observation, reward, bool(terminated), bool(truncated), info
 
+    def _compute_reward(
+        self, distance: float, tip_speed: float, failure: bool
+    ) -> tuple[float, dict[str, float]]:
+        return tendon_arm_reward(
+            distance=distance,
+            tip_speed=tip_speed,
+            failure=failure,
+        )
+
     def _observation(self) -> np.ndarray:
         tip = self.rod.position_collection[:, -1]
         tip_velocity = self.rod.velocity_collection[:, -1]
@@ -285,6 +309,7 @@ class TendonArmReachEnv(Env[np.ndarray, np.ndarray]):
             (
                 self._tip_history.ravel(),
                 self._target,
+                self._target_velocity if self.include_target_velocity else np.empty(0),
                 self._target - tip,
                 tip_velocity,
                 np.array((np.linalg.norm(tip_velocity),)),

@@ -1,8 +1,10 @@
 # Spirob tendon-arm reaching
 
-`TendonArmReach-v0` is a Gymnasium task for controlling a tendon-driven,
-Spirob-inspired continuum arm. The arm is a 0.30 m tapered Cosserat rod with
-12 tension inputs. It is clamped at the base and initially hangs downward.
+`TendonArmReach-v0` and `TendonArmReach-v1` are Gymnasium tasks for controlling
+a tendon-driven, Spirob-inspired continuum arm. The arm is a 0.30 m tapered
+Cosserat rod with 12 tension inputs. It is clamped at the base and initially
+hangs downward. v0 is a fixed-target reaching task; v1 tracks a moving
+figure-eight target.
 
 The geometry is derived from the outer spiral of a Spirob arm and represented
 as a straight, tapered rod. The schematic shows the spiral-profile idea, the
@@ -89,6 +91,24 @@ while not (terminated or truncated):
     action = env.action_space.sample()
     observation, reward, terminated, truncated, info = env.step(action)
 
+env.close()
+```
+
+## Moving-target tracking (v1)
+
+v1 moves the target along a figure eight centered at `(0, -0.26, 0)` m, with
+default half-width 6 cm, half-height 4 cm, and an 8-second period. Each reset
+randomizes the starting phase (reproducibly with `seed`); pass
+`options={"phase": 0.0}` to choose a specific phase. Episodes last two target
+cycles by default. The observation adds the target's 3-D velocity to v0's
+state, and the near-target settling penalty uses tip velocity relative to
+target velocity. This gives the policy both position and direction/speed cues
+for closed-loop interception and tracking.
+
+```python
+env = gym.make("TendonArmReach-v1")
+observation, info = env.reset(seed=1)
+observation, reward, terminated, truncated, info = env.step(env.action_space.sample())
 env.close()
 ```
 

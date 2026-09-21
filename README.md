@@ -88,9 +88,7 @@ python -m gym_softrobot.debug.registry
 
 ## Demo
 
-![Spirob tendon arm tracking a figure-eight target with CMA-ES-tuned PID](https://d1hwl9j5fn5ugq.cloudfront.net/gym_softrobot_static/spirob_figure_eight_tracking.gif)
-
-
+<img src="https://d1hwl9j5fn5ugq.cloudfront.net/gym_softrobot_static/spirob_figure_eight_tracking_compact.gif" alt="Spirob tendon arm tracking a figure-eight target with CMA-ES-tuned PID" width="1020" />
 
 ## Development
 

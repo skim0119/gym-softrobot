@@ -26,6 +26,12 @@ Start with [Getting started](getting_started.md) and the compact
 research question depends on a particular actuation model.
 ```
 
+The Spirob-inspired tendon arm can track a moving figure eight.
+
+![Spirob tendon arm tracing a moving figure-eight target](https://d1hwl9j5fn5ugq.cloudfront.net/gym_softrobot_static/spirob_figure_eight_tracking.gif)
+
+See the [tendon-arm guide](envs/tendon_arm.md) for the environment model.
+
 ```{toctree}
 :maxdepth: 1
 :caption: Getting started

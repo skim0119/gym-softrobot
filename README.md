@@ -86,6 +86,12 @@ examples. The registered IDs can also be listed with:
 python -m gym_softrobot.debug.registry
 ```
 
+## Demo
+
+![Spirob tendon arm tracking a figure-eight target with CMA-ES-tuned PID](https://d1hwl9j5fn5ugq.cloudfront.net/gym_softrobot_static/spirob_figure_eight_tracking.gif)
+
+
+
 ## Development
 
 ```bash

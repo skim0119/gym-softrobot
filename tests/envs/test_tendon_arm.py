@@ -1,8 +1,11 @@
 import numpy as np
 from gymnasium.utils.env_checker import check_env
 
-from gym_softrobot.envs.tendon_arm import TendonArmReachEnv
-from gym_softrobot.envs.tendon_arm.reward import tendon_arm_reward
+from gym_softrobot.envs.tendon_arm import TendonArmReachEnv, TendonArmTrackingEnv
+from gym_softrobot.envs.tendon_arm.reward import (
+    tendon_arm_reward,
+    tendon_arm_tracking_reward,
+)
 from gym_softrobot.envs.tendon_arm.spirob_geometry import spirob_taper_profile
 from gym_softrobot.envs.tendon_arm.tendon_forces import (
     TendonActuation,
@@ -17,9 +20,50 @@ def make_fast_env(**kwargs):
     return env
 
 
+def make_fast_tracking_env(**kwargs):
+    env = TendonArmTrackingEnv(**kwargs)
+    env.simulation_steps_per_action = 2
+    env.max_episode_steps = 2
+    return env
+
+
 def test_tendon_arm_passes_gymnasium_checker():
     env = make_fast_env()
     check_env(env, skip_render_check=True)
+    env.close()
+
+
+def test_tendon_arm_tracking_passes_gymnasium_checker():
+    env = make_fast_tracking_env()
+    check_env(env, skip_render_check=True)
+    env.close()
+
+
+def test_tracking_target_moves_and_observation_includes_velocity():
+    env = make_fast_tracking_env(figure_eight_period=2.0)
+    observation, reset_info = env.reset(seed=8, options={"phase": 0.0})
+    initial_target = reset_info["target_position"].copy()
+    assert observation.shape == (128,)
+    assert env.observation_space.shape == (128,)
+    np.testing.assert_allclose(reset_info["target_velocity"][0], 0.06 * np.pi)
+
+    next_observation, _, _, _, step_info = env.step(np.zeros(12, dtype=np.float32))
+    assert not np.array_equal(step_info["target_position"], initial_target)
+    assert np.linalg.norm(step_info["target_velocity"]) > 0.0
+    np.testing.assert_allclose(next_observation[18:21], step_info["target_velocity"])
+    env.close()
+
+
+def test_tracking_reset_is_seed_deterministic_and_episode_covers_two_cycles():
+    env = TendonArmTrackingEnv(figure_eight_period=2.0)
+    first_observation, first_info = env.reset(seed=10)
+    second_observation, second_info = env.reset(seed=10)
+    np.testing.assert_array_equal(first_observation, second_observation)
+    np.testing.assert_array_equal(
+        first_info["target_position"], second_info["target_position"]
+    )
+    assert env.max_episode_steps == 120
+    assert first_observation.shape == (128,)
     env.close()
 
 
@@ -90,6 +134,14 @@ def test_tendon_arm_reward_does_not_penalize_speed_far_from_target():
     reward, components = tendon_arm_reward(distance=0.04, tip_speed=1.0)
     assert components["velocity"] == 0.0
     assert reward == -0.04
+
+
+def test_tracking_reward_uses_relative_speed():
+    reward, components = tendon_arm_tracking_reward(
+        distance=0.015, relative_speed=0.1
+    )
+    assert np.isclose(components["relative_velocity"], -0.0005)
+    assert np.isclose(reward, -0.0155)
 
 
 def test_normalized_action_scales_to_configured_tendon_tensions():

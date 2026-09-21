@@ -30,3 +30,27 @@ def tendon_arm_reward(
         "failure": failure_value,
     }
     return float(sum(components.values())), components
+
+
+def tendon_arm_tracking_reward(
+    *,
+    distance: float,
+    relative_speed: float = 0.0,
+    failure: bool = False,
+    velocity_weight: float = 1.0e-3,
+    velocity_reference: float = 0.1,
+    velocity_gate: float = 0.03,
+) -> tuple[float, dict[str, float]]:
+    """Reward target proximity and low tip velocity relative to a moving goal."""
+    distance_value = -abs(float(distance))
+    gate_weight = max(0.0, 1.0 - abs(float(distance)) / velocity_gate)
+    velocity_value = -velocity_weight * gate_weight * (
+        float(relative_speed) / velocity_reference
+    ) ** 2
+    failure_value = -50.0 if failure else 0.0
+    components = {
+        "distance": distance_value,
+        "relative_velocity": velocity_value,
+        "failure": failure_value,
+    }
+    return float(sum(components.values())), components

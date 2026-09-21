@@ -67,6 +67,11 @@ register(
     entry_point="gym_softrobot.envs.tendon_arm:TendonArmReachEnv",
 )
 
+register(
+    id="TendonArmReach-v1",
+    entry_point="gym_softrobot.envs.tendon_arm:TendonArmTrackingEnv",
+)
+
 """ Snake Environment """
 register(
     id="ContinuumSnake-v0",

@@ -1,0 +1,11 @@
+<a class="sidebar-brand{% if logo %} centered{% endif %}" href="{{ pathto(master_doc) }}">
+  {%- block brand_content %}
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo only-light" src="{{ gym_softrobot_light_logo }}" alt="Light Logo"/>
+    <img class="sidebar-logo only-dark" src="{{ gym_softrobot_dark_logo }}" alt="Dark Logo"/>
+  </div>
+  {% if not theme_sidebar_hide_name %}
+  <span class="sidebar-brand-text">{{ docstitle if docstitle else project }}</span>
+  {%- endif %}
+  {% endblock brand_content %}
+</a>

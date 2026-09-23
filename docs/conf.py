@@ -33,11 +33,14 @@ myst_enable_extensions = [
 
 html_theme = "furo"
 html_title = "gym-softrobot"
+templates_path = ["_templates"]
 html_static_path = ["_static"]
 html_css_files = ["css/custom.css"]
+html_context = {
+    "gym_softrobot_light_logo": "https://d1hwl9j5fn5ugq.cloudfront.net/gym_softrobot_static/gym-softrobot-logo-light.svg",
+    "gym_softrobot_dark_logo": "https://d1hwl9j5fn5ugq.cloudfront.net/gym_softrobot_static/gym-softrobot-logo-dark.svg",
+}
 html_theme_options = {
-    "light_logo": "images/gym-softrobot-logo-light.svg",
-    "dark_logo": "images/gym-softrobot-logo-dark.svg",
     "source_repository": "https://github.com/skim0119/gym-softrobot/",
     "source_branch": "main",
     "source_directory": "docs/",

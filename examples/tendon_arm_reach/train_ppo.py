@@ -19,9 +19,16 @@ from plot_progress import plot_progress
     help="Number of policy steps to train.",
 )
 @click.option(
+    "--n-envs",
+    type=click.IntRange(min=1),
+    default=4,
+    show_default=True,
+    help="Number of parallel simulation environments.",
+)
+@click.option(
     "--output",
     type=click.Path(path_type=Path, file_okay=False),
-    default=Path("save/tendon_arm_reach"),
+    default=Path(__file__).resolve().parent / "save" / "tendon_arm_tracking",
     show_default=True,
     help="Directory for checkpoints, logs, and normalization statistics.",
 )
@@ -42,18 +49,23 @@ from plot_progress import plot_progress
 )
 def main(
     timesteps: int,
+    n_envs: int,
     output: Path,
     seed: int,
     max_tension: float,
     checkpoint_freq: int,
 ) -> None:
-    """Train PPO on TendonArmReach-v0 using Stable-Baselines3."""
+    """Train PPO on the moving-target TendonArmReach-v1 task."""
 
     try:
         from stable_baselines3 import PPO
         from stable_baselines3.common.callbacks import CheckpointCallback
-        from stable_baselines3.common.monitor import Monitor
-        from stable_baselines3.common.vec_env import DummyVecEnv, VecNormalize
+        from stable_baselines3.common.vec_env import (
+            DummyVecEnv,
+            SubprocVecEnv,
+            VecMonitor,
+            VecNormalize,
+        )
     except ImportError as error:
         raise SystemExit(
             "Install the optional trainer with: uv pip install stable-baselines3"
@@ -63,19 +75,23 @@ def main(
     env_kwargs = {"max_tension": max_tension}
 
     def make_env():
-        base_env = gym.make("TendonArmReach-v0", **env_kwargs)
-        return Monitor(
-            base_env,
-            filename=str(output / "monitor.csv"),
-            info_keywords=("distance_to_target",),
-        )
+        return gym.make("TendonArmReach-v1", **env_kwargs)
 
-    vector_env = DummyVecEnv([make_env])
-    env = VecNormalize(vector_env, norm_obs=True, norm_reward=True)
+    env_fns = [make_env for _ in range(n_envs)]
+    if n_envs == 1:
+        vector_env = DummyVecEnv(env_fns)
+    else:
+        vector_env = SubprocVecEnv(env_fns, start_method="spawn")
+    monitored_env = VecMonitor(
+        vector_env,
+        filename=str(output / "monitor.csv"),
+        info_keywords=("distance_to_target",),
+    )
+    env = VecNormalize(monitored_env, norm_obs=True, norm_reward=True)
     checkpoint = CheckpointCallback(
-        save_freq=checkpoint_freq,
+        save_freq=max(checkpoint_freq // n_envs, 1),
         save_path=output,
-        name_prefix="ppo_tendon_arm",
+        name_prefix="ppo_tendon_arm_tracking",
         save_vecnormalize=True,
     )
     model = PPO(
@@ -98,20 +114,23 @@ def main(
         clip_range=0.1,
         ent_coef=0.005,
     )
-    model.learn(
-        total_timesteps=timesteps,
-        callback=checkpoint,
-        progress_bar=(
-            importlib.util.find_spec("rich") is not None
-            and importlib.util.find_spec("tqdm") is not None
-        ),
-    )
-    model.save(output / "final_model")
-    env.save(output / "vecnormalize.pkl")
-    env.close()
+    try:
+        model.learn(
+            total_timesteps=timesteps,
+            callback=checkpoint,
+            progress_bar=(
+                importlib.util.find_spec("rich") is not None
+                and importlib.util.find_spec("tqdm") is not None
+            ),
+        )
+        model.save(output / "final_model")
+        env.save(output / "vecnormalize.pkl")
+    finally:
+        env.close()
     plot_progress(
         output / "monitor.csv",
         output / "training_progress.png",
+        n_envs=n_envs,
     )
 
 

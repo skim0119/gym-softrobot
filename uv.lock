@@ -450,6 +450,7 @@ version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "cma" },
     { name = "coomm" },
     { name = "gymnasium" },
     { name = "matplotlib" },
@@ -485,6 +486,7 @@ docs = [
 [package.metadata]
 requires-dist = [
     { name = "click", specifier = ">=8.5.0" },
+    { name = "cma", specifier = ">=4.4.4" },
     { name = "coomm", git = "https://github.com/hanson-hschang/COOMM.git?rev=refactor-numba-hotloops" },
     { name = "gymnasium", specifier = ">=1.0.0" },
     { name = "matplotlib" },

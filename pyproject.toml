@@ -26,6 +26,7 @@ dependencies = [
     "pyglet==1.5.31",
     "vapory",
     "click>=8.5.0",
+    "cma>=4.4.4",
 ]
 
 [build-system]

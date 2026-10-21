@@ -19,12 +19,15 @@ def main() -> None:
     )
     parser.add_argument("--output", type=Path, default=Path("training_progress.png"))
     parser.add_argument("--window", type=int, default=20)
+    parser.add_argument("--n-envs", type=int, default=1)
     args = parser.parse_args()
 
-    plot_progress(args.log, args.output, window=args.window)
+    plot_progress(args.log, args.output, window=args.window, n_envs=args.n_envs)
 
 
-def plot_progress(log: Path, output: Path, *, window: int = 20) -> None:
+def plot_progress(
+    log: Path, output: Path, *, window: int = 20, n_envs: int = 1
+) -> None:
     """Plot episode statistics from an SB3 monitor file or output directory."""
 
     files = sorted(log.rglob("*monitor.csv")) if log.is_dir() else [log]
@@ -41,7 +44,7 @@ def plot_progress(log: Path, output: Path, *, window: int = 20) -> None:
 
     rewards = np.asarray([float(row["r"]) for row in rows])
     lengths = np.asarray([float(row["l"]) for row in rows])
-    timesteps = np.cumsum(lengths)
+    timesteps = np.cumsum(lengths) * n_envs
     distances = np.asarray(
         [float(row.get("distance_to_target", "nan")) for row in rows]
     )

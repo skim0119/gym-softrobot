@@ -60,11 +60,10 @@ forces and moments; the lite variant isolates the mechanics of one arm.
 ## Body — crawling and reaching
 
 ```{caution}
-`OctoCrawl-v0` is retained for older experiments and PyMARL-style
-decentralized controllers. Its action, observation, physics, and reward
-contracts differ from the migrated crawlers. New work should use
-`OctoPhaseCrawl-v0` for abstract phase actuation or `OctoMuscleCrawl-v0` for
-explicit TM/LM/OM muscle control.
+`OctoCrawl-v0` stays registered for older experiments. Its action,
+observation, physics, and reward differ from the migrated crawlers. New work
+should use `OctoPhaseCrawl-v0` for abstract phase actuation or
+`OctoMuscleCrawl-v0` for explicit TM/LM/OM muscle control.
 ```
 
 | Environment | Task | Actuation | Action | Constraint or scene |

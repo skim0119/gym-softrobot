@@ -53,7 +53,6 @@ class CrawlEnv(Env):
     metadata = {
         "render_modes": ["rgb_array"],
         "render_fps": 25,
-        "multiagent": ["PyMARL"],
     }
 
     def __init__(
@@ -77,7 +76,6 @@ class CrawlEnv(Env):
 
         n_arm = 8
         self.n_arm = n_arm
-        self.n_agent = n_arm  # for MARL
         self.n_elems = n_elems
         self.n_seg = n_elems - 1
 
@@ -115,14 +113,6 @@ class CrawlEnv(Env):
         # Rendering-related
         self.viewer = None
         self.renderer = None
-
-    @property
-    def agent_id(self):
-        return ["LF1", "LF2", "LB2", "LB1", "RB1", "RB2", "RF2", "RF1"]
-
-    def get_env_info(self):
-        # Need for decentralized control
-        return dict(n_actions=self.n_action, n_agents=8)
 
     def reset(
         self,

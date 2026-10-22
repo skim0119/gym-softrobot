@@ -104,9 +104,6 @@ class ReachEnv(Env):
         self.viewer = None
         self.renderer = None
 
-    def get_env_info(self):
-        return dict(n_actions=self.n_action, n_agents=8)
-
     def reset(
         self,
         *,

@@ -54,13 +54,6 @@ envs/pendulum
 
 ```{toctree}
 :maxdepth: 1
-:caption: User guide
-
-envs/wrappers
-```
-
-```{toctree}
-:maxdepth: 1
 :caption: Development
 
 GitHub <https://github.com/skim0119/gym-softrobot>

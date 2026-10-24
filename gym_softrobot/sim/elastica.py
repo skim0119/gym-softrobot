@@ -64,8 +64,6 @@ def _diverged(world: ElasticaWorld) -> bool:
 
 
 class ElasticaBatch[W: ElasticaWorld]:
-    """RodBatch over num_envs PyElastica worlds, stepped serially in-process."""
-
     def __init__(self, task: ElasticaTask[W], num_envs: int) -> None:
         if num_envs < 1:
             raise ValueError(f"num_envs must be >= 1, got {num_envs}")

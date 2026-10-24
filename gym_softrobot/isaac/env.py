@@ -38,15 +38,14 @@ def _as_indices(env_ids: Sequence[int] | torch.Tensor) -> np.ndarray:
     return np.asarray(array, dtype=np.intp).reshape(-1)
 
 
-def _generator(seed: int | None, env_index: int, episode: int) -> np.random.Generator:
-    # spawn_key keeps this episode off every other env and off its own earlier draws.
+def _episode_generator(
+    seed: int | None, env_index: int, episode: int
+) -> np.random.Generator:
     sequence = np.random.SeedSequence(seed, spawn_key=(env_index, episode))
     return np.random.Generator(np.random.PCG64(sequence))
 
 
-def _node_widths(radii: np.ndarray) -> list[float]:
-    # Element radii sit between nodes. Ends copy the adjacent element and
-    # interior nodes average the two neighbors. USD wants one width per vertex.
+def _vertex_widths_from_element_radii(radii: np.ndarray) -> list[float]:
     radii = np.asarray(radii, dtype=np.float64)
     nodes = np.empty(radii.shape[0] + 1, dtype=np.float64)
     nodes[0] = radii[0]
@@ -91,7 +90,9 @@ def _write_curves(
                 Gf.Vec3f(float(points[0, node]), float(points[1, node]), float(points[2, node]))
                 for node in range(points.shape[1])
             ]
-            widths = _node_widths(frame.radii[rod_index][env_index])
+            widths = _vertex_widths_from_element_radii(
+                frame.radii[rod_index][env_index]
+            )
             prepared.append((curves, vectors, widths))
     with Sdf.ChangeBlock():
         for curves, vectors, widths in prepared:
@@ -218,7 +219,9 @@ class SoftRobotEnv(DirectRLEnv):
         else:
             self._episode_counts[ids] += 1
         rngs = [
-            _generator(self._seed, int(index), int(self._episode_counts[index]))
+            _episode_generator(
+                self._seed, int(index), int(self._episode_counts[index])
+            )
             for index in ids
         ]
         obs = self._batch.reset(ids, rngs)

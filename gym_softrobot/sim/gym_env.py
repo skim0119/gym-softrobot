@@ -10,8 +10,6 @@ from gym_softrobot.sim.batch import BatchFrame, SoftRobotTask
 
 
 class RodTaskEnv(Env[NDArray[np.float32], NDArray[np.float32]]):
-    """Single-world Gymnasium env over ``SoftRobotTask.make_batch(1)``."""
-
     metadata = {"render_modes": ["rgb_array"], "render_fps": 5}
 
     def __init__(self, task: SoftRobotTask, render_mode: str | None = None) -> None:

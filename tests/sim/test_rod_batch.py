@@ -43,8 +43,8 @@ def _first_uniform(seed: int) -> float:
 
 
 class _Stepper:
-    def step(self, simulator: object, time: float, dt: float) -> float:
-        for rod in simulator.rods:  # type: ignore[attr-defined]
+    def step(self, simulator, time: float, dt: float) -> float:
+        for rod in simulator.rods:
             rod.position_collection += dt
         return time + dt
 

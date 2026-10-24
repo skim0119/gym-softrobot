@@ -1,5 +1,3 @@
-"""PyElastica batch seam and the single-world Gymnasium shell."""
-
 from gym_softrobot.sim.batch import (
     BatchFrame,
     BatchStep,

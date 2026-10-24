@@ -29,3 +29,7 @@ that would otherwise make a reciprocal bending cycle produce no net motion.
 The rod must continually trade elastic bending energy, inertia, contact
 damping, and frictional dissipation. Forward progress is therefore an emergent
 result of the gait and substrate interaction rather than a prescribed velocity.
+
+The same rod is also available as `SnakeLocomotionTask` for a batched step.
+See [Run the continuum snake](../isaac/snake.md). `ContinuumSnake-v0` itself
+is unchanged.

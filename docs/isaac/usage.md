@@ -10,7 +10,7 @@ From the repository root, with the project environment active, run:
 uv run python examples/isaac_snake/cpu_rollout.py --steps 1 --seed 0
 ```
 
-The process prints a reset observation of shape `(756,)` and one line for the step. The reward on that first step is `0.0`. `terminated` and `truncated` are both false. The reward stays `0.0` until the callback history covers two gait periods. One step is 0.2 s of rod time.
+The process prints a reset observation of shape `(756,)` and one line for the step. The reward is the center-of-mass speed along +z during that step, in meters per second. `terminated` and `truncated` are both false. One step is 0.2 s of rod time. The script's action leaves the muscles off, so that particular step stays near zero.
 
 To take more steps, pass `--steps`. The episode truncates on step 111.
 

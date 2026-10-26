@@ -1,8 +1,10 @@
 """Continuum-snake locomotion as an ``ElasticaTask``.
 
-``ContinuumSnake-v0`` is unchanged. This task drives the same rod, muscle
-torque, and anisotropic plane through ``RodBatch``. The build does not read
-the generator, because ``ContinuumSnakeEnv.reset`` does not either.
+``ContinuumSnake-v0`` is unchanged, including the score returned by its
+``step``. This task drives the same rod, muscle torque, and anisotropic plane
+through ``RodBatch``. Its reward is the center-of-mass speed along the rod's
+initial heading, +z, over the control step that just finished. The build does
+not read the generator, because ``ContinuumSnakeEnv.reset`` does not either.
 """
 
 import math
@@ -11,10 +13,7 @@ from dataclasses import dataclass
 import numpy as np
 from numpy.typing import NDArray
 
-from gym_softrobot.envs.snake.continuum_snake import (
-    ContinuumSnakeEnv,
-    compute_projected_velocity,
-)
+from gym_softrobot.envs.snake.continuum_snake import ContinuumSnakeEnv
 from gym_softrobot.sim import ElasticaTask, ElasticaWorld, TaskSpec
 
 # Same clock as ContinuumSnakeEnv._build. One policy step is step_skip
@@ -55,6 +54,12 @@ def snake_task_spec() -> TaskSpec:
 @dataclass(eq=False)
 class SnakeWorld(ElasticaWorld):
     env: ContinuumSnakeEnv | None = None
+    com_z: float = 0.0
+
+
+def _center_of_mass_z(world: SnakeWorld) -> float:
+    com = np.asarray(world.rods[0].compute_position_center_of_mass(), dtype=np.float64)
+    return float(com[2])
 
 
 class SnakeLocomotionTask(ElasticaTask[SnakeWorld]):
@@ -64,13 +69,15 @@ class SnakeLocomotionTask(ElasticaTask[SnakeWorld]):
         del rng
         env = ContinuumSnakeEnv()
         env.reset()
-        return SnakeWorld(
+        world = SnakeWorld(
             simulator=env.snake_sim,
             timestepper=_BoundClock(env.stepper),
             dt=_INTEGRATOR_DT,
             rods=(env.shearable_rod,),
             env=env,
         )
+        world.com_z = _center_of_mass_z(world)
+        return world
 
     def apply_action(self, world: SnakeWorld, action: NDArray[np.float32]) -> None:
         if world.env is None:
@@ -83,7 +90,7 @@ class SnakeLocomotionTask(ElasticaTask[SnakeWorld]):
         return world.env.get_state()
 
     def reward(self, world: SnakeWorld) -> float:
-        if world.env is None:
-            raise RuntimeError("snake world has no environment")
-        forward = compute_projected_velocity(world.env.data, world.env.period)[2]
-        return float(forward)
+        com_z = _center_of_mass_z(world)
+        speed = (com_z - world.com_z) / _CONTROL_DT
+        world.com_z = com_z
+        return speed

@@ -1,7 +1,7 @@
 """Roll out the continuum snake without Isaac Lab.
 
 One step integrates 0.2 s of rod time, about 25,000 integrator steps.
-The first rewards are 0 until two gait periods have been recorded.
+The reward is the center-of-mass speed along +z during that step, in m/s.
 """
 
 import argparse

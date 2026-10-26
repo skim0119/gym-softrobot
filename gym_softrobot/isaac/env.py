@@ -9,7 +9,7 @@ import numpy as np
 import torch
 from isaaclab.envs import DirectRLEnv, DirectRLEnvCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sim import SimulationCfg
+from isaaclab.sim import PhysxCfg, SimulationCfg
 from isaaclab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from isaaclab.utils import configclass
 from pxr import Gf, Sdf, Usd, UsdGeom
@@ -110,7 +110,15 @@ class SoftRobotEnvCfg(DirectRLEnvCfg):
 
     task_entry: str = MISSING
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=16, env_spacing=1.0)
-    sim: SimulationCfg = SimulationCfg(render_interval=1)
+    # PhysX only clocks an empty stage. The rod control interval is about 0.2 s,
+    # and Isaac Lab warns on that step unless these solver flags are set.
+    sim: SimulationCfg = SimulationCfg(
+        render_interval=1,
+        physx=PhysxCfg(
+            enable_stabilization=True,
+            enable_external_forces_every_iteration=True,
+        ),
+    )
     decimation: int = 1
 
 

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import ClassVar
+from typing import ClassVar, Generic, TypeVar
 
 import numpy as np
 from elastica import BaseSystemCollection
@@ -22,7 +22,10 @@ class ElasticaWorld:
     time: float = 0.0
 
 
-class ElasticaTask[W: ElasticaWorld](ABC):
+W = TypeVar("W", bound=ElasticaWorld)
+
+
+class ElasticaTask(ABC, Generic[W]):
     spec: ClassVar[TaskSpec]
 
     @abstractmethod
@@ -63,7 +66,7 @@ def _diverged(world: ElasticaWorld) -> bool:
     )
 
 
-class ElasticaBatch[W: ElasticaWorld]:
+class ElasticaBatch(Generic[W]):
     def __init__(self, task: ElasticaTask[W], num_envs: int) -> None:
         if num_envs < 1:
             raise ValueError(f"num_envs must be >= 1, got {num_envs}")

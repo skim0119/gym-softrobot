@@ -46,3 +46,5 @@ From the same Isaac Lab checkout:
 ```
 
 RSL-RL collects 16 steps before the first mean reward. Five iterations is a smoke test. The log directory is `logs/rsl_rl/snake_locomotion/` under the working directory. Raise `--max_iterations` for a real run, and raise `--num_envs` only after one rod step is fast enough on that machine.
+
+By default every env steps in the Isaac Lab process, one after another. Add `--rod_processes` to step them in worker processes instead. The worker count is the CPU count unless `--rod_workers` sets it, and it never exceeds `--num_envs`. Each worker is another Python process with its own copy of the rods, so envs beyond the worker count share a worker and step in turn.

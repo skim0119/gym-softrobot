@@ -140,10 +140,10 @@ class ContinuumSnakeEnv(Env):
             raise ValueError(f"Unsupported render mode: {render_mode}")
         self.render_mode = render_mode
         # Action space
-        action_space_low = -np.ones(7) * 1e-2
-        action_space_low[-1] = 0.5
-        action_space_high = np.ones(7) * 1e-2
-        action_space_high[-1] = 3.0
+        action_space_low = np.full(7, -1e-2, dtype=np.float32)
+        action_space_low[-1] = np.float32(0.5)
+        action_space_high = np.full(7, 1e-2, dtype=np.float32)
+        action_space_high[-1] = np.float32(3.0)
         self.action_space = spaces.Box(
             action_space_low, action_space_high, dtype=np.float32
         )
@@ -152,7 +152,9 @@ class ContinuumSnakeEnv(Env):
         self._n_elem = 50
         observation_space = (((self._n_elem + 1) * 3 * 2) + ((self._n_elem) * 9),)
         self.observation_space = spaces.Box(
-            -np.inf, np.inf, shape=observation_space, dtype=np.float32
+            low=np.full(observation_space, -np.inf, dtype=np.float32),
+            high=np.full(observation_space, np.inf, dtype=np.float32),
+            dtype=np.float32,
         )
 
         self.viewer = None

@@ -62,7 +62,15 @@ def _substep_count(control_dt: float, dt: float) -> int:
 
 def _diverged(world: ElasticaWorld) -> bool:
     return any(
-        not np.isfinite(np.asarray(rod.position_collection)).all() for rod in world.rods
+        not all(
+            np.isfinite(np.asarray(state)).all()
+            for state in (
+                rod.position_collection,
+                rod.velocity_collection,
+                rod.director_collection,
+            )
+        )
+        for rod in world.rods
     )
 
 
@@ -105,6 +113,11 @@ class ElasticaBatch(Generic[W]):
     def step(self, actions: NDArray[np.float32]) -> BatchStep:
         self._require_ready()
         actions = np.asarray(actions, dtype=np.float32)
+        expected_shape = (self._num_envs, self.spec.action_space.shape[0])
+        if actions.shape != expected_shape:
+            raise ValueError(
+                f"actions must have shape {expected_shape}, got {actions.shape}"
+            )
         obs_dim = int(self.spec.observation_space.shape[0])
         obs = np.empty((self._num_envs, obs_dim), dtype=np.float32)
         reward = np.empty(self._num_envs, dtype=np.float32)
@@ -118,14 +131,27 @@ class ElasticaBatch(Generic[W]):
                 world.time = world.timestepper.step(
                     world.simulator, world.time, world.dt
                 )
+            numerical_failure = _diverged(world)
+            failed[index] = numerical_failure or bool(self._task.failed(world))
+            if numerical_failure:
+                obs[index] = 0.0
+                reward[index] = 0.0
+                continue
             observed = np.asarray(self._task.observe(world), dtype=np.float32)
             if observed.shape != (obs_dim,):
                 raise ValueError(
                     f"observe returned shape {observed.shape}, expected {(obs_dim,)}"
                 )
-            obs[index] = observed
-            reward[index] = np.float32(self._task.reward(world))
-            failed[index] = bool(self._task.failed(world)) or _diverged(world)
+            reward_value = np.float32(self._task.reward(world))
+            if not np.isfinite(observed).all() or not np.isfinite(reward_value):
+                failed[index] = True
+                obs[index] = np.nan_to_num(
+                    observed, nan=0.0, posinf=0.0, neginf=0.0
+                )
+                reward[index] = 0.0
+            else:
+                obs[index] = observed
+                reward[index] = reward_value
         return BatchStep(obs=obs, reward=reward, failed=failed)
 
     def frame(self) -> BatchFrame:

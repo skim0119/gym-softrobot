@@ -54,6 +54,16 @@ envs/pendulum
 
 ```{toctree}
 :maxdepth: 1
+:caption: Isaac Lab
+
+isaac/strategy
+isaac/usage
+isaac/adapters
+isaac/snake
+```
+
+```{toctree}
+:maxdepth: 1
 :caption: Development
 
 GitHub <https://github.com/skim0119/gym-softrobot>

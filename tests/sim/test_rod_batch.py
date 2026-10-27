@@ -58,6 +58,8 @@ def _make_rod(n_nodes: int, token: float):
 
     return SimpleNamespace(
         position_collection=np.full((3, n_nodes), token, dtype=np.float64),
+        velocity_collection=np.zeros((3, n_nodes), dtype=np.float64),
+        director_collection=np.repeat(np.eye(3)[:, :, None], n_nodes - 1, axis=2),
         radius=np.full(n_nodes - 1, 0.01, dtype=np.float64),
     )
 
@@ -105,7 +107,7 @@ class _NanOnPositive(FakeTask):
     def apply_action(self, world: _World, action: NDArray[np.float32]) -> None:
         super().apply_action(world, action)
         if float(action[0]) > 0.0:
-            world.rods[0].position_collection[0, 0] = np.nan
+            world.rods[0].velocity_collection[0, 0] = np.nan
 
 
 class _ShortRod(FakeTask):
@@ -223,7 +225,7 @@ def test_failure_on_horizon_sets_both_flags() -> None:
     env.close()
 
 
-def test_nonfinite_position_fails_only_that_world() -> None:
+def test_nonfinite_velocity_fails_only_that_world_with_finite_outputs() -> None:
     batch = _NanOnPositive().make_batch(2)
     tokens = (_first_uniform(0), _first_uniform(1))
     batch.reset(_ids(0, 1), [np.random.default_rng(0), np.random.default_rng(1)])
@@ -232,7 +234,9 @@ def test_nonfinite_position_fails_only_that_world() -> None:
     assert np.isfinite(result.obs[0]).all()
     assert np.isfinite(result.reward[0])
     assert result.reward[0] == pytest.approx(np.float32(tokens[0] + CONTROL_DT))
-    assert not np.isfinite(result.obs[1, 0])
+    assert np.isfinite(result.obs[1]).all()
+    np.testing.assert_array_equal(result.obs[1], np.zeros(2, dtype=np.float32))
+    assert result.reward[1] == 0.0
     batch.close()
 
 
@@ -326,6 +330,16 @@ def test_step_before_reset_raises() -> None:
     batch = FakeTask().make_batch(1)
     with pytest.raises(RuntimeError):
         batch.step(np.zeros((1, 1), dtype=np.float32))
+
+
+def test_step_rejects_wrong_action_batch_shape() -> None:
+    batch = FakeTask().make_batch(2)
+    batch.reset(_ids(0, 1), [np.random.default_rng(0), np.random.default_rng(1)])
+    with pytest.raises(ValueError, match=r"actions must have shape \(2, 1\)"):
+        batch.step(np.zeros((3, 1), dtype=np.float32))
+    with pytest.raises(ValueError, match=r"actions must have shape \(2, 1\)"):
+        batch.step(np.zeros((1, 1), dtype=np.float32))
+    batch.close()
 
 
 def test_render_rgb_array_is_uint8_and_none_mode_returns_none() -> None:

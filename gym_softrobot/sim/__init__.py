@@ -1,6 +1,7 @@
 from gym_softrobot.sim.batch import (
     BatchFrame,
     BatchStep,
+    ProcessPool,
     RodBatch,
     SoftRobotTask,
     TaskSpec,
@@ -13,6 +14,7 @@ __all__ = [
     "BatchStep",
     "ElasticaTask",
     "ElasticaWorld",
+    "ProcessPool",
     "RodBatch",
     "RodTaskEnv",
     "SoftRobotTask",

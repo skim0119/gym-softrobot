@@ -16,7 +16,7 @@ from pxr import Gf, Sdf, Usd, UsdGeom
 
 import isaaclab.sim as sim_utils
 
-from gym_softrobot.sim.batch import BatchFrame, BatchStep, SoftRobotTask
+from gym_softrobot.sim.batch import BatchFrame, BatchStep, ProcessPool, SoftRobotTask
 
 __all__ = ["SoftRobotEnv", "SoftRobotEnvCfg"]
 
@@ -120,6 +120,8 @@ class SoftRobotEnvCfg(DirectRLEnvCfg):
         ),
     )
     decimation: int = 1
+    rod_processes: bool = False
+    rod_workers: int | None = None
 
 
 class SoftRobotEnv(DirectRLEnv):
@@ -144,7 +146,8 @@ class SoftRobotEnv(DirectRLEnv):
         cfg.sim.dt = spec.control_dt
         cfg.decimation = 1
         cfg.episode_length_s = spec.episode_length_s
-        self._batch = task.make_batch(cfg.scene.num_envs)
+        pool = ProcessPool(workers=cfg.rod_workers) if cfg.rod_processes else None
+        self._batch = task.make_batch(cfg.scene.num_envs, pool)
         self._seed = cfg.seed
         self._episode_counts = np.zeros(cfg.scene.num_envs, dtype=np.int64)
         self._full_reset = False

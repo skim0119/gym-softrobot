@@ -32,10 +32,23 @@ def main() -> None:
         type=str,
         default="SoftRobot-ContinuumSnake-Direct-v0",
     )
+    parser.add_argument(
+        "--rod_processes",
+        action="store_true",
+        help="step each env's rod in a worker process",
+    )
+    parser.add_argument(
+        "--rod_workers",
+        type=int,
+        default=None,
+        help="worker processes for --rod_processes; default is the CPU count",
+    )
     AppLauncher.add_app_launcher_args(parser)
     args = parser.parse_args()
     if args.num_envs < 1:
         raise SystemExit("--num_envs must be >= 1")
+    if args.rod_workers is not None and args.rod_workers < 1:
+        raise SystemExit("--rod_workers must be >= 1")
     if args.max_iterations < 1:
         raise SystemExit("--max_iterations must be >= 1")
     app = AppLauncher(args).app
@@ -99,6 +112,8 @@ def main() -> None:
     )
     env_cfg = parse_env_cfg(args.task, device=args.device, num_envs=args.num_envs)
     env_cfg.seed = args.seed
+    env_cfg.rod_processes = args.rod_processes
+    env_cfg.rod_workers = args.rod_workers
     agent_cfg = SnakePPORunnerCfg()
     agent_cfg.seed = args.seed
     agent_cfg.device = args.device

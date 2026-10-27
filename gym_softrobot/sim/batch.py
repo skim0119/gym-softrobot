@@ -87,6 +87,40 @@ class BatchFrame:
                 )
 
 
+@dataclass(frozen=True, slots=True)
+class ProcessPool:
+    """Step worlds in worker processes. ``None`` workers means the CPU count."""
+
+    workers: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.workers is not None and (
+            isinstance(self.workers, bool)
+            or not isinstance(self.workers, int)
+            or self.workers < 1
+        ):
+            raise ValueError(
+                f"workers must be None or an integer >= 1, got {self.workers!r}"
+            )
+
+
+def require_actions(
+    actions: NDArray[np.float32], num_envs: int, spec: TaskSpec
+) -> NDArray[np.float32]:
+    actions = np.asarray(actions, dtype=np.float32)
+    expected = (num_envs, spec.action_space.shape[0])
+    if actions.shape != expected:
+        raise ValueError(f"actions must have shape {expected}, got {actions.shape}")
+    return actions
+
+
+def require_generators(
+    ids: NDArray[np.intp], rngs: Sequence[np.random.Generator]
+) -> None:
+    if len(rngs) != ids.size:
+        raise ValueError(f"expected {ids.size} generators, got {len(rngs)}")
+
+
 class RodBatch(Protocol):
     """N independent worlds advanced in lockstep."""
 
@@ -110,4 +144,6 @@ class RodBatch(Protocol):
 class SoftRobotTask(Protocol):
     spec: TaskSpec
 
-    def make_batch(self, num_envs: int) -> RodBatch: ...
+    def make_batch(
+        self, num_envs: int, processes: ProcessPool | None = None
+    ) -> RodBatch: ...

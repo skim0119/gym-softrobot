@@ -8,7 +8,16 @@ from elastica import BaseSystemCollection
 from elastica.rod import RodBase
 from numpy.typing import NDArray
 
-from gym_softrobot.sim.batch import BatchFrame, BatchStep, RodBatch, TaskSpec
+from gym_softrobot.sim._process_batch import ProcessBatch
+from gym_softrobot.sim.batch import (
+    BatchFrame,
+    BatchStep,
+    ProcessPool,
+    RodBatch,
+    TaskSpec,
+    require_actions,
+    require_generators,
+)
 
 
 @dataclass(eq=False)
@@ -44,8 +53,12 @@ class ElasticaTask(ABC, Generic[W]):
     def failed(self, world: W) -> bool:
         return False
 
-    def make_batch(self, num_envs: int) -> RodBatch:
-        return ElasticaBatch(self, num_envs)
+    def make_batch(
+        self, num_envs: int, processes: ProcessPool | None = None
+    ) -> RodBatch:
+        if processes is None:
+            return ElasticaBatch(self, num_envs)
+        return ProcessBatch(self, num_envs, processes)
 
 
 def _substep_count(control_dt: float, dt: float) -> int:
@@ -94,8 +107,7 @@ class ElasticaBatch(Generic[W]):
         self, env_ids: NDArray[np.intp], rngs: Sequence[np.random.Generator]
     ) -> NDArray[np.float32]:
         ids = np.asarray(env_ids, dtype=np.intp).reshape(-1)
-        if len(rngs) != ids.size:
-            raise ValueError(f"expected {ids.size} generators, got {len(rngs)}")
+        require_generators(ids, rngs)
         obs_dim = int(self.spec.observation_space.shape[0])
         obs = np.empty((ids.size, obs_dim), dtype=np.float32)
         for row, (index, rng) in enumerate(zip(ids, rngs, strict=True)):
@@ -112,12 +124,7 @@ class ElasticaBatch(Generic[W]):
 
     def step(self, actions: NDArray[np.float32]) -> BatchStep:
         self._require_ready()
-        actions = np.asarray(actions, dtype=np.float32)
-        expected_shape = (self._num_envs, self.spec.action_space.shape[0])
-        if actions.shape != expected_shape:
-            raise ValueError(
-                f"actions must have shape {expected_shape}, got {actions.shape}"
-            )
+        actions = require_actions(actions, self._num_envs, self.spec)
         obs_dim = int(self.spec.observation_space.shape[0])
         obs = np.empty((self._num_envs, obs_dim), dtype=np.float32)
         reward = np.empty(self._num_envs, dtype=np.float32)

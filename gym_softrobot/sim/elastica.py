@@ -8,6 +8,7 @@ from elastica import BaseSystemCollection
 from elastica.rod import RodBase
 from numpy.typing import NDArray
 
+from gym_softrobot.sim._process_batch import ProcessBatch
 from gym_softrobot.sim.batch import (
     BatchFrame,
     BatchStep,
@@ -57,9 +58,6 @@ class ElasticaTask(ABC, Generic[W]):
     ) -> RodBatch:
         if processes is None:
             return ElasticaBatch(self, num_envs)
-        # _process_batch imports this module, so a top-level import is circular.
-        from gym_softrobot.sim._process_batch import ProcessBatch
-
         return ProcessBatch(self, num_envs, processes)
 
 

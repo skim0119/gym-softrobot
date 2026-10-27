@@ -14,11 +14,11 @@ from gym_softrobot.sim.batch import (
     BatchStep,
     ProcessPool,
     RodBatch,
+    SoftRobotTask,
     TaskSpec,
     require_actions,
     require_generators,
 )
-from gym_softrobot.sim.elastica import ElasticaTask
 
 _THREAD_VARS = (
     "OMP_NUM_THREADS",
@@ -32,8 +32,6 @@ _JOIN_TIMEOUT_S = 5.0
 
 @dataclass(frozen=True, slots=True)
 class Layout:
-    """Contiguous env blocks per worker, and the worker that owns each env."""
-
     spans: tuple[range, ...]
     owner: tuple[int, ...]
 
@@ -108,7 +106,7 @@ def _stack_frames(frames: Sequence[BatchFrame]) -> BatchFrame:
 
 
 def _handle(
-    task: ElasticaTask, slots: list[RodBatch | None], command: object
+    task: SoftRobotTask, slots: list[RodBatch | None], command: object
 ) -> object:
     spec = task.spec
     match command:
@@ -141,7 +139,7 @@ def _handle(
     raise TypeError(f"unknown command {command!r}")
 
 
-def _serve(conn: Connection, task: ElasticaTask, slot_count: int) -> None:
+def _serve(conn: Connection, task: SoftRobotTask, slot_count: int) -> None:
     # Ctrl-C belongs to the parent, which closes the pipes to stop the workers.
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     slots: list[RodBatch | None] = [None] * slot_count
@@ -159,7 +157,6 @@ def _serve(conn: Connection, task: ElasticaTask, slot_count: int) -> None:
         try:
             conn.send(reply)
         except Exception as error:
-            # An unpicklable reply would otherwise kill the worker and read as a lost env.
             unsent = repr(reply.error) if isinstance(reply, _Raised) else "its result"
             conn.send(
                 _Raised(RuntimeError(f"rod worker could not send {unsent}: {error!r}"))
@@ -173,9 +170,7 @@ class _Worker:
 
 
 class ProcessBatch:
-    """An ElasticaBatch split across spawned processes, one slot per env."""
-
-    def __init__(self, task: ElasticaTask, num_envs: int, pool: ProcessPool) -> None:
+    def __init__(self, task: SoftRobotTask, num_envs: int, pool: ProcessPool) -> None:
         if num_envs < 1:
             raise ValueError(f"num_envs must be >= 1, got {num_envs}")
         self._task = task
@@ -327,7 +322,6 @@ class ProcessBatch:
     def _exchange(
         self, commands: dict[int, object]
     ) -> dict[int, _Reply | _Raised | None]:
-        """Send every command, then drain every reply. ``None`` marks a worker that died."""
         sent = {}
         for worker, command in commands.items():
             try:

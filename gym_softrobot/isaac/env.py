@@ -121,7 +121,6 @@ class SoftRobotEnvCfg(DirectRLEnvCfg):
     )
     decimation: int = 1
     rod_processes: bool = False
-    # Read only when rod_processes is True. None means the CPU count.
     rod_workers: int | None = None
 
 
